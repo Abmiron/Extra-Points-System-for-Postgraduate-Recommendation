@@ -69,6 +69,7 @@ function del(index) {
 
 .todo-form {
   display: flex;
+  justify-content: center;
   margin: 20px 0 30px 20px;
 }
 
