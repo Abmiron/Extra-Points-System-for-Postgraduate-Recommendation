@@ -1,91 +1,164 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef struct List
+typedef struct Node
 {
-    int data;
-    struct List *next;
-} List;
+    int data1;
+    int data2;
+    struct Node *next;
+} Node;
 
-List *creatList()
+typedef struct Stack
 {
-    List *head = (List *)malloc(sizeof(List));
-    head->next = NULL;
-    int x;
-    scanf("%d", &x);
-    if (x == -1)
-        return head;
-    List *tail = head;
-    while (x != -1)
-    {
-        List *node = (List *)malloc(sizeof(List));
-        node->data = x;
-        node->next = NULL;
-        tail->next = node;
-        tail = node;
-        scanf("%d", &x);
-    }
-    return head;
+    Node *top;
+    int size;
+} Stack;
+
+void initStack(Stack *s)
+{
+    s->top = NULL;
+    s->size = 0;
 }
 
-void printList(List *head)
+int isEmpty(Stack *s)
 {
-    if (!head->next)
+    return s->size == 0;
+}
+
+// 入栈
+void push(Stack *s, int data1, int data2)
+{
+    Node *newNode = (Node *)malloc(sizeof(Node));
+    newNode->data1 = data1;
+    newNode->data2 = data2;
+    newNode->next = s->top;
+    s->top = newNode;
+    s->size++;
+}
+
+// 出栈
+int pop(Stack *s, int *data1, int *data2)
+{
+    if (isEmpty(s))
+        return -1;
+    Node *temp = s->top;
+    *data1 = temp->data1;
+    *data2 = temp->data2;
+    s->top = s->top->next;
+    free(temp);
+    s->size--;
+    return 0;
+}
+
+// 获取栈顶
+int peek(Stack *s, int *data1, int *data2)
+{
+    if (isEmpty(s))
+        return -1;
+    *data1 = s->top->data1;
+    *data2 = s->top->data2;
+    return 0;
+}
+
+void printPath(Stack *s)
+{
+    // 反转栈打印正向路径
+    Stack tempStack;
+    initStack(&tempStack);
+    Node *current = s->top;
+    while (current)
     {
-        printf("NULL");
-        return;
+        push(&tempStack, current->data1, current->data2);
+        current = current->next;
     }
 
-    List *p = head->next;
-    int i = 0;
-    while (p)
+    while (!isEmpty(&tempStack))
     {
-        if (i++ > 0)
-            printf(" ");
-        printf("%d", p->data);
-        p = p->next;
+        int x, y;
+        pop(&tempStack, &x, &y);
+        printf("(%d,%d)", x, y);
     }
     printf("\n");
 }
 
-List *work(List *head1, List *head2)
-{
-    
-    List *p1 = head1->next;
-    List *p2 = head2->next;
-    List *head3 = (List *)malloc(sizeof(List));
-    head3->next = NULL;
-    List *tail3 = head3;
-
-    while (p1 && p2)
-    {
-        if (p1->data < p2->data)
-        {
-            p1 = p1->next;
-        }
-        else if (p1->data > p2->data)
-        {
-            p2 = p2->next;
-        }
-        else
-        {
-            List *node = (List *)malloc(sizeof(List));
-            node->data = p1->data;
-            node->next = NULL;
-            tail3->next = node;
-            tail3 = node;
-            p1 = p1->next;
-            p2 = p2->next;
-        }
-    }
-    return head3;
-}
-
 int main()
 {
-    List *head1 = creatList();
-    List *head2 = creatList();
-    List *head3 = work(head1, head2);
-    printList(head3);
+    int n;
+    scanf("%d", &n);
+
+    int **maze = (int **)malloc(n * sizeof(int *));
+    for (int i = 0; i < n; i++)
+        maze[i] = (int *)malloc(n * sizeof(int));
+
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            scanf("%d", &maze[i][j]);
+        }
+    }
+
+    Stack s;
+    initStack(&s);
+
+    int x = 1, y = 1;
+    push(&s, x, y);
+    maze[x][y] = 1;//记录起点并标记为已访问
+
+    int found = 0;
+    int directions[4][2] = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}}; // 右下左上
+
+    while (!isEmpty(&s))
+    {
+        int currX, currY;
+        peek(&s, &currX, &currY);
+        if (currX == n - 2 && currY == n - 2)
+        {
+            found = 1;
+            break;
+        }
+
+        int moved = 0;
+        
+        for (int i = 0; i < 4; i++)
+        {
+            int newX = currX + directions[i][0];
+            int newY = currY + directions[i][1];
+
+            if (newX > 0 && newX < n - 1 && newY > 0 && newY < n - 1 && maze[newX][newY] == 0)
+            {
+                push(&s, newX, newY);
+                maze[newX][newY] = 1;
+                moved = 1;
+                break;
+            }
+        }
+        if (!moved)
+        {
+            int discardX, discardY;
+            pop(&s, &discardX, &discardY);
+        }
+    }
+
+    if (found)
+    {
+        printPath(&s);
+    }
+    else
+    {
+        printf("NO\n");
+    }
+
+    // 释放内存
+    while (!isEmpty(&s))
+    {
+        int discardX, discardY;
+        pop(&s, &discardX, &discardY);
+    }
+
+    for (int i = 0; i < n; i++)
+        free(maze[i]);
+    free(maze);
+
     return 0;
 }
