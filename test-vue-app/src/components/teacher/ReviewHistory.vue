@@ -68,7 +68,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="application in filteredApplications" :key="application.id">
+            <tr v-for="application in paginatedApplications" :key="application.id">
               <td>{{ application.studentName }}</td>
               <td>{{ application.studentId }}</td>
               <td>{{ getDepartmentText(application.department) }}</td>
@@ -89,7 +89,7 @@
                 </button>
               </td>
             </tr>
-            <tr v-if="filteredApplications.length === 0">
+            <tr v-if="paginatedApplications.length === 0">
               <td colspan="11" class="no-data">暂无审核记录</td>
             </tr>
           </tbody>
@@ -232,11 +232,14 @@ const closeDetailModal = () => {
 
 // 生命周期
 onMounted(() => {
-  // 从本地存储加载已审核的申请数据
+  // 从本地存储加载数据
   const savedApplications = JSON.parse(localStorage.getItem('studentApplications') || '[]')
+  console.log('审核记录页面 - 所有申请:', savedApplications)
+  
   applications.value = savedApplications.filter(app => 
     app.status === 'approved' || app.status === 'rejected'
   )
+  console.log('已审核的申请:', applications.value)
 })
 </script>
 

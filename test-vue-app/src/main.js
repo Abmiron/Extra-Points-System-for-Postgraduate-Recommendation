@@ -4,16 +4,12 @@ import router from './router'
 import { createPinia } from 'pinia'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faUser, faLock , faSpinner, faFileUpload,faHistory,faChartPie,faBell,faSignOutAlt,faUsers,faDatabase,faRuler,faCog,
-  faDownload,faPlus,faBan,faCheck,faKey,faTrash,faEdit,faChevronLeft,faChevronRight,faTimes,
-  faArchive,faEye
-} from '@fortawesome/free-solid-svg-icons'
 
-// 添加图标到库
-library.add(faUser, faLock, faSpinner, faFileUpload,faHistory,faChartPie,faBell,faSignOutAlt,faUsers,faDatabase,faRuler,faCog,
-  faDownload,faPlus,faBan,faCheck,faKey,faTrash,faEdit,faChevronLeft,faChevronRight,faTimes,
-  faArchive,faEye
-)
+// 引入整个 solid 图标包
+import { fas } from '@fortawesome/free-solid-svg-icons'
+
+// 添加所有 solid 图标到库
+library.add(fas)
 
 // 全局样式
 import './assets/styles/main.css'
