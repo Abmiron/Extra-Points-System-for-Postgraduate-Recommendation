@@ -373,141 +373,31 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.filters {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.filter-group {
+/* 组件特有样式 */
+.date-range-group {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.filter-label {
-  font-size: 14px;
-  color: #666;
-  white-space: nowrap;
+.date-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-select, .form-control.small {
-  padding: 6px 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
+.date-separator {
+  color: #999;
+  font-size: 14px;
+  white-space: nowrap;
 }
 
 .form-control.small {
   width: 120px;
 }
+</style>
 
-.application-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.application-table th,
-.application-table td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.application-table th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-}
-
-.application-table tr:hover {
-  background-color: #f8f9fa;
-}
-
-.no-data {
-  text-align: center;
-  color: #666;
-  padding: 40px;
-}
-
-.pagination {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 20px;
-}
-
-.pagination-controls {
-  display: flex;
-  gap: 10px;
-}
-
-.btn {
-  padding: 8px 12px;
-  border: none;
-  border-radius: 4px;
-  background-color: #003366;
-  color: white;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.btn:hover {
-  background-color: #002244;
-}
-
-.btn-outline {
-  background-color: transparent;
-  color: #003366;
-  border: 1px solid #003366;
-}
-
-.btn-outline:hover {
-  background-color: #003366;
-  color: white;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn:disabled:hover {
-  background-color: #003366;
-}
-
-.small-btn {
-  padding: 6px 10px;
-  font-size: 12px;
-}
-
-@media (max-width: 768px) {
-  .filters {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .filter-group {
-    width: 100%;
-  }
-  
-  .pagination {
-    flex-direction: column;
-    gap: 15px;
-    align-items: flex-start;
-  }
-  
-  .application-table {
-    font-size: 14px;
-  }
-  
-  .application-table th,
-  .application-table td {
-    padding: 8px 10px;
-  }
-}
+<style>
+/* 引入共享样式 */
+@import '../common/shared-styles.css';
 </style>

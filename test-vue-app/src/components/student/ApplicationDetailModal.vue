@@ -2,7 +2,7 @@
   <div class="modal-overlay" @click="$emit('close')">
     <div class="modal-content two-column-layout" @click.stop>
       <div class="modal-header">
-        <h3>审核详情</h3>
+        <h3>申请详情</h3>
         <button class="close-btn" @click="$emit('close')">
           <font-awesome-icon :icon="['fas', 'times']" />
         </button>
@@ -112,7 +112,7 @@
           </div>
         </div>
 
-        <!-- 右侧：申请信息和审核操作 -->
+        <!-- 右侧：申请信息 -->
         <div class="right-column">
           <!-- 学生基本信息 -->
           <div class="card compact-card">
@@ -120,11 +120,11 @@
             <div class="compact-row">
               <div class="compact-group">
                 <label>姓名</label>
-                <span>{{ application.studentName }}</span>
+                <span>{{ application.studentName || '当前用户' }}</span>
               </div>
               <div class="compact-group">
                 <label>学号</label>
-                <span>{{ application.studentId }}</span>
+                <span>{{ application.studentId || 'N/A' }}</span>
               </div>
               <div class="compact-group">
                 <label>所在系</label>
@@ -161,9 +161,17 @@
                 <label>奖项类型</label>
                 <span>{{ application.awardType === 'individual' ? '个人' : '集体' }}</span>
               </div>
+              <div v-if="application.awardType === 'team'" class="compact-group">
+                <label>作者排序</label>
+                <span>第 {{ application.authorOrder }} 作者</span>
+              </div>
               <div class="compact-group">
                 <label>自评分数</label>
                 <span>{{ application.selfScore }}</span>
+              </div>
+              <div class="compact-group">
+                <label>最终分数</label>
+                <span>{{ application.finalScore || '-' }}</span>
               </div>
             </div>
             
@@ -173,39 +181,37 @@
             </div>
           </div>
 
-          <!-- 审核操作区 -->
+          <!-- 审核状态信息 -->
           <div class="card compact-card">
-            <div class="card-title">审核操作</div>
+            <div class="card-title">审核状态</div>
             <div class="compact-row">
               <div class="compact-group">
-                <label>核定加分</label>
-                <input type="number" class="form-control small" v-model="reviewData.finalScore" 
-                       step="0.1" min="0" max="5" placeholder="0-5分">
+                <label>审核状态</label>
+                <span :class="`status-badge status-${application.status}`">
+                  {{ getStatusText(application.status) }}
+                </span>
+              </div>
+              <div class="compact-group">
+                <label>申请时间</label>
+                <span>{{ formatDate(application.appliedAt || application.createdAt) }}</span>
+              </div>
+              <div class="compact-group">
+                <label>审核时间</label>
+                <span>{{ formatDate(application.reviewedAt) || '-' }}</span>
+              </div>
+              <div class="compact-group">
+                <label>审核人</label>
+                <span>{{ application.reviewedBy || '-' }}</span>
               </div>
             </div>
-            <div class="compact-row">
-              <div class="compact-group half-width">
-                <label>核定说明</label>
-                <textarea class="form-control small-textarea" v-model="reviewData.approveComment" 
-                          rows="2" placeholder="通过说明（可选）"></textarea>
-              </div>
-              <div class="compact-group half-width">
-                <label>驳回意见</label>
-                <textarea class="form-control small-textarea" v-model="reviewData.rejectComment" 
-                          rows="2" placeholder="驳回理由"></textarea>
-              </div>
-            </div>
-            <div class="form-actions-compact">
-              <button type="button" class="btn btn-reject" @click="rejectApplication">
-                <font-awesome-icon :icon="['fas', 'times']" /> 驳回
-              </button>
-              <button type="button" class="btn btn-approve" @click="approveApplication">
-                <font-awesome-icon :icon="['fas', 'check']" /> 通过
-              </button>
+            <div class="compact-group full-width" v-if="application.reviewComment">
+              <label>审核意见</label>
+              <div class="review-comment">{{ application.reviewComment }}</div>
             </div>
           </div>
         </div>
       </div>
+      
     </div>
   </div>
 </template>
@@ -220,13 +226,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['approve', 'reject', 'close'])
-
-const reviewData = reactive({
-  finalScore: 0,
-  approveComment: '',
-  rejectComment: ''
-})
+const emit = defineEmits(['close'])
 
 // 图片相关状态
 const currentImageIndex = ref(0)
@@ -380,13 +380,13 @@ const downloadFile = (file) => {
   }
 }
 
+const onPreviewImageLoad = () => {
+  // 图片加载完成后的处理
+}
+
 // 监听 application 变化
 watch(() => props.application, (newApp) => {
   if (newApp) {
-    reviewData.finalScore = newApp.selfScore || 0
-    reviewData.approveComment = ''
-    reviewData.rejectComment = ''
-    
     currentImageIndex.value = 0
     resetPreviewZoom()
   }
@@ -403,39 +403,33 @@ const getMajorText = (major) => {
   return majors[major] || major
 }
 
-const getTypeText = (type) => type === 'academic' ? '学术专长' : '综合表现'
+const getTypeText = (type) => {
+  return type === 'academic' ? '学术专长' : '综合表现'
+}
 
 const getLevelText = (level) => {
-  const levels = { national: '国家级', provincial: '省级', municipal: '市级', school: '校级' }
+  const levels = {
+    national: '国家级',
+    provincial: '省级',
+    municipal: '市级',
+    school: '校级'
+  }
   return levels[level] || level
+}
+
+const getStatusText = (status) => {
+  const statusText = {
+    draft: '草稿',
+    pending: '待审核',
+    approved: '已通过',
+    rejected: '未通过'
+  }
+  return statusText[status] || status
 }
 
 const formatDate = (dateString) => {
   if (!dateString) return '-'
   return new Date(dateString).toLocaleDateString('zh-CN')
-}
-
-const approveApplication = () => {
-  if (!reviewData.finalScore || reviewData.finalScore <= 0) {
-    alert('请输入有效的核定分数')
-    return
-  }
-  
-  if (reviewData.finalScore > 5) {
-    alert('核定分数不能超过5分')
-    return
-  }
-  
-  emit('approve', props.application.id, reviewData.finalScore, reviewData.approveComment)
-}
-
-const rejectApplication = () => {
-  if (!reviewData.rejectComment) {
-    alert('请填写驳回理由')
-    return
-  }
-  
-  emit('reject', props.application.id, reviewData.rejectComment)
 }
 </script>
 
@@ -708,7 +702,7 @@ const rejectApplication = () => {
   margin-bottom: 12px;
   color: #003366;
   padding-bottom: 8px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #ffffff;
   display: flex;
   align-items: center;
 }
@@ -769,39 +763,43 @@ const rejectApplication = () => {
   border-left: 3px solid #003366;
 }
 
-.form-control.small {
-  width: 100px;
-}
-
-.form-control.small-textarea {
-  resize: vertical;
-  min-height: 60px;
+.review-comment {
   font-size: 13px;
+  line-height: 1.4;
+  color: #555;
+  background: #fff3cd;
+  padding: 8px 10px;
+  border-radius: 4px;
+  border-left: 4px solid #ffc107;
 }
 
-.form-actions-compact {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  margin-top: 15px;
-  padding-top: 12px;
-  border-top: 1px solid #eee;
+/* 状态徽章 */
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
 }
 
-.btn-approve {
-  background-color: #28a745;
+.status-draft {
+  background-color: #fef5e7;
+  color: #e67e22;
 }
 
-.btn-approve:hover {
-  background-color: #218838;
+.status-pending {
+  background-color: #ebf5fb;
+  color: #3498db;
 }
 
-.btn-reject {
-  background-color: #dc3545;
+.status-approved {
+  background-color: #eafaf1;
+  color: #27ae60;
 }
 
-.btn-reject:hover {
-  background-color: #c82333;
+.status-rejected {
+  background-color: #fdedec;
+  color: #e74c3c;
 }
 
 /* 响应式设计 */

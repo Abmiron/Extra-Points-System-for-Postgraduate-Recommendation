@@ -227,10 +227,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 组件特有样式 */
 .form-row {
   display: flex;
   gap: 20px;
   margin-bottom: 20px;
+  padding: 0 20px;
 }
 
 .form-row .form-group {
@@ -239,12 +241,14 @@ onMounted(() => {
 
 .form-group {
   margin-bottom: 20px;
+  padding: 0 20px;
 }
 
 .form-label {
   display: block;
   margin-bottom: 8px;
   font-weight: 500;
+  color: #333;
 }
 
 .form-control {
@@ -253,6 +257,7 @@ onMounted(() => {
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
+  transition: all 0.2s ease;
 }
 
 .form-control:focus {
@@ -271,9 +276,9 @@ onMounted(() => {
   display: flex;
   gap: 15px;
   justify-content: flex-end;
-  margin-top: 30px;
-  padding-top: 20px;
+  margin-top: 10px;
   border-top: 1px solid #eee;
+  background-color: #ffffff;
 }
 
 .radio-group {
@@ -292,35 +297,6 @@ onMounted(() => {
   font-size: 12px;
   color: #6c757d;
   margin-top: 5px;
-}
-
-.btn {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  background-color: #003366;
-  color: white;
-  transition: background-color 0.3s;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.btn:hover {
-  background-color: #002244;
-}
-
-.btn-outline {
-  background-color: transparent;
-  color: #003366;
-  border: 1px solid #003366;
-}
-
-.btn-outline:hover {
-  background-color: #003366;
-  color: white;
 }
 
 .system-status {
@@ -345,6 +321,7 @@ onMounted(() => {
   background-color: #ffc107;
 }
 
+/* 响应式设计 */
 @media (max-width: 768px) {
   .form-row {
     flex-direction: column;
@@ -355,5 +332,30 @@ onMounted(() => {
     flex-direction: column;
     gap: 10px;
   }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .form-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
+
+@media (max-width: 480px) {
+  .form-row,
+  .form-group {
+    padding: 0 15px;
+  }
+  
+  .form-actions {
+    padding: 15px;
+  }
+}
+</style>
+
+<style>
+/* 引入共享样式 */
+@import '../common/shared-styles.css';
 </style>

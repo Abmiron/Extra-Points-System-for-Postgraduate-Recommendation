@@ -2,9 +2,6 @@
   <div class="page-content">
     <div class="page-title">
       <span>申请记录</span>
-      <button class="btn" @click="$emit('new-application')">
-        <font-awesome-icon :icon="['fas', 'plus']" /> 新建申请
-      </button>
     </div>
 
     <!-- 筛选区域 -->
@@ -67,19 +64,21 @@
               <td>{{ application.selfScore }}</td>
               <td>{{ application.finalScore || '-' }}</td>
               <td>
-                <button class="btn-outline btn small-btn" @click="viewApplication(application)">
-                  <font-awesome-icon :icon="['fas', 'eye']" />
-                </button>
-                <button v-if="application.status === 'draft'" 
-                        class="btn-outline btn small-btn" 
-                        @click="editApplication(application)">
-                  <font-awesome-icon :icon="['fas', 'edit']" />
-                </button>
-                <button v-if="application.status === 'draft'" 
-                        class="btn-outline btn small-btn" 
-                        @click="deleteApplication(application.id)">
-                  <font-awesome-icon :icon="['fas', 'trash']" />
-                </button>
+                <div class="action-buttons">
+                  <button class="btn-outline btn small-btn" @click="viewApplication(application)" title="查看">
+                    <font-awesome-icon :icon="['fas', 'eye']" />
+                  </button>
+                  <button v-if="application.status === 'draft'" 
+                          class="btn-outline btn small-btn" 
+                          @click="editApplication(application)" title="编辑">
+                    <font-awesome-icon :icon="['fas', 'edit']" />
+                  </button>
+                  <button v-if="application.status === 'draft'" 
+                          class="btn-outline btn small-btn" 
+                          @click="deleteApplication(application.id)" title="删除">
+                    <font-awesome-icon :icon="['fas', 'trash']" />
+                  </button>
+                </div>
               </td>
             </tr>
             <tr v-if="filteredApplications.length === 0">
@@ -104,91 +103,17 @@
     </div>
 
     <!-- 申请详情模态框 -->
-    <div v-if="selectedApplication" class="modal-overlay" @click="closeModal">
-      <div class="modal-content large" @click.stop>
-        <div class="modal-header">
-          <h3>申请详情</h3>
-          <button class="close-btn" @click="closeModal">
-            <font-awesome-icon :icon="['fas', 'times']" />
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="application-detail">
-            <div class="detail-section">
-              <h4>基本信息</h4>
-              <div class="detail-grid">
-                <div class="detail-item">
-                  <label>申请类型:</label>
-                  <span>{{ getTypeText(selectedApplication.applicationType) }}</span>
-                </div>
-                <div class="detail-item">
-                  <label>项目名称:</label>
-                  <span>{{ selectedApplication.projectName }}</span>
-                </div>
-                <div class="detail-item">
-                  <label>获奖时间:</label>
-                  <span>{{ formatDate(selectedApplication.awardDate) }}</span>
-                </div>
-                <div class="detail-item">
-                  <label>奖项级别:</label>
-                  <span>{{ getLevelText(selectedApplication.awardLevel) }}</span>
-                </div>
-                <div class="detail-item">
-                  <label>奖项类型:</label>
-                  <span>{{ selectedApplication.awardType === 'individual' ? '个人奖项' : '集体奖项' }}</span>
-                </div>
-                <div v-if="selectedApplication.awardType === 'team'" class="detail-item">
-                  <label>作者排序:</label>
-                  <span>第 {{ selectedApplication.authorOrder }} 作者</span>
-                </div>
-              </div>
-            </div>
-            
-            <div class="detail-section">
-              <h4>评分信息</h4>
-              <div class="detail-grid">
-                <div class="detail-item">
-                  <label>自评分数:</label>
-                  <span>{{ selectedApplication.selfScore }}</span>
-                </div>
-                <div class="detail-item">
-                  <label>最终分数:</label>
-                  <span>{{ selectedApplication.finalScore || '-' }}</span>
-                </div>
-                <div class="detail-item">
-                  <label>审核状态:</label>
-                  <span :class="`status-badge status-${selectedApplication.status}`">
-                    {{ getStatusText(selectedApplication.status) }}
-                  </span>
-                </div>
-                <div v-if="selectedApplication.reviewedAt" class="detail-item">
-                  <label>审核时间:</label>
-                  <span>{{ formatDate(selectedApplication.reviewedAt) }}</span>
-                </div>
-              </div>
-            </div>
-            
-            <div class="detail-section">
-              <h4>加分依据说明</h4>
-              <p class="description">{{ selectedApplication.description }}</p>
-            </div>
-            
-            <div v-if="selectedApplication.reviewComment" class="detail-section">
-              <h4>审核意见</h4>
-              <p class="review-comment">{{ selectedApplication.reviewComment }}</p>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn" @click="closeModal">关闭</button>
-        </div>
-      </div>
-    </div>
+    <ApplicationDetailModal 
+      v-if="selectedApplication"
+      :application="selectedApplication"
+      @close="closeModal"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import ApplicationDetailModal from './ApplicationDetailModal.vue'
 
 const emit = defineEmits(['new-application'])
 
@@ -319,61 +244,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.filters {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  align-items: center;
-}
+/* 引入共享样式 */
+@import '../common/shared-styles.css';
 
-.filter-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.filter-label {
-  font-size: 14px;
-  color: #666;
-  white-space: nowrap;
-}
-
-select {
-  padding: 6px 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-}
-
-.application-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.application-table th,
-.application-table td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.application-table th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-}
-
-.application-table tr:hover {
-  background-color: #f8f9fa;
-}
-
-.status-badge {
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
+/* 状态徽章特有样式 */
 .status-draft {
   background-color: #fef5e7;
   color: #e67e22;
@@ -394,129 +268,7 @@ select {
   color: #e74c3c;
 }
 
-.no-data {
-  text-align: center;
-  color: #666;
-  padding: 40px;
-}
-
-.pagination {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 20px;
-}
-
-.pagination-controls {
-  display: flex;
-  gap: 10px;
-}
-
-.btn {
-  padding: 8px 12px;
-  border: none;
-  border-radius: 4px;
-  background-color: #003366;
-  color: white;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.btn:hover {
-  background-color: #002244;
-}
-
-.btn-outline {
-  background-color: transparent;
-  color: #003366;
-  border: 1px solid #003366;
-}
-
-.btn-outline:hover {
-  background-color: #003366;
-  color: white;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn:disabled:hover {
-  background-color: #003366;
-}
-
-.small-btn {
-  padding: 4px 8px;
-  font-size: 12px;
-}
-
-/* 模态框样式 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 800px;
-  max-height: 90vh;
-  overflow: auto;
-}
-
-.modal-content.large {
-  max-width: 1000px;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #eee;
-}
-
-.modal-header h3 {
-  margin: 0;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  color: #666;
-}
-
-.close-btn:hover {
-  color: #333;
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  padding: 20px;
-  border-top: 1px solid #eee;
-}
-
-/* 申请详情样式 */
+/* 申请详情模态框特有样式 */
 .application-detail {
   display: flex;
   flex-direction: column;
@@ -561,29 +313,74 @@ select {
   border-left: 4px solid #ffc107;
 }
 
+/* 大尺寸模态框 */
+.modal-content.large {
+  max-width: 1000px;
+}
+
+/* 响应式调整 */
 @media (max-width: 768px) {
-  .filters {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .filter-group {
-    width: 100%;
-  }
-  
-  .pagination {
-    flex-direction: column;
-    gap: 15px;
-    align-items: flex-start;
-  }
-  
   .detail-grid {
     grid-template-columns: 1fr;
   }
   
-  .modal-content {
+  .detail-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  
+  .modal-content.large {
     width: 95%;
     margin: 20px;
+  }
+}
+
+/* 操作按钮组优化 */
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.action-buttons .small-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.action-buttons .small-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 操作列宽度设置 */
+.application-table th:last-child,
+.application-table td:last-child {
+  width: 140px;
+  min-width: 140px;
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .action-buttons {
+    gap: 3px;
+  }
+  
+  .action-buttons .small-btn {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    font-size: 11px;
   }
 }
 </style>

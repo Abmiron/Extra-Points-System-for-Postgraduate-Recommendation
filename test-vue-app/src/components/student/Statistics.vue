@@ -102,18 +102,6 @@
         </table>
       </div>
     </div>
-
-    <!-- 成绩分布图表区域 -->
-    <div class="card">
-      <div class="card-title">成绩分布</div>
-      <div class="chart-container">
-        <div class="chart-placeholder">
-          <font-awesome-icon :icon="['fas', 'chart-bar']" size="3x" />
-          <p>成绩分布图表</p>
-          <p class="help-text">此处将显示可视化成绩分布图表</p>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -199,6 +187,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 引入共享样式 */
+@import '../common/shared-styles.css';
+
+/* 统计卡片特有样式 */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -234,83 +226,10 @@ onMounted(() => {
   margin-top: 5px;
 }
 
-.chart-container {
-  padding: 20px;
-}
-
-.chart-placeholder {
-  height: 300px;
-  background-color: #f8f9fa;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  border-radius: 8px;
-  color: #666;
-}
-
-.chart-placeholder svg {
-  margin-bottom: 15px;
-  color: #003366;
-}
-
-.application-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.application-table th,
-.application-table td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.application-table th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-}
-
-.application-table tr:hover {
-  background-color: #f8f9fa;
-}
-
-.status-badge {
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.status-approved {
-  background-color: #eafaf1;
-  color: #27ae60;
-}
-
-.no-data {
-  text-align: center;
-  color: #666;
-  padding: 40px;
-}
-
-.help-text {
-  font-size: 14px;
-  color: #888;
-  margin-top: 10px;
-}
-
+/* 响应式调整 */
 @media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: 1fr;
-  }
-  
-  .application-table {
-    font-size: 14px;
-  }
-  
-  .application-table th,
-  .application-table td {
-    padding: 8px 10px;
   }
 }
 </style>

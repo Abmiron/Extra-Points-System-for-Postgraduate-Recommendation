@@ -2,16 +2,18 @@
   <div class="page-content">
     <div class="page-title">
       <span>规则管理</span>
-      <button class="btn" @click="showAddRuleModal = true">
-        <font-awesome-icon :icon="['fas', 'plus']" /> 添加规则
-      </button>
+      <div class="page-title-actions">
+        <button class="btn btn-outline" @click="showAddRuleModal = true">
+          <font-awesome-icon :icon="['fas', 'plus']" /> 添加规则
+        </button>
+      </div>
     </div>
 
     <!-- 筛选区域 -->
     <div class="filters">
       <div class="filter-group">
         <span class="filter-label">规则类型:</span>
-        <select v-model="filters.type">
+        <select class="form-control" v-model="filters.type">
           <option value="all">全部</option>
           <option value="academic">学术专长</option>
           <option value="comprehensive">综合表现</option>
@@ -19,7 +21,7 @@
       </div>
       <div class="filter-group">
         <span class="filter-label">状态:</span>
-        <select v-model="filters.status">
+        <select class="form-control" v-model="filters.status">
           <option value="all">全部</option>
           <option value="active">启用</option>
           <option value="disabled">禁用</option>
@@ -44,7 +46,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="rule in filteredRules" :key="rule.id">
+            <tr v-for="rule in paginatedRules" :key="rule.id">
               <td>{{ rule.name }}</td>
               <td>{{ getTypeText(rule.type) }}</td>
               <td>{{ rule.level }}</td>
@@ -56,22 +58,26 @@
               </td>
               <td>{{ formatDate(rule.createdAt) }}</td>
               <td>
-                <button class="btn-outline btn small-btn" @click="editRule(rule)">
-                  <font-awesome-icon :icon="['fas', 'edit']" />
-                </button>
-                <button v-if="rule.status === 'active'" 
-                        class="btn-outline btn small-btn" 
-                        @click="toggleRuleStatus(rule.id, 'disabled')">
-                  <font-awesome-icon :icon="['fas', 'ban']" />
-                </button>
-                <button v-else 
-                        class="btn-outline btn small-btn" 
-                        @click="toggleRuleStatus(rule.id, 'active')">
-                  <font-awesome-icon :icon="['fas', 'check']" />
-                </button>
+                <div class="action-buttons">
+                  <button class="btn-outline btn small-btn" @click="editRule(rule)" title="编辑">
+                    <font-awesome-icon :icon="['fas', 'edit']" />
+                  </button>
+                  <button v-if="rule.status === 'active'" 
+                          class="btn-outline btn small-btn" 
+                          @click="toggleRuleStatus(rule.id, 'disabled')"
+                          title="禁用">
+                    <font-awesome-icon :icon="['fas', 'ban']" />
+                  </button>
+                  <button v-else 
+                          class="btn-outline btn small-btn" 
+                          @click="toggleRuleStatus(rule.id, 'active')"
+                          title="启用">
+                    <font-awesome-icon :icon="['fas', 'check']" />
+                  </button>
+                </div>
               </td>
             </tr>
-            <tr v-if="filteredRules.length === 0">
+            <tr v-if="paginatedRules.length === 0">
               <td colspan="7" class="no-data">暂无规则数据</td>
             </tr>
           </tbody>
@@ -81,7 +87,7 @@
 
     <!-- 分页控件 -->
     <div class="pagination">
-      <div>显示 {{ startIndex + 1 }}-{{ endIndex }} 条，共 {{ totalRules }} 条记录</div>
+      <div class="pagination-info">显示 {{ startIndex + 1 }}-{{ endIndex }} 条，共 {{ totalRules }} 条记录</div>
       <div class="pagination-controls">
         <button class="btn-outline btn" :disabled="currentPage === 1" @click="prevPage">
           <font-awesome-icon :icon="['fas', 'chevron-left']" /> 上一页
@@ -203,6 +209,97 @@ const rules = ref([
     status: 'disabled',
     description: '获得省级优秀志愿者称号',
     createdAt: '2023-02-20T00:00:00Z'
+  },
+  // 添加更多测试数据
+  {
+    id: 4,
+    name: 'EI论文',
+    type: 'academic',
+    level: 'A',
+    score: 3.0,
+    status: 'active',
+    description: '在EI期刊发表论文',
+    createdAt: '2023-03-10T00:00:00Z'
+  },
+  {
+    id: 5,
+    name: '省级竞赛一等奖',
+    type: 'academic',
+    level: '省级',
+    score: 2.5,
+    status: 'active',
+    description: '获得省级竞赛一等奖',
+    createdAt: '2023-03-15T00:00:00Z'
+  },
+  {
+    id: 6,
+    name: '学生干部',
+    type: 'comprehensive',
+    level: '校级',
+    score: 1.5,
+    status: 'active',
+    description: '担任校级学生干部',
+    createdAt: '2023-04-01T00:00:00Z'
+  },
+  {
+    id: 7,
+    name: '发明专利',
+    type: 'academic',
+    level: '国家级',
+    score: 4.5,
+    status: 'active',
+    description: '获得国家发明专利',
+    createdAt: '2023-04-05T00:00:00Z'
+  },
+  {
+    id: 8,
+    name: '社会实践优秀',
+    type: 'comprehensive',
+    level: '校级',
+    score: 1.0,
+    status: 'disabled',
+    description: '社会实践获得优秀评价',
+    createdAt: '2023-04-10T00:00:00Z'
+  },
+  {
+    id: 9,
+    name: '核心期刊论文',
+    type: 'academic',
+    level: 'B',
+    score: 2.0,
+    status: 'active',
+    description: '在核心期刊发表论文',
+    createdAt: '2023-04-15T00:00:00Z'
+  },
+  {
+    id: 10,
+    name: '文体竞赛获奖',
+    type: 'comprehensive',
+    level: '省级',
+    score: 1.5,
+    status: 'active',
+    description: '获得省级文体竞赛奖项',
+    createdAt: '2023-04-20T00:00:00Z'
+  },
+  {
+    id: 11,
+    name: '软件著作权',
+    type: 'academic',
+    level: '国家级',
+    score: 3.0,
+    status: 'active',
+    description: '获得软件著作权',
+    createdAt: '2023-05-01T00:00:00Z'
+  },
+  {
+    id: 12,
+    name: '志愿服务时长',
+    type: 'comprehensive',
+    level: '校级',
+    score: 0.5,
+    status: 'active',
+    description: '累计志愿服务时长达标',
+    createdAt: '2023-05-05T00:00:00Z'
   }
 ])
 
@@ -308,5 +405,17 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 样式与UserManagement.vue类似，已省略重复部分 */
+/* 组件特有样式 - 如果没有特殊样式，可以留空 */
+/* 覆盖或补充共享样式 */
+.application-table th:last-child,
+.application-table td:last-child {
+  width: 120px;
+  min-width: 120px;
+  text-align: center;
+}
+</style>
+
+<style>
+/* 引入共享样式 */
+@import '../common/shared-styles.css';
 </style>

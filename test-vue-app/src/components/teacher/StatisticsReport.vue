@@ -2,16 +2,18 @@
   <div class="page-content">
     <div class="page-title">
       <span>统计报表</span>
-      <button class="btn" @click="exportExcel">
-        <font-awesome-icon :icon="['fas', 'download']" /> 导出Excel
-      </button>
+      <div class="page-title-actions">
+        <button class="btn btn-outline" @click="exportExcel">
+          <font-awesome-icon :icon="['fas', 'download']" /> 导出Excel
+        </button>
+      </div>
     </div>
 
     <!-- 筛选区域 -->
     <div class="filters">
       <div class="filter-group">
         <span class="filter-label">所在系:</span>
-        <select v-model="filters.department">
+        <select class="form-control" v-model="filters.department">
           <option value="all">全部</option>
           <option value="cs">计算机科学系</option>
           <option value="se">软件工程系</option>
@@ -20,7 +22,7 @@
       </div>
       <div class="filter-group">
         <span class="filter-label">专业:</span>
-        <select v-model="filters.major">
+        <select class="form-control" v-model="filters.major">
           <option value="all">全部</option>
           <option value="cs">计算机科学与技术</option>
           <option value="se">软件工程</option>
@@ -29,7 +31,7 @@
       </div>
       <div class="filter-group">
         <span class="filter-label">学年:</span>
-        <select v-model="filters.academicYear">
+        <select class="form-control" v-model="filters.academicYear">
           <option value="2023">2023-2024</option>
           <option value="2022">2022-2023</option>
           <option value="2021">2021-2022</option>
@@ -73,6 +75,9 @@
               <td>{{ stat.avgSpecialtyScore }}</td>
               <td>{{ stat.avgComprehensiveScore }}</td>
               <td>{{ stat.avgTotalScore }}</td>
+            </tr>
+            <tr v-if="statistics.length === 0">
+              <td colspan="6" class="no-data">暂无统计数据</td>
             </tr>
           </tbody>
         </table>
@@ -192,26 +197,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.filters {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.filter-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.filter-label {
-  font-size: 14px;
-  color: #666;
-  white-space: nowrap;
-}
-
+/* 组件特有样式 */
 .chart-container {
   padding: 20px;
 }
@@ -232,31 +218,11 @@ onMounted(() => {
   color: #003366;
 }
 
-.application-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.application-table th,
-.application-table td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.application-table th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-}
-
-.application-table tr:hover {
-  background-color: #f8f9fa;
-}
-
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
+  padding: 20px;
 }
 
 .stat-card {
@@ -265,6 +231,13 @@ onMounted(() => {
   padding: 20px;
   text-align: center;
   border-left: 4px solid #003366;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .stat-value {
@@ -292,27 +265,25 @@ onMounted(() => {
   margin-top: 10px;
 }
 
+/* 响应式设计 */
 @media (max-width: 768px) {
-  .filters {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .filter-group {
-    width: 100%;
-  }
-  
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
-  .application-table {
-    font-size: 14px;
+}
+
+@media (max-width: 480px) {
+  .stat-card {
+    padding: 15px;
   }
   
-  .application-table th,
-  .application-table td {
-    padding: 8px 10px;
+  .stat-value {
+    font-size: 24px;
   }
 }
+</style>
+
+<style>
+/* 引入共享样式 */
+@import '../common/shared-styles.css';
 </style>

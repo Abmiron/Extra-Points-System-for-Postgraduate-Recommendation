@@ -2,7 +2,7 @@
   <div class="page-content">
     <div class="page-title">
       <span>个人信息</span>
-      <button class="btn" @click="toggleEdit" :disabled="saving">
+      <button class="btn btn-outline" @click="toggleEdit" :disabled="saving">
         <font-awesome-icon :icon="['fas', 'edit']" /> 
         {{ isEditing ? '取消编辑' : '编辑信息' }}
       </button>
@@ -260,87 +260,14 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.form-row {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-}
+/* 引入共享样式 */
+@import '../common/shared-styles.css';
 
-.form-row .form-group {
-  flex: 1;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-}
-
-.form-control {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.form-control:focus {
-  outline: none;
-  border-color: #003366;
-  box-shadow: 0 0 0 2px rgba(0, 51, 102, 0.2);
-}
-
+/* 组件特有样式 */
 .form-control:disabled {
   background-color: #f5f5f5;
   color: #666;
   cursor: not-allowed;
-}
-
-.form-actions {
-  display: flex;
-  gap: 15px;
-  justify-content: flex-end;
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 1px solid #eee;
-}
-
-.btn {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  background-color: #003366;
-  color: white;
-  transition: background-color 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.btn:hover:not(:disabled) {
-  background-color: #002244;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-outline {
-  background-color: transparent;
-  color: #003366;
-  border: 1px solid #003366;
-}
-
-.btn-outline:hover:not(:disabled) {
-  background-color: #003366;
-  color: white;
 }
 
 .help-text {
@@ -355,65 +282,12 @@ onMounted(() => {
   margin-top: 5px;
 }
 
-/* 模态框样式 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
+/* 模态框尺寸调整 */
 .modal-content {
-  background: white;
-  border-radius: 8px;
-  width: 90%;
   max-width: 500px;
-  max-height: 90vh;
-  overflow: auto;
 }
 
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #eee;
-}
-
-.modal-header h3 {
-  margin: 0;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  color: #666;
-}
-
-.close-btn:hover {
-  color: #333;
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 20px;
-  border-top: 1px solid #eee;
-}
-
+/* 响应式调整 */
 @media (max-width: 768px) {
   .form-row {
     flex-direction: column;

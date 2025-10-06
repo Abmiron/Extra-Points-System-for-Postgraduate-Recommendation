@@ -2,11 +2,11 @@
   <div class="page-content">
     <div class="page-title">
       <span>用户管理</span>
-      <div>
+      <div class="page-title-actions">
         <button class="btn btn-outline" @click="importUsers">
           <font-awesome-icon :icon="['fas', 'download']" /> 导入用户
         </button>
-        <button class="btn" @click="showAddUserModal = true">
+        <button class="btn btn-outline" @click="showAddUserModal = true">
           <font-awesome-icon :icon="['fas', 'plus']" /> 添加用户
         </button>
       </div>
@@ -28,7 +28,7 @@
       </div>
       <div class="filter-group">
         <span class="filter-label">学院:</span>
-        <select v-model="filters.faculty">
+        <select class="form-control" v-model="filters.faculty">
           <option value="all">全部</option>
           <option value="cs">计算机科学系</option>
           <option value="se">软件工程系</option>
@@ -37,7 +37,7 @@
       </div>
       <div class="filter-group">
         <span class="filter-label">状态:</span>
-        <select v-model="filters.status">
+        <select class="form-control" v-model="filters.status">
           <option value="all">全部</option>
           <option value="active">启用</option>
           <option value="disabled">禁用</option>
@@ -79,7 +79,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="user in filteredUsers" :key="user.id">
+            <tr v-for="user in paginatedUsers" :key="user.id">
               <td><input type="checkbox" v-model="selectedUsers" :value="user.id"></td>
               <td>{{ user.account }}</td>
               <td>{{ user.name }}</td>
@@ -92,28 +92,32 @@
               </td>
               <td>{{ formatDate(user.lastLogin) }}</td>
               <td>
-                <button class="btn-outline btn small-btn" @click="editUser(user)">
-                  <font-awesome-icon :icon="['fas', 'edit']" />
-                </button>
-                <button v-if="user.status === 'active'" 
-                        class="btn-outline btn small-btn" 
-                        @click="toggleUserStatus(user.id, 'disabled')">
-                  <font-awesome-icon :icon="['fas', 'ban']" />
-                </button>
-                <button v-else 
-                        class="btn-outline btn small-btn" 
-                        @click="toggleUserStatus(user.id, 'active')">
-                  <font-awesome-icon :icon="['fas', 'check']" />
-                </button>
-                <button class="btn-outline btn small-btn" @click="resetPassword(user.id)">
-                  <font-awesome-icon :icon="['fas', 'key']" />
-                </button>
-                <button class="btn-outline btn small-btn" @click="viewUserHistory(user.id)">
-                  <font-awesome-icon :icon="['fas', 'history']" />
-                </button>
+                <div class="action-buttons">
+                  <button class="btn-outline btn small-btn" @click="editUser(user)" title="编辑">
+                    <font-awesome-icon :icon="['fas', 'edit']" />
+                  </button>
+                  <button v-if="user.status === 'active'" 
+                          class="btn-outline btn small-btn" 
+                          @click="toggleUserStatus(user.id, 'disabled')"
+                          title="禁用">
+                    <font-awesome-icon :icon="['fas', 'ban']" />
+                  </button>
+                  <button v-else 
+                          class="btn-outline btn small-btn" 
+                          @click="toggleUserStatus(user.id, 'active')"
+                          title="启用">
+                    <font-awesome-icon :icon="['fas', 'check']" />
+                  </button>
+                  <button class="btn-outline btn small-btn" @click="resetPassword(user.id)" title="重置密码">
+                    <font-awesome-icon :icon="['fas', 'key']" />
+                  </button>
+                  <button class="btn-outline btn small-btn" @click="viewUserHistory(user.id)" title="操作历史">
+                    <font-awesome-icon :icon="['fas', 'history']" />
+                  </button>
+                </div>
               </td>
             </tr>
-            <tr v-if="filteredUsers.length === 0">
+            <tr v-if="paginatedUsers.length === 0">
               <td colspan="8" class="no-data">暂无用户数据</td>
             </tr>
           </tbody>
@@ -123,7 +127,7 @@
 
     <!-- 分页控件 -->
     <div class="pagination">
-      <div>显示 {{ startIndex + 1 }}-{{ endIndex }} 条，共 {{ totalUsers }} 条记录</div>
+      <div class="pagination-info">显示 {{ startIndex + 1 }}-{{ endIndex }} 条，共 {{ totalUsers }} 条记录</div>
       <div class="pagination-controls">
         <button class="btn-outline btn" :disabled="currentPage === 1" @click="prevPage">
           <font-awesome-icon :icon="['fas', 'chevron-left']" /> 上一页
@@ -285,12 +289,93 @@ const users = ref([
     roleName: '系统管理员',
     status: 'active',
     lastLogin: '2023-09-12T10:15:00Z'
+  },
+  // 添加更多测试数据
+  {
+    id: 5,
+    role: 'student',
+    account: '12320253219876',
+    name: '王同学',
+    faculty: 'ai',
+    major: 'ai',
+    status: 'active',
+    lastLogin: '2023-09-05T11:20:00Z'
+  },
+  {
+    id: 6,
+    role: 'teacher',
+    account: '2000654321',
+    name: '李老师',
+    faculty: 'se',
+    roleName: '评审员',
+    status: 'active',
+    lastLogin: '2023-09-08T16:45:00Z'
+  },
+  {
+    id: 7,
+    role: 'student',
+    account: '12320253214321',
+    name: '赵同学',
+    faculty: 'cs',
+    major: 'cs',
+    status: 'disabled',
+    lastLogin: '2023-08-20T09:30:00Z'
+  },
+  {
+    id: 8,
+    role: 'student',
+    account: '12320253218765',
+    name: '钱同学',
+    faculty: 'se',
+    major: 'se',
+    status: 'active',
+    lastLogin: '2023-09-15T14:10:00Z'
+  },
+  {
+    id: 9,
+    role: 'teacher',
+    account: '2000789012',
+    name: '陈老师',
+    faculty: 'ai',
+    roleName: '审核员',
+    status: 'active',
+    lastLogin: '2023-09-14T10:25:00Z'
+  },
+  {
+    id: 10,
+    role: 'student',
+    account: '12320253215432',
+    name: '孙同学',
+    faculty: 'ai',
+    major: 'ai',
+    status: 'active',
+    lastLogin: '2023-09-12T13:40:00Z'
+  },
+  {
+    id: 11,
+    role: 'student',
+    account: '12320253217654',
+    name: '周同学',
+    faculty: 'cs',
+    major: 'cs',
+    status: 'disabled',
+    lastLogin: '2023-08-18T15:55:00Z'
+  },
+  {
+    id: 12,
+    role: 'admin',
+    account: 'admin002',
+    name: '超级管理员',
+    faculty: 'cs',
+    roleName: '系统管理员',
+    status: 'active',
+    lastLogin: '2023-09-16T08:20:00Z'
   }
 ])
 
 // 计算属性
 const filteredUsers = computed(() => {
-  let filtered = users.value.filter(user => {
+  return users.value.filter(user => {
     const tabMatch = activeTab.value === user.role
     const keywordMatch = !filters.keyword || 
                          user.name.includes(filters.keyword) || 
@@ -300,10 +385,9 @@ const filteredUsers = computed(() => {
     
     return tabMatch && keywordMatch && facultyMatch && statusMatch
   })
-  
-  return filtered
 })
 
+// 分页相关计算属性
 const totalUsers = computed(() => filteredUsers.value.length)
 const totalPages = computed(() => Math.ceil(totalUsers.value / pageSize))
 const startIndex = computed(() => (currentPage.value - 1) * pageSize)
@@ -334,7 +418,7 @@ const searchUsers = () => {
 
 const toggleSelectAll = () => {
   if (selectAll.value) {
-    selectedUsers.value = filteredUsers.value.map(user => user.id)
+    selectedUsers.value = paginatedUsers.value.map(user => user.id)
   } else {
     selectedUsers.value = []
   }
@@ -427,18 +511,6 @@ const batchDelete = () => {
   }
 }
 
-const prevPage = () => {
-  if (currentPage.value > 1) {
-    currentPage.value--
-  }
-}
-
-const nextPage = () => {
-  if (currentPage.value < totalPages.value) {
-    currentPage.value++
-  }
-}
-
 const closeModal = () => {
   showAddUserModal.value = false
   editingUser.value = null
@@ -454,6 +526,19 @@ const closeModal = () => {
   })
 }
 
+// 分页方法
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
+}
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
+}
+
 // 生命周期
 onMounted(() => {
   // 可以从API加载用户数据
@@ -461,6 +546,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 组件特有样式 */
 .tabs {
   display: flex;
   margin-bottom: 20px;
@@ -468,282 +554,37 @@ onMounted(() => {
 }
 
 .tab-btn {
-  padding: 10px 20px;
+  padding: 12px 24px;
   background: none;
   border: none;
-  cursor: pointer;
-  font-size: 14px;
-  color: #666;
   border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .tab-btn.active {
-  color: #003366;
   border-bottom-color: #003366;
+  color: #003366;
   font-weight: 500;
-}
-
-.filters {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.filter-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.filter-label {
-  font-size: 14px;
-  color: #666;
-  white-space: nowrap;
 }
 
 .batch-actions {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 15px;
+  flex-wrap: wrap;
 }
 
-.application-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.application-table th,
-.application-table td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.application-table th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-}
-
-.application-table tr:hover {
-  background-color: #f8f9fa;
-}
-
-.status-badge {
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.status-approved {
-  background-color: #eafaf1;
-  color: #27ae60;
-}
-
-.status-rejected {
-  background-color: #fdedec;
-  color: #e74c3c;
-}
-
-.no-data {
+/* 覆盖或补充共享样式 */
+.application-table th:last-child,
+.application-table td:last-child {
+  width: 180px;
+  min-width: 180px;
   text-align: center;
-  color: #666;
-  padding: 40px;
 }
+</style>
 
-.pagination {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 20px;
-}
-
-.pagination-controls {
-  display: flex;
-  gap: 10px;
-}
-
-.btn {
-  padding: 8px 12px;
-  border: none;
-  border-radius: 4px;
-  background-color: #003366;
-  color: white;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.btn:hover {
-  background-color: #002244;
-}
-
-.btn-outline {
-  background-color: transparent;
-  color: #003366;
-  border: 1px solid #003366;
-}
-
-.btn-outline:hover {
-  background-color: #003366;
-  color: white;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn:disabled:hover {
-  background-color: #003366;
-}
-
-.small-btn {
-  padding: 5px 8px;
-  font-size: 12px;
-}
-
-/* 模态框样式 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 600px;
-  max-height: 90vh;
-  overflow: auto;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #eee;
-}
-
-.modal-header h3 {
-  margin: 0;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  color: #666;
-}
-
-.close-btn:hover {
-  color: #333;
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.form-row {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.form-row .form-group {
-  flex: 1;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-}
-
-.form-control {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.form-control:focus {
-  outline: none;
-  border-color: #003366;
-  box-shadow: 0 0 0 2px rgba(0, 51, 102, 0.2);
-}
-
-.form-actions {
-  display: flex;
-  gap: 15px;
-  justify-content: flex-end;
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 1px solid #eee;
-}
-
-.help-text {
-  font-size: 12px;
-  color: #6c757d;
-  margin-top: 5px;
-}
-
-@media (max-width: 768px) {
-  .filters {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .filter-group {
-    width: 100%;
-  }
-  
-  .batch-actions {
-    flex-wrap: wrap;
-  }
-  
-  .pagination {
-    flex-direction: column;
-    gap: 15px;
-    align-items: flex-start;
-  }
-  
-  .application-table {
-    font-size: 14px;
-  }
-  
-  .application-table th,
-  .application-table td {
-    padding: 8px 10px;
-  }
-  
-  .modal-content {
-    width: 95%;
-    margin: 20px;
-  }
-  
-  .form-row {
-    flex-direction: column;
-    gap: 0;
-  }
-}
+<style>
+/* 引入共享样式 */
+@import '../common/shared-styles.css';
 </style>

@@ -2,55 +2,50 @@
   <div class="page-content">
     <div class="page-title">
       <span>数据管理</span>
-      <button class="btn" @click="showCreateApplicationModal = true">
-        <font-awesome-icon :icon="['fas', 'plus']" /> 代创建申请
-      </button>
+      <div class="page-title-actions">
+        <button class="btn btn-outline" @click="showCreateApplicationModal = true">
+          <font-awesome-icon :icon="['fas', 'plus']" /> 代创建申请
+        </button>
+      </div>
     </div>
 
-    <!-- 高级搜索面板 -->
-    <div class="card">
-      <div class="card-title">高级搜索</div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">学生姓名</label>
-          <input type="text" class="form-control" v-model="filters.studentName" 
-                 placeholder="请输入学生姓名">
-        </div>
-        <div class="form-group">
-          <label class="form-label">学号</label>
-          <input type="text" class="form-control" v-model="filters.studentId" 
-                 placeholder="请输入学号">
-        </div>
-        <div class="form-group">
-          <label class="form-label">申请类型</label>
-          <select class="form-control" v-model="filters.applicationType">
-            <option value="all">全部</option>
-            <option value="academic">学术专长</option>
-            <option value="comprehensive">综合表现</option>
-          </select>
+    <!-- 搜索区域 - 修改为与用户管理组件相同样式 -->
+    <div class="filters">
+      <div class="filter-group">
+        <input type="text" class="form-control" v-model="filters.studentName" 
+               placeholder="学生姓名">
+      </div>
+      <div class="filter-group">
+        <input type="text" class="form-control" v-model="filters.studentId" 
+               placeholder="学号">
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">申请类型:</span>
+        <select class="form-control" v-model="filters.applicationType">
+          <option value="all">全部类型</option>
+          <option value="academic">学术专长</option>
+          <option value="comprehensive">综合表现</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">审核状态:</span>
+        <select class="form-control" v-model="filters.status">
+          <option value="all">全部状态</option>
+          <option value="pending">待审核</option>
+          <option value="approved">已通过</option>
+          <option value="rejected">未通过</option>
+        </select>
+      </div>
+      <div class="filter-group date-range-group">
+        <span class="filter-label">申请时间:</span>
+        <div class="date-range">
+          <input type="date" class="form-control" v-model="filters.startDate">
+          <span class="date-separator">至</span>
+          <input type="date" class="form-control" v-model="filters.endDate">
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">审核状态</label>
-          <select class="form-control" v-model="filters.status">
-            <option value="all">全部</option>
-            <option value="pending">待审核</option>
-            <option value="approved">已通过</option>
-            <option value="rejected">未通过</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">申请时间</label>
-          <input type="date" class="form-control" v-model="filters.startDate"> 
-          至 <input type="date" class="form-control" v-model="filters.endDate">
-        </div>
-        <div class="form-group">
-          <label class="form-label">&nbsp;</label>
-          <button class="btn" @click="searchApplications">搜索</button>
-          <button class="btn btn-outline" @click="resetFilters">重置</button>
-        </div>
-      </div>
+      <button class="btn" @click="searchApplications">搜索</button>
+      <button class="btn btn-outline" @click="resetFilters">重置</button>
     </div>
 
     <!-- 批量操作工具栏 -->
@@ -83,7 +78,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="application in filteredApplications" :key="application.id">
+            <tr v-for="application in paginatedApplications" :key="application.id">
               <td><input type="checkbox" v-model="selectedApplications" :value="application.id"></td>
               <td>{{ application.id }}</td>
               <td>{{ application.studentName }}</td>
@@ -99,18 +94,20 @@
               <td>{{ application.selfScore }}</td>
               <td>{{ application.finalScore || '-' }}</td>
               <td>
-                <button class="btn-outline btn small-btn" @click="viewApplication(application)">
-                  <font-awesome-icon :icon="['fas', 'eye']" />
-                </button>
-                <button class="btn-outline btn small-btn" @click="editApplication(application)">
-                  <font-awesome-icon :icon="['fas', 'edit']" />
-                </button>
-                <button class="btn-outline btn small-btn" @click="viewHistory(application.id)">
-                  <font-awesome-icon :icon="['fas', 'history']" />
-                </button>
+                <div class="action-buttons">
+                  <button class="btn-outline btn small-btn" @click="viewApplication(application)" title="查看">
+                    <font-awesome-icon :icon="['fas', 'eye']" />
+                  </button>
+                  <button class="btn-outline btn small-btn" @click="editApplication(application)" title="编辑">
+                    <font-awesome-icon :icon="['fas', 'edit']" />
+                  </button>
+                  <button class="btn-outline btn small-btn" @click="viewHistory(application.id)" title="操作历史">
+                    <font-awesome-icon :icon="['fas', 'history']" />
+                  </button>
+                </div>
               </td>
             </tr>
-            <tr v-if="filteredApplications.length === 0">
+            <tr v-if="paginatedApplications.length === 0">
               <td colspan="11" class="no-data">暂无申请数据</td>
             </tr>
           </tbody>
@@ -120,7 +117,7 @@
 
     <!-- 分页控件 -->
     <div class="pagination">
-      <div>显示 {{ startIndex + 1 }}-{{ endIndex }} 条，共 {{ totalApplications }} 条记录</div>
+      <div class="pagination-info">显示 {{ startIndex + 1 }}-{{ endIndex }} 条，共 {{ totalApplications }} 条记录</div>
       <div class="pagination-controls">
         <button class="btn-outline btn" :disabled="currentPage === 1" @click="prevPage">
           <font-awesome-icon :icon="['fas', 'chevron-left']" /> 上一页
@@ -338,6 +335,42 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 样式与UserManagement.vue类似，已省略重复部分 */
-/* 实际项目中应提取公共样式 */
+/* 组件特有样式 */
+.date-range-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-separator {
+  color: #999;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.batch-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+/* 覆盖或补充共享样式 */
+.application-table th:last-child,
+.application-table td:last-child {
+  width: 140px;
+  min-width: 140px;
+  text-align: center;
+}
+</style>
+
+<style>
+/* 引入共享样式 */
+@import '../common/shared-styles.css';
 </style>
