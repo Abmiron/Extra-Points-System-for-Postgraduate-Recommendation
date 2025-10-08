@@ -1,19 +1,10 @@
 <template>
   <div class="container">
-    <Header 
-      :user-name="authStore.userName" 
-      :user-avatar="authStore.userAvatar"
-      title="推免加分系统-审核端"
-    />
-    
+    <Header :user-name="authStore.userName" :user-avatar="authStore.userAvatar" title="推免加分系统-审核端" />
+
     <div class="content-wrapper">
-      <Sidebar 
-        :active-page="currentPage"
-        @page-change="switchPage"
-        :user-info="userInfo"
-        user-type="teacher"
-      />
-      
+      <Sidebar :active-page="currentPage" @page-change="switchPage" :user-info="userInfo" user-type="teacher" />
+
       <main class="main-content">
         <!-- 动态显示当前页面 -->
         <component :is="currentPageComponent" @new-application="switchToPendingReview" />

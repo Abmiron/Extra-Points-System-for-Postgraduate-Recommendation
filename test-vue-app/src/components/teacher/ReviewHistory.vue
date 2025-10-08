@@ -42,7 +42,7 @@
       </div>
       <div class="filter-group">
         <span class="filter-label">时间段:</span>
-        <input type="date" class="form-control small" v-model="filters.startDate"> 
+        <input type="date" class="form-control small" v-model="filters.startDate">
         至 <input type="date" class="form-control small" v-model="filters.endDate">
       </div>
       <button class="btn" @click="applyFilters">应用筛选</button>
@@ -111,12 +111,8 @@
     </div>
 
     <!-- 申请详情模态框 -->
-    <ReviewDetailModal 
-      v-if="selectedApplication"
-      :application="selectedApplication"
-      :readonly="true"
-      @close="closeDetailModal"
-    />
+    <ReviewDetailModal v-if="selectedApplication" :application="selectedApplication" :readonly="true"
+      @close="closeDetailModal" />
   </div>
 </template>
 
@@ -146,13 +142,13 @@ const filteredApplications = computed(() => {
     const majorMatch = filters.major === 'all' || app.major === filters.major
     const typeMatch = filters.type === 'all' || app.applicationType === filters.type
     const statusMatch = filters.status === 'all' || app.status === filters.status
-    const dateMatch = !filters.startDate || !filters.endDate || 
-                     (new Date(app.reviewedAt) >= new Date(filters.startDate) && 
-                      new Date(app.reviewedAt) <= new Date(filters.endDate))
-    
+    const dateMatch = !filters.startDate || !filters.endDate ||
+      (new Date(app.reviewedAt) >= new Date(filters.startDate) &&
+        new Date(app.reviewedAt) <= new Date(filters.endDate))
+
     return departmentMatch && majorMatch && typeMatch && statusMatch && dateMatch
   })
-  
+
   // 按审核时间倒序排列
   return filtered.sort((a, b) => new Date(b.reviewedAt) - new Date(a.reviewedAt))
 })
@@ -235,8 +231,8 @@ onMounted(() => {
   // 从本地存储加载数据
   const savedApplications = JSON.parse(localStorage.getItem('studentApplications') || '[]')
   console.log('审核记录页面 - 所有申请:', savedApplications)
-  
-  applications.value = savedApplications.filter(app => 
+
+  applications.value = savedApplications.filter(app =>
     app.status === 'approved' || app.status === 'rejected'
   )
   console.log('已审核的申请:', applications.value)

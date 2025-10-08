@@ -1,19 +1,10 @@
 <template>
   <div class="container">
-    <Header 
-      :user-name="authStore.userName" 
-      :user-avatar="authStore.userAvatar"
-      title="推免加分系统"
-    />
-    
+    <Header :user-name="authStore.userName" :user-avatar="authStore.userAvatar" title="推免加分系统" />
+
     <div class="content-wrapper">
-      <Sidebar 
-        :active-page="currentPage"
-        @page-change="switchPage"
-        :user-info="userInfo"
-        user-type="student"
-      />
-      
+      <Sidebar :active-page="currentPage" @page-change="switchPage" :user-info="userInfo" user-type="student" />
+
       <main class="main-content">
         <component :is="currentPageComponent" />
       </main>

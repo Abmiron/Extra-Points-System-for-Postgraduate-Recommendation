@@ -3,7 +3,7 @@
     <div class="page-title">
       <span>个人信息</span>
       <button class="btn btn-outline" @click="toggleEdit" :disabled="saving">
-        <font-awesome-icon :icon="['fas', 'edit']" /> 
+        <font-awesome-icon :icon="['fas', 'edit']" />
         {{ isEditing ? '取消编辑' : '编辑信息' }}
       </button>
     </div>
@@ -14,65 +14,33 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">姓名</label>
-            <input type="text" class="form-control" v-model="profile.name" 
-                   :disabled="!isEditing" required>
+            <input type="text" class="form-control" v-model="profile.name" :disabled="!isEditing" required>
           </div>
           <div class="form-group">
             <label class="form-label">学号</label>
-            <input type="text" class="form-control" v-model="profile.studentId" 
-                   disabled>
+            <input type="text" class="form-control" v-model="profile.studentId" disabled>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">学院</label>
-            <input type="text" class="form-control" v-model="profile.faculty" 
-                   :disabled="!isEditing" required>
+            <input type="text" class="form-control" v-model="profile.faculty" :disabled="!isEditing" required>
           </div>
           <div class="form-group">
             <label class="form-label">专业</label>
-            <input type="text" class="form-control" v-model="profile.major" 
-                   :disabled="!isEditing" required>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">CET4成绩</label>
-            <input type="number" class="form-control" v-model="profile.cet4" 
-                   :disabled="!isEditing" min="0" max="710">
-          </div>
-          <div class="form-group">
-            <label class="form-label">CET6成绩</label>
-            <input type="number" class="form-control" v-model="profile.cet6" 
-                   :disabled="!isEditing" min="0" max="710">
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">推免绩点</label>
-            <input type="number" class="form-control" v-model="profile.gpa" 
-                   :disabled="!isEditing" step="0.01" min="0" max="4.0" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">学业综合成绩</label>
-            <input type="number" class="form-control" v-model="profile.academicScore" 
-                   :disabled="!isEditing" step="0.1" min="0" max="100" required>
+            <input type="text" class="form-control" v-model="profile.major" :disabled="!isEditing" required>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">电子邮箱</label>
-            <input type="email" class="form-control" v-model="profile.email" 
-                   :disabled="!isEditing" required>
+            <input type="email" class="form-control" v-model="profile.email" :disabled="!isEditing" required>
           </div>
           <div class="form-group">
             <label class="form-label">手机号码</label>
-            <input type="tel" class="form-control" v-model="profile.phone" 
-                   :disabled="!isEditing" required>
+            <input type="tel" class="form-control" v-model="profile.phone" :disabled="!isEditing" required>
           </div>
         </div>
 
@@ -114,28 +82,24 @@
           <form @submit.prevent="changePassword">
             <div class="form-group">
               <label class="form-label">当前密码</label>
-              <input type="password" class="form-control" v-model="passwordForm.currentPassword" 
-                     required>
+              <input type="password" class="form-control" v-model="passwordForm.currentPassword" required>
             </div>
             <div class="form-group">
               <label class="form-label">新密码</label>
-              <input type="password" class="form-control" v-model="passwordForm.newPassword" 
-                     required minlength="6">
+              <input type="password" class="form-control" v-model="passwordForm.newPassword" required minlength="6">
               <div class="help-text">密码长度至少6位</div>
             </div>
             <div class="form-group">
               <label class="form-label">确认新密码</label>
-              <input type="password" class="form-control" v-model="passwordForm.confirmPassword" 
-                     required>
-              <div v-if="passwordForm.newPassword !== passwordForm.confirmPassword" 
-                   class="error-text">两次输入的密码不一致</div>
+              <input type="password" class="form-control" v-model="passwordForm.confirmPassword" required>
+              <div v-if="passwordForm.newPassword !== passwordForm.confirmPassword" class="error-text">两次输入的密码不一致</div>
             </div>
           </form>
         </div>
         <div class="modal-footer">
           <button class="btn btn-outline" @click="closePasswordModal">取消</button>
-          <button class="btn" @click="changePassword" 
-                  :disabled="passwordForm.newPassword !== passwordForm.confirmPassword">
+          <button class="btn" @click="changePassword"
+            :disabled="passwordForm.newPassword !== passwordForm.confirmPassword">
             确认修改
           </button>
         </div>
@@ -157,10 +121,6 @@ const profile = reactive({
   studentId: '12320253211234',
   faculty: '信息学院',
   major: '计算机科学与技术',
-  cet4: 580,
-  cet6: 520,
-  gpa: 3.85,
-  academicScore: 92.5,
   email: 'zhang@xmu.edu.cn',
   phone: '13800138000'
 })
@@ -190,14 +150,14 @@ const cancelEdit = () => {
 
 const saveProfile = async () => {
   saving.value = true
-  
+
   try {
     // 模拟API调用
     await new Promise(resolve => setTimeout(resolve, 1000))
-    
+
     // 保存到本地存储
     localStorage.setItem('studentProfile', JSON.stringify(profile))
-    
+
     alert('个人信息已更新')
     isEditing.value = false
   } catch (error) {
@@ -213,19 +173,19 @@ const changePassword = async () => {
     alert('两次输入的密码不一致')
     return
   }
-  
+
   if (passwordForm.newPassword.length < 6) {
     alert('密码长度至少6位')
     return
   }
-  
+
   try {
     // 模拟API调用
     await new Promise(resolve => setTimeout(resolve, 1000))
-    
+
     alert('密码修改成功')
     closePasswordModal()
-    
+
     // 清空表单
     Object.assign(passwordForm, {
       currentPassword: '',
@@ -293,11 +253,11 @@ onMounted(() => {
     flex-direction: column;
     gap: 0;
   }
-  
+
   .form-actions {
     flex-direction: column;
   }
-  
+
   .modal-content {
     width: 95%;
     margin: 20px;

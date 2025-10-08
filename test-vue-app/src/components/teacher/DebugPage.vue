@@ -13,10 +13,10 @@
     <div class="debug-info">
       <h3>本地存储内容:</h3>
       <pre>{{ storageContent }}</pre>
-      
+
       <h3>待审核申请:</h3>
       <pre>{{ pendingApplications }}</pre>
-      
+
       <h3>已审核申请:</h3>
       <pre>{{ reviewedApplications }}</pre>
     </div>

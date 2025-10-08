@@ -3,7 +3,7 @@
     <div class="page-title">
       <span>个人信息</span>
       <button class="btn btn-outline" @click="toggleEdit" :disabled="saving">
-        <font-awesome-icon :icon="['fas', 'edit']" /> 
+        <font-awesome-icon :icon="['fas', 'edit']" />
         {{ isEditing ? '取消编辑' : '编辑信息' }}
       </button>
     </div>
@@ -14,52 +14,44 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">姓名</label>
-            <input type="text" class="form-control" v-model="profile.name" 
-                   :disabled="!isEditing" required>
+            <input type="text" class="form-control" v-model="profile.name" :disabled="!isEditing" required>
           </div>
           <div class="form-group">
             <label class="form-label">工号</label>
-            <input type="text" class="form-control" v-model="profile.teacherId" 
-                   disabled>
+            <input type="text" class="form-control" v-model="profile.teacherId" disabled>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">学院</label>
-            <input type="text" class="form-control" v-model="profile.faculty" 
-                   :disabled="!isEditing" required>
+            <input type="text" class="form-control" v-model="profile.faculty" :disabled="!isEditing" required>
           </div>
           <div class="form-group">
             <label class="form-label">职称</label>
-            <input type="text" class="form-control" v-model="profile.title" 
-                   :disabled="!isEditing" required>
+            <input type="text" class="form-control" v-model="profile.title" :disabled="!isEditing" required>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">电子邮箱</label>
-            <input type="email" class="form-control" v-model="profile.email" 
-                   :disabled="!isEditing" required>
+            <input type="email" class="form-control" v-model="profile.email" :disabled="!isEditing" required>
           </div>
           <div class="form-group">
             <label class="form-label">手机号码</label>
-            <input type="tel" class="form-control" v-model="profile.phone" 
-                   :disabled="!isEditing" required>
+            <input type="tel" class="form-control" v-model="profile.phone" :disabled="!isEditing" required>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">办公室地址</label>
-            <input type="text" class="form-control" v-model="profile.office" 
-                   :disabled="!isEditing">
+            <input type="text" class="form-control" v-model="profile.office" :disabled="!isEditing">
           </div>
           <div class="form-group">
             <label class="form-label">办公电话</label>
-            <input type="tel" class="form-control" v-model="profile.officePhone" 
-                   :disabled="!isEditing">
+            <input type="tel" class="form-control" v-model="profile.officePhone" :disabled="!isEditing">
           </div>
         </div>
 
@@ -75,7 +67,7 @@
       </form>
     </div>
 
-    
+
 
     <!-- 审核统计 -->
     <div class="card">
@@ -105,17 +97,17 @@
     </div>
 
     <!-- 修改密码 -->
-        <div class="card">
-          <div class="card-title">安全设置</div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">修改密码</label>
-              <button class="btn btn-outline" @click="showChangePassword = true">
-                <font-awesome-icon :icon="['fas', 'key']" /> 修改密码
-              </button>
-            </div>
-          </div>
+    <div class="card">
+      <div class="card-title">安全设置</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">修改密码</label>
+          <button class="btn btn-outline" @click="showChangePassword = true">
+            <font-awesome-icon :icon="['fas', 'key']" /> 修改密码
+          </button>
         </div>
+      </div>
+    </div>
 
     <!-- 修改密码模态框 -->
     <div v-if="showChangePassword" class="modal-overlay" @click="closePasswordModal">
@@ -130,28 +122,24 @@
           <form @submit.prevent="changePassword">
             <div class="form-group">
               <label class="form-label">当前密码</label>
-              <input type="password" class="form-control" v-model="passwordForm.currentPassword" 
-                     required>
+              <input type="password" class="form-control" v-model="passwordForm.currentPassword" required>
             </div>
             <div class="form-group">
               <label class="form-label">新密码</label>
-              <input type="password" class="form-control" v-model="passwordForm.newPassword" 
-                     required minlength="6">
+              <input type="password" class="form-control" v-model="passwordForm.newPassword" required minlength="6">
               <div class="help-text">密码长度至少6位</div>
             </div>
             <div class="form-group">
               <label class="form-label">确认新密码</label>
-              <input type="password" class="form-control" v-model="passwordForm.confirmPassword" 
-                     required>
-              <div v-if="passwordForm.newPassword !== passwordForm.confirmPassword" 
-                   class="error-text">两次输入的密码不一致</div>
+              <input type="password" class="form-control" v-model="passwordForm.confirmPassword" required>
+              <div v-if="passwordForm.newPassword !== passwordForm.confirmPassword" class="error-text">两次输入的密码不一致</div>
             </div>
           </form>
         </div>
         <div class="modal-footer">
           <button class="btn btn-outline" @click="closePasswordModal">取消</button>
-          <button class="btn" @click="changePassword" 
-                  :disabled="passwordForm.newPassword !== passwordForm.confirmPassword">
+          <button class="btn" @click="changePassword"
+            :disabled="passwordForm.newPassword !== passwordForm.confirmPassword">
             确认修改
           </button>
         </div>
@@ -222,14 +210,14 @@ const cancelEdit = () => {
 
 const saveProfile = async () => {
   saving.value = true
-  
+
   try {
     // 模拟API调用
     await new Promise(resolve => setTimeout(resolve, 1000))
-    
+
     // 保存到本地存储
     localStorage.setItem('teacherProfile', JSON.stringify(profile))
-    
+
     alert('个人信息已更新')
     isEditing.value = false
   } catch (error) {
@@ -245,19 +233,19 @@ const changePassword = async () => {
     alert('两次输入的密码不一致')
     return
   }
-  
+
   if (passwordForm.newPassword.length < 6) {
     alert('密码长度至少6位')
     return
   }
-  
+
   try {
     // 模拟API调用
     await new Promise(resolve => setTimeout(resolve, 1000))
-    
+
     alert('密码修改成功')
     closePasswordModal()
-    
+
     // 清空表单
     Object.assign(passwordForm, {
       currentPassword: '',
@@ -283,7 +271,7 @@ const closePasswordModal = () => {
 const calculateStats = () => {
   stats.pendingCount = pendingApplications.value.length
   stats.totalReviewed = reviewedApplications.value.length
-  
+
   // 计算本月审核数量
   const currentMonth = new Date().getMonth()
   const currentYear = new Date().getFullYear()
@@ -301,7 +289,7 @@ onMounted(() => {
     Object.assign(profile, JSON.parse(savedProfile))
   }
   originalProfile.value = { ...profile }
-  
+
   // 计算统计信息
   calculateStats()
 })
@@ -397,11 +385,11 @@ onMounted(() => {
     flex-direction: column;
     gap: 0;
   }
-  
+
   .form-actions {
     flex-direction: column;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
   }

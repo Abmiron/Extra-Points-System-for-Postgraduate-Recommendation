@@ -10,9 +10,8 @@
     </div>
     <nav class="sidebar-nav">
       <ul>
-        <li v-for="item in menuItems" :key="item.key"
-            :class="{ active: activePage === item.key }"
-            @click="$emit('page-change', item.key)">
+        <li v-for="item in menuItems" :key="item.key" :class="{ active: activePage === item.key }"
+          @click="$emit('page-change', item.key)">
           <a href="#" @click.prevent>
             <font-awesome-icon :icon="item.icon" />
             <span>{{ item.title }}</span>
@@ -110,7 +109,8 @@ const menuItems = computed(() => menuConfig[props.userType] || [])
   color: #333;
 }
 
-.user-faculty, .user-role {
+.user-faculty,
+.user-role {
   font-size: 13px;
   color: #666;
   line-height: 1.3;
@@ -157,18 +157,18 @@ const menuItems = computed(() => menuConfig[props.userType] || [])
     width: 100%;
     height: auto;
   }
-  
+
   .sidebar-nav ul {
     display: flex;
     overflow-x: auto;
     padding: 0 10px;
   }
-  
+
   .sidebar-nav li {
     flex-shrink: 0;
     margin-bottom: 0;
   }
-  
+
   .sidebar-nav li a {
     border-radius: 4px;
     margin: 0 4px;

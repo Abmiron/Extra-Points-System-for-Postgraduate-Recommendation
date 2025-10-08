@@ -126,7 +126,7 @@ const handleLogout = () => {
   display: flex;
   align-items: center;
   cursor: pointer;
-  gap: 8px; 
+  gap: 8px;
 }
 
 .user-avatar {
@@ -150,15 +150,15 @@ const handleLogout = () => {
   .header {
     padding: 10px 15px;
   }
-  
+
   .logo {
     width: 120px;
   }
-  
+
   .university-name {
     font-size: 16px;
   }
-  
+
   .user-menu span {
     display: none;
   }

@@ -38,7 +38,7 @@
   font-size: 18px;
   font-weight: 600;
   color: #003366;
-  padding:12px 14px;
+  padding: 12px 14px;
   border-bottom: 1px solid #eee;
   background-color: #f8f9fa;
 }
@@ -394,35 +394,35 @@
     align-items: flex-start;
     gap: 15px;
   }
-  
+
   .page-title-actions {
     width: 100%;
     justify-content: flex-start;
   }
-  
+
   .filters {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .filter-group {
     width: 100%;
   }
-  
+
   .application-table {
     font-size: 14px;
   }
-  
+
   .application-table th,
   .application-table td {
     padding: 8px 10px;
   }
-  
+
   .modal-content {
     width: 95%;
     margin: 20px;
   }
-  
+
   .form-row {
     flex-direction: column;
     gap: 0;
@@ -433,19 +433,19 @@
     gap: 4px;
     justify-content: center;
   }
-  
+
   .action-buttons .small-btn {
     width: 28px;
     height: 28px;
     min-width: 28px;
   }
-  
+
   .application-table th:last-child,
   .application-table td:last-child {
     width: 120px;
     min-width: 120px;
   }
-  
+
   .pagination {
     flex-direction: column;
     gap: 15px;
@@ -459,7 +459,7 @@
     width: 100%;
     gap: 10px;
   }
-  
+
   .page-title-actions .btn {
     width: 100%;
     min-width: auto;
@@ -469,14 +469,14 @@
   .action-buttons {
     gap: 3px;
   }
-  
+
   .action-buttons .small-btn {
     width: 26px;
     height: 26px;
     min-width: 26px;
     font-size: 11px;
   }
-  
+
   .application-table th:last-child,
   .application-table td:last-child {
     width: 100px;

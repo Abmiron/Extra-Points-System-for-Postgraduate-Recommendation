@@ -34,7 +34,7 @@
       </div>
       <div class="filter-group">
         <span class="filter-label">时间段:</span>
-        <input type="date" class="form-control small" v-model="filters.startDate"> 
+        <input type="date" class="form-control small" v-model="filters.startDate">
         至 <input type="date" class="form-control small" v-model="filters.endDate">
       </div>
       <button class="btn" @click="applyFilters">应用筛选</button>
@@ -93,13 +93,8 @@
     </div>
 
     <!-- 审核详情模态框 -->
-    <ReviewDetailModal 
-      v-if="selectedApplication"
-      :application="selectedApplication"
-      @approve="handleApprove"
-      @reject="handleReject"
-      @close="closeReviewModal"
-    />
+    <ReviewDetailModal v-if="selectedApplication" :application="selectedApplication" @approve="handleApprove"
+      @reject="handleReject" @close="closeReviewModal" />
   </div>
 </template>
 
@@ -127,13 +122,13 @@ const filteredApplications = computed(() => {
     const departmentMatch = filters.department === 'all' || app.department === filters.department
     const majorMatch = filters.major === 'all' || app.major === filters.major
     const typeMatch = filters.type === 'all' || app.applicationType === filters.type
-    const dateMatch = !filters.startDate || !filters.endDate || 
-                     (new Date(app.appliedAt) >= new Date(filters.startDate) && 
-                      new Date(app.appliedAt) <= new Date(filters.endDate))
-    
+    const dateMatch = !filters.startDate || !filters.endDate ||
+      (new Date(app.appliedAt) >= new Date(filters.startDate) &&
+        new Date(app.appliedAt) <= new Date(filters.endDate))
+
     return departmentMatch && majorMatch && typeMatch && dateMatch
   })
-  
+
   return filtered
 })
 
@@ -209,11 +204,11 @@ const handleApprove = (applicationId, finalScore, comment) => {
     application.reviewComment = comment
     application.reviewedAt = new Date().toISOString()
     application.reviewedBy = '当前教师'
-    
+
     // 更新本地存储
     updateLocalStorage()
   }
-  
+
   closeReviewModal()
   alert('申请已通过审核')
 }
@@ -227,11 +222,11 @@ const handleReject = (applicationId, comment) => {
     application.reviewComment = comment
     application.reviewedAt = new Date().toISOString()
     application.reviewedBy = '当前教师'
-    
+
     // 更新本地存储
     updateLocalStorage()
   }
-  
+
   closeReviewModal()
   alert('申请已驳回')
 }
@@ -270,7 +265,7 @@ onMounted(() => {
         awardType: 'individual',
         description: '在2024年全国大学生程序设计竞赛中获得一等奖，展现了优秀的算法设计和编程能力。',
         files: [
-          { name: '获奖证书.pdf', url: '/certificates/cert001.pdf' },
+          { name: '获奖证书.jpg', url: 'https://ts4.tc.mm.bing.net/th/id/OIP-C.vk0IckSexDI9OWpO2BieqwHaHa?cb=12&rs=1&pid=ImgDetMain&o=7&rm=3' },
           { name: '比赛成绩单.jpg', url: 'https://img95.699pic.com/excel/40015/8976.jpg!/crop/0x1400a0a0/fw/850/quality/90' }
         ]
       },
@@ -361,7 +356,7 @@ onMounted(() => {
         ]
       }
     ]
-    
+
     localStorage.setItem('studentApplications', JSON.stringify(mockApplications))
     applications.value = mockApplications.filter(app => app.status === 'pending')
     console.log('模拟数据已创建，待审核申请:', applications.value)

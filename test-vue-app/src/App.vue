@@ -22,7 +22,8 @@ onMounted(() => {
   padding: 0;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   width: 100%;
   overflow: hidden;
@@ -38,6 +39,7 @@ html, body {
 .page-leave-active {
   transition: opacity 0.3s;
 }
+
 .page-enter-from,
 .page-leave-to {
   opacity: 0;

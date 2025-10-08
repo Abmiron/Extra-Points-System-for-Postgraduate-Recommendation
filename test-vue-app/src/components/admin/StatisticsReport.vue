@@ -162,7 +162,7 @@ const totalStats = computed(() => {
   const totalApplications = filteredStatistics.value.reduce((sum, stat) => sum + stat.applicationCount, 0)
   const totalAvgScore = filteredStatistics.value.reduce((sum, stat) => sum + stat.avgTotalScore, 0)
   const avgTotalScore = totalAvgScore / filteredStatistics.value.length
-  
+
   return {
     totalApplications,
     approvalRate: 75.6, // 模拟数据
@@ -276,7 +276,7 @@ onMounted(() => {
   .stat-card {
     padding: 15px;
   }
-  
+
   .stat-value {
     font-size: 24px;
   }

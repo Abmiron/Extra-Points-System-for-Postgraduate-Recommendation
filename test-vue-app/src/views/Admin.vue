@@ -1,19 +1,10 @@
 <template>
   <div class="container">
-    <Header 
-      :user-name="authStore.userName" 
-      :user-avatar="authStore.userAvatar"
-      title="推免加分系统-管理端"
-    />
-    
+    <Header :user-name="authStore.userName" :user-avatar="authStore.userAvatar" title="推免加分系统-管理端" />
+
     <div class="content-wrapper">
-      <Sidebar 
-        :active-page="currentPage"
-        @page-change="switchPage"
-        :user-info="userInfo"
-        user-type="admin"
-      />
-      
+      <Sidebar :active-page="currentPage" @page-change="switchPage" :user-info="userInfo" user-type="admin" />
+
       <main class="main-content">
         <!-- 动态显示当前页面 -->
         <component :is="currentPageComponent" />

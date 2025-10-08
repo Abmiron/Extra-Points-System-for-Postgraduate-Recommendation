@@ -62,16 +62,12 @@
                   <button class="btn-outline btn small-btn" @click="editRule(rule)" title="编辑">
                     <font-awesome-icon :icon="['fas', 'edit']" />
                   </button>
-                  <button v-if="rule.status === 'active'" 
-                          class="btn-outline btn small-btn" 
-                          @click="toggleRuleStatus(rule.id, 'disabled')"
-                          title="禁用">
+                  <button v-if="rule.status === 'active'" class="btn-outline btn small-btn"
+                    @click="toggleRuleStatus(rule.id, 'disabled')" title="禁用">
                     <font-awesome-icon :icon="['fas', 'ban']" />
                   </button>
-                  <button v-else 
-                          class="btn-outline btn small-btn" 
-                          @click="toggleRuleStatus(rule.id, 'active')"
-                          title="启用">
+                  <button v-else class="btn-outline btn small-btn" @click="toggleRuleStatus(rule.id, 'active')"
+                    title="启用">
                     <font-awesome-icon :icon="['fas', 'check']" />
                   </button>
                 </div>
@@ -129,8 +125,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">分值</label>
-                <input type="number" class="form-control" v-model="ruleForm.score" 
-                       step="0.1" min="0" max="10" required>
+                <input type="number" class="form-control" v-model="ruleForm.score" step="0.1" min="0" max="10" required>
               </div>
               <div class="form-group">
                 <label class="form-label">状态</label>
@@ -142,8 +137,7 @@
             </div>
             <div class="form-group">
               <label class="form-label">规则描述</label>
-              <textarea class="form-control" v-model="ruleForm.description" 
-                        rows="3" placeholder="请输入规则详细描述"></textarea>
+              <textarea class="form-control" v-model="ruleForm.description" rows="3" placeholder="请输入规则详细描述"></textarea>
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-outline" @click="closeModal">取消</button>
@@ -308,10 +302,10 @@ const filteredRules = computed(() => {
   let filtered = rules.value.filter(rule => {
     const typeMatch = filters.type === 'all' || rule.type === filters.type
     const statusMatch = filters.status === 'all' || rule.status === filters.status
-    
+
     return typeMatch && statusMatch
   })
-  
+
   return filtered
 })
 
@@ -360,7 +354,7 @@ const saveRule = () => {
     }
     rules.value.push(newRule)
   }
-  
+
   closeModal()
   alert('规则保存成功')
 }

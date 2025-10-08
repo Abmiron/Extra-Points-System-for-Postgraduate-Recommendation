@@ -68,14 +68,12 @@
                   <button class="btn-outline btn small-btn" @click="viewApplication(application)" title="查看">
                     <font-awesome-icon :icon="['fas', 'eye']" />
                   </button>
-                  <button v-if="application.status === 'draft'" 
-                          class="btn-outline btn small-btn" 
-                          @click="editApplication(application)" title="编辑">
+                  <button v-if="application.status === 'draft'" class="btn-outline btn small-btn"
+                    @click="editApplication(application)" title="编辑">
                     <font-awesome-icon :icon="['fas', 'edit']" />
                   </button>
-                  <button v-if="application.status === 'draft'" 
-                          class="btn-outline btn small-btn" 
-                          @click="deleteApplication(application.id)" title="删除">
+                  <button v-if="application.status === 'draft'" class="btn-outline btn small-btn"
+                    @click="deleteApplication(application.id)" title="删除">
                     <font-awesome-icon :icon="['fas', 'trash']" />
                   </button>
                 </div>
@@ -103,11 +101,7 @@
     </div>
 
     <!-- 申请详情模态框 -->
-    <ApplicationDetailModal 
-      v-if="selectedApplication"
-      :application="selectedApplication"
-      @close="closeModal"
-    />
+    <ApplicationDetailModal v-if="selectedApplication" :application="selectedApplication" @close="closeModal" />
   </div>
 </template>
 
@@ -135,14 +129,14 @@ const filteredApplications = computed(() => {
     const typeMatch = filters.type === 'all' || app.applicationType === filters.type
     return statusMatch && typeMatch
   })
-  
+
   // 排序
   if (filters.sort === 'newest') {
     filtered.sort((a, b) => new Date(b.appliedAt || b.createdAt) - new Date(a.appliedAt || a.createdAt))
   } else {
     filtered.sort((a, b) => new Date(a.appliedAt || a.createdAt) - new Date(b.appliedAt || b.createdAt))
   }
-  
+
   return filtered
 })
 
@@ -234,7 +228,7 @@ onMounted(() => {
   // 从本地存储加载数据
   const savedApplications = JSON.parse(localStorage.getItem('studentApplications') || '[]')
   const savedDrafts = JSON.parse(localStorage.getItem('applicationDrafts') || '[]')
-  
+
   // 合并申请和草稿
   applications.value = [
     ...savedDrafts.map(draft => ({ ...draft, status: 'draft' })),
@@ -301,7 +295,8 @@ onMounted(() => {
   color: #666;
 }
 
-.description, .review-comment {
+.description,
+.review-comment {
   background-color: #f8f9fa;
   padding: 15px;
   border-radius: 4px;
@@ -323,13 +318,13 @@ onMounted(() => {
   .detail-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .detail-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 5px;
   }
-  
+
   .modal-content.large {
     width: 95%;
     margin: 20px;
@@ -375,7 +370,7 @@ onMounted(() => {
   .action-buttons {
     gap: 3px;
   }
-  
+
   .action-buttons .small-btn {
     width: 26px;
     height: 26px;

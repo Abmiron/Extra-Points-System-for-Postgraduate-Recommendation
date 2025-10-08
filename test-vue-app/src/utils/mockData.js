@@ -17,7 +17,7 @@ export const generateMockApplications = () => {
       awardType: 'individual',
       description: '在2024年全国大学生程序设计竞赛中获得一等奖，展现了优秀的算法设计和编程能力。',
       files: [
-        { name: '获奖证书.pdf', url: '/certificates/cert001.pdf' },
+        { name: '获奖证书.jpg', url: 'https://pic.ibaotu.com/00/02/39/43a888piCzJ2.jpg-0.jpg!ww7006' },
         { name: '比赛成绩单.jpg', url: 'https://img95.699pic.com/excel/40015/8976.jpg!/crop/0x1400a0a0/fw/850/quality/90' }
       ]
     },

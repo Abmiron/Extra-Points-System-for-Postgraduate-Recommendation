@@ -19,21 +19,11 @@
           <form class="login-form" @submit.prevent="handleLogin">
             <div class="input-group">
               <font-awesome-icon :icon="['fas', 'user']" class="input-icon" />
-              <input 
-                type="text" 
-                v-model="loginForm.username"
-                placeholder="请输入学号/工号" 
-                required
-              >
+              <input type="text" v-model="loginForm.username" placeholder="请输入学号/工号" required>
             </div>
             <div class="input-group">
               <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
-              <input 
-                type="password" 
-                v-model="loginForm.password"
-                placeholder="请输入密码" 
-                required
-              >
+              <input type="password" v-model="loginForm.password" placeholder="请输入密码" required>
             </div>
 
             <div class="form-actions">
@@ -77,44 +67,44 @@ const loginForm = reactive({
 
 const handleLogin = async () => {
   loading.value = true
-  
+
   try {
     // 模拟登录验证
     const mockUsers = {
-      'student': { 
-        name: '张同学', 
-        role: 'student', 
+      'student': {
+        name: '张同学',
+        role: 'student',
         avatar: '/images/头像1.jpg',
         faculty: '信息学院',
         major: '计算机科学与技术'
       },
-      'teacher': { 
-        name: '张老师', 
-        role: 'teacher', 
+      'teacher': {
+        name: '张老师',
+        role: 'teacher',
         avatar: '/images/头像2.jpg',
         faculty: '信息学院',
         roleName: '审核员'
       },
-      'admin': { 
-        name: '管理员', 
-        role: 'admin', 
+      'admin': {
+        name: '管理员',
+        role: 'admin',
         avatar: '/images/头像2.jpg',
         faculty: '信息学院',
         roleName: '系统管理员'
       }
     }
-    
+
     const userData = mockUsers[loginForm.username]
     if (userData && loginForm.password === '123456') {
       authStore.login(userData)
-      
+
       // 根据角色跳转
       const routeMap = {
         student: '/student',
         teacher: '/teacher',
         admin: '/admin'
       }
-      
+
       router.push(routeMap[userData.role])
     } else {
       alert('登录失败，请检查用户名和密码')
@@ -150,7 +140,7 @@ const handleForgotPassword = () => {
   position: fixed;
   width: 100vw;
   height: 100vh;
-  background: url('https://ids.xmu.edu.cn/authserver/qrcodeTheme/static/dzimages/1.jpg') no-repeat center center;
+  background: url('../images/loginBackground.jpg') no-repeat center center;
   background-size: cover;
   filter: blur(8px) brightness(0.80);
   transform: scale(1.05);
@@ -283,7 +273,7 @@ const handleForgotPassword = () => {
 }
 
 /* 输入框聚焦时图标颜色变化 */
-.input-group input:focus + .input-icon {
+.input-group input:focus+.input-icon {
   color: #003d86;
 }
 
@@ -306,7 +296,7 @@ const handleForgotPassword = () => {
   font-weight: 500;
   text-align: left;
   width: 100%;
-  border: none; 
+  border: none;
   padding: 0;
 }
 

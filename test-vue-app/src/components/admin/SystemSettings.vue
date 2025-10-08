@@ -35,13 +35,11 @@
       <div class="card-title">系统公告管理</div>
       <div class="form-group">
         <label class="form-label">公告标题</label>
-        <input type="text" class="form-control" v-model="announcement.title" 
-               placeholder="请输入公告标题">
+        <input type="text" class="form-control" v-model="announcement.title" placeholder="请输入公告标题">
       </div>
       <div class="form-group">
         <label class="form-label">公告内容</label>
-        <textarea class="form-control" v-model="announcement.content" 
-                  rows="4" placeholder="请输入公告内容"></textarea>
+        <textarea class="form-control" v-model="announcement.content" rows="4" placeholder="请输入公告内容"></textarea>
       </div>
       <div class="form-group">
         <label class="form-label">发布对象</label>
@@ -163,7 +161,7 @@ const publishAnnouncement = () => {
     alert('请填写公告标题和内容')
     return
   }
-  
+
   // 发布公告
   const announcements = JSON.parse(localStorage.getItem('systemAnnouncements') || '[]')
   const newAnnouncement = {
@@ -174,14 +172,14 @@ const publishAnnouncement = () => {
   }
   announcements.push(newAnnouncement)
   localStorage.setItem('systemAnnouncements', JSON.stringify(announcements))
-  
+
   // 清空表单
   Object.assign(announcement, {
     title: '',
     content: '',
     audience: 'all'
   })
-  
+
   alert('公告发布成功')
 }
 
@@ -327,16 +325,16 @@ onMounted(() => {
     flex-direction: column;
     gap: 0;
   }
-  
+
   .radio-group {
     flex-direction: column;
     gap: 10px;
   }
-  
+
   .form-actions {
     flex-direction: column;
   }
-  
+
   .form-actions .btn {
     width: 100%;
     justify-content: center;
@@ -344,11 +342,12 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
+
   .form-row,
   .form-group {
     padding: 0 15px;
   }
-  
+
   .form-actions {
     padding: 15px;
   }

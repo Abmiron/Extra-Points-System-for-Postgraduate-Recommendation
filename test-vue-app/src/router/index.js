@@ -7,27 +7,27 @@ import Teacher from '../views/Teacher.vue'
 import Admin from '../views/Admin.vue'
 
 const routes = [
-  { 
-    path: '/', 
-    redirect: '/login' 
+  {
+    path: '/',
+    redirect: '/login'
   },
-  { 
-    path: '/login', 
+  {
+    path: '/login',
     component: Login,
     meta: { requiresAuth: false }
   },
-  { 
-    path: '/student', 
+  {
+    path: '/student',
     component: Student,
     meta: { requiresAuth: true, role: 'student' }
   },
-  { 
-    path: '/teacher', 
+  {
+    path: '/teacher',
     component: Teacher,
     meta: { requiresAuth: true, role: 'teacher' }
   },
-  { 
-    path: '/admin', 
+  {
+    path: '/admin',
     component: Admin,
     meta: { requiresAuth: true, role: 'admin' }
   },
@@ -44,7 +44,7 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
-  
+
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login')
   } else if (to.meta.role && authStore.role !== to.meta.role) {

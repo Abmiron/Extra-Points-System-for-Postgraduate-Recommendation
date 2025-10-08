@@ -7,7 +7,7 @@
           <font-awesome-icon :icon="['fas', 'times']" />
         </button>
       </div>
-      
+
       <div class="modal-body">
         <!-- 左侧：文件预览区域 -->
         <div class="left-column" v-if="hasFiles">
@@ -33,39 +33,15 @@
                   </button>
                 </div>
               </div>
-              
-              <!-- 主预览区域 -->
-              <div class="main-preview">
-                <div class="image-container" 
-                     @mousedown="startPreviewDrag"
-                     @mousemove="onPreviewDrag"
-                     @mouseup="endPreviewDrag"
-                     @mouseleave="endPreviewDrag"
-                     @wheel="onPreviewWheel">
-                  <div class="image-transform-container" 
-                       :style="{
-                         transform: `translate(${previewDragOffset.x}px, ${previewDragOffset.y}px) scale(${previewZoomLevel})`,
-                         cursor: isPreviewDragging ? 'grabbing' : 'grab'
-                       }">
-                    <img :src="getFileUrl(currentImage)" 
-                         :alt="currentImage.name" 
-                         class="preview-image"
-                         @load="onPreviewImageLoad" />
-                  </div>
-                </div>
-              </div>
 
-              <!-- 图片导航 -->
+              <!-- 图片导航移动到控制按钮下方、主预览区域上方 -->
               <div class="image-navigation" v-if="imageFiles.length > 1">
                 <button class="nav-btn" @click="prevImage" :disabled="currentImageIndex === 0">
                   <font-awesome-icon :icon="['fas', 'chevron-left']" />
                 </button>
                 <div class="thumbnail-list">
-                  <div v-for="(file, index) in imageFiles" 
-                       :key="index" 
-                       class="thumbnail-item"
-                       :class="{ active: index === currentImageIndex }"
-                       @click="switchImage(index)">
+                  <div v-for="(file, index) in imageFiles" :key="index" class="thumbnail-item"
+                    :class="{ active: index === currentImageIndex }" @click="switchImage(index)">
                     <img :src="getFileUrl(file)" :alt="file.name" />
                   </div>
                 </div>
@@ -73,29 +49,29 @@
                   <font-awesome-icon :icon="['fas', 'chevron-right']" />
                 </button>
               </div>
-            </div>
 
-            <!-- 文件列表区域 -->
-            <div class="file-list-section">
-              <div class="card-title" v-if="!hasImages">证明文件</div>
-              <div class="file-list-compact">
-                <div class="file-list-title" v-if="hasImages">所有文件</div>
-                <div v-for="(file, index) in application.files" :key="index" class="file-item-compact">
-                  <font-awesome-icon :icon="getFileIcon(file.name)" />
-                  <span class="file-name">{{ file.name }}</span>
-                  <div class="file-actions">
-                    <button v-if="isImage(file)" 
-                            class="btn-icon" 
-                            @click="switchToImage(file)"
-                            :class="{ active: isCurrentImage(file) }"
-                            title="预览图片">
-                      <font-awesome-icon :icon="['fas', 'eye']" />
-                    </button>
-                    <button class="btn-icon" @click="downloadFile(file)" title="下载">
-                      <font-awesome-icon :icon="['fas', 'download']" />
-                    </button>
+              <!-- 主预览区域 -->
+              <div class="main-preview">
+                <div class="image-container" @mousedown="startPreviewDrag" @mousemove="onPreviewDrag"
+                  @mouseup="endPreviewDrag" @mouseleave="endPreviewDrag" @wheel="onPreviewWheel">
+                  <div class="image-transform-container" :style="{
+                    transform: `translate(${previewDragOffset.x}px, ${previewDragOffset.y}px) scale(${previewZoomLevel})`,
+                    cursor: isPreviewDragging ? 'grabbing' : 'grab'
+                  }">
+                    <img :src="getFileUrl(currentImage)" :alt="currentImage.name" class="preview-image"
+                      @load="onPreviewImageLoad" />
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <!-- 没有图片但有其他文件时显示提示 -->
+            <div v-else>
+              <div class="card-title">证明文件预览</div>
+              <div class="no-files">
+                <font-awesome-icon :icon="['fas', 'file-image']" class="no-files-icon" />
+                <p>暂无图片文件可预览</p>
+                <p class="no-files-desc">您可以在右侧文件列表中下载其他格式的文件</p>
               </div>
             </div>
           </div>
@@ -104,7 +80,7 @@
         <!-- 没有文件时显示提示 -->
         <div class="left-column" v-else>
           <div class="card preview-card">
-            <div class="card-title">证明文件</div>
+            <div class="card-title">证明文件预览</div>
             <div class="no-files">
               <font-awesome-icon :icon="['fas', 'folder-open']" class="no-files-icon" />
               <p>暂无证明文件</p>
@@ -112,7 +88,7 @@
           </div>
         </div>
 
-        <!-- 右侧：申请信息 -->
+        <!-- 右侧：申请信息和文件列表 -->
         <div class="right-column">
           <!-- 学生基本信息 -->
           <div class="card compact-card">
@@ -174,10 +150,30 @@
                 <span>{{ application.finalScore || '-' }}</span>
               </div>
             </div>
-            
+
             <div class="compact-group full-width">
               <label>加分依据</label>
               <div class="description-text">{{ application.description }}</div>
+            </div>
+          </div>
+
+          <!-- 文件列表区域 -->
+          <div class="card compact-card" v-if="hasFiles">
+            <div class="card-title">证明文件</div>
+            <div class="file-list-compact">
+              <div v-for="(file, index) in application.files" :key="index" class="file-item-compact">
+                <font-awesome-icon :icon="getFileIcon(file.name)" />
+                <span class="file-name">{{ file.name }}</span>
+                <div class="file-actions">
+                  <button v-if="isImage(file)" class="btn-icon" @click="switchToImage(file)"
+                    :class="{ active: isCurrentImage(file) }" title="预览图片">
+                    <font-awesome-icon :icon="['fas', 'eye']" />
+                  </button>
+                  <button class="btn-icon" @click="downloadFile(file)" title="下载">
+                    <font-awesome-icon :icon="['fas', 'download']" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -211,7 +207,6 @@
           </div>
         </div>
       </div>
-      
     </div>
   </div>
 </template>
@@ -313,7 +308,7 @@ const resetPreviewZoom = () => {
 
 // 预览区域拖拽功能
 const startPreviewDrag = (event) => {
-  if (event.button !== 0 ) return
+  if (event.button !== 0) return
   isPreviewDragging.value = true
   previewLastDragPos.x = event.clientX
   previewLastDragPos.y = event.clientY
@@ -321,14 +316,14 @@ const startPreviewDrag = (event) => {
 }
 
 const onPreviewDrag = (event) => {
-  if (!isPreviewDragging.value ) return
-  
+  if (!isPreviewDragging.value) return
+
   const deltaX = event.clientX - previewLastDragPos.x
   const deltaY = event.clientY - previewLastDragPos.y
-  
+
   previewDragOffset.x += deltaX
   previewDragOffset.y += deltaY
-  
+
   previewLastDragPos.x = event.clientX
   previewLastDragPos.y = event.clientY
   event.preventDefault()
@@ -341,19 +336,19 @@ const endPreviewDrag = () => {
 // 预览区域鼠标滚轮缩放
 const onPreviewWheel = (event) => {
   event.preventDefault()
-  
+
   const delta = -Math.sign(event.deltaY) * 0.1
   const newZoom = Math.max(0.5, Math.min(3, previewZoomLevel.value + delta))
-  
+
   const rect = event.currentTarget.getBoundingClientRect()
   const mouseX = event.clientX - rect.left
   const mouseY = event.clientY - rect.top
-  
+
   const zoomPointX = (mouseX - previewDragOffset.x) / previewZoomLevel.value
   const zoomPointY = (mouseY - previewDragOffset.y) / previewZoomLevel.value
-  
+
   previewZoomLevel.value = newZoom
-  
+
   previewDragOffset.x = mouseX - zoomPointX * newZoom
   previewDragOffset.y = mouseY - zoomPointY * newZoom
 }
@@ -369,12 +364,12 @@ const downloadFile = (file) => {
     alert(`开始下载文件: ${file.name}`)
     return
   }
-  
+
   const link = document.createElement('a')
   link.href = url
   link.download = file.name
   link.click()
-  
+
   if (file instanceof File) {
     URL.revokeObjectURL(url)
   }
@@ -439,7 +434,8 @@ const formatDate = (dateString) => {
   display: flex;
   flex-direction: column;
   max-width: 1400px;
-  max-height: 90vh;
+  height: 90vh;
+  /* 改为固定高度 */
   width: 95%;
   background: white;
   border-radius: 8px;
@@ -452,6 +448,8 @@ const formatDate = (dateString) => {
   padding: 0;
   overflow: hidden;
   min-height: 0;
+  height: calc(100% - 60px);
+  /* 减去header高度 */
 }
 
 /* 左侧文件预览区域 */
@@ -462,6 +460,8 @@ const formatDate = (dateString) => {
   border-right: 1px solid #eee;
   display: flex;
   flex-direction: column;
+  height: 100%;
+  /* 固定高度 */
 }
 
 /* 右侧信息区域 */
@@ -470,16 +470,25 @@ const formatDate = (dateString) => {
   padding: 20px;
   overflow-y: auto;
   background: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  min-height: 0;
+  height: 100%;
+  /* 固定高度 */
 }
 
 /* 预览卡片样式 */
 .preview-card {
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   flex: 1;
   display: flex;
   flex-direction: column;
+  margin-bottom: 0;
+  height: 100%;
+  /* 固定高度 */
 }
 
 .image-counter {
@@ -529,22 +538,24 @@ const formatDate = (dateString) => {
 .main-preview {
   margin-bottom: 5px;
   border: 1px solid #eee;
-  border-radius: 6px;
+  border-radius: 3px;
   overflow: hidden;
   background: #fafafa;
   flex: 1;
+  min-height: 0;
+  /* 允许收缩 */
 }
 
 .image-container {
   position: relative;
-  height: 700px;
+  height: 690px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: 
-    linear-gradient(45deg, #f0f0f0 25%, transparent 25%), 
-    linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), 
-    linear-gradient(45deg, transparent 75%, #f0f0f0 75%), 
+  background:
+    linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
+    linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
     linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
   background-size: 20px 20px;
   background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
@@ -573,6 +584,11 @@ const formatDate = (dateString) => {
   text-align: center;
   padding: 40px 20px;
   color: #666;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .no-files-icon {
@@ -581,12 +597,22 @@ const formatDate = (dateString) => {
   color: #ccc;
 }
 
-/* 图片导航 */
+.no-files-desc {
+  font-size: 14px;
+  margin-top: 10px;
+  color: #999;
+}
+
+/* 图片导航样式调整 */
 .image-navigation {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 15px;
+  margin-top: -2px;
+  padding: 0px 8px;
+  background: #f8f9fa;
+  flex-shrink: 0;
+  /* 防止导航栏被压缩 */
 }
 
 .nav-btn {
@@ -594,9 +620,16 @@ const formatDate = (dateString) => {
   color: white;
   border: none;
   border-radius: 4px;
-  padding: 8px 12px;
+  padding: 6px 10px;
   cursor: pointer;
   font-size: 12px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  /* 防止按钮被压缩 */
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: #002244;
 }
 
 .nav-btn:disabled {
@@ -606,20 +639,28 @@ const formatDate = (dateString) => {
 
 .thumbnail-list {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   overflow-x: auto;
   flex: 1;
-  padding: 5px 0;
+  padding: 2px 0;
+  flex-shrink: 0;
+  /* 防止缩略图列表被压缩 */
 }
 
 .thumbnail-item {
-  width: 80px;
-  height: 80px;
+  width: 60px;
+  height: 60px;
   border: 2px solid transparent;
   border-radius: 4px;
   overflow: hidden;
   cursor: pointer;
   flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.thumbnail-item:hover {
+  border-color: #003366;
+  opacity: 0.8;
 }
 
 .thumbnail-item.active {
@@ -633,20 +674,11 @@ const formatDate = (dateString) => {
 }
 
 /* 文件列表 */
-.file-list-section {
-  margin-top: 5px;
-}
-
 .file-list-compact {
-  border-top: 1px solid #eee;
-  padding-top: 10px;
-}
-
-.file-list-title {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 10px;
-  color: #333;
+  padding-bottom: 0;
+  max-height: 200px;
+  /* 文件列表最大高度 */
+  overflow-y: auto;
 }
 
 .file-item-compact {
@@ -682,7 +714,8 @@ const formatDate = (dateString) => {
   font-size: 12px;
 }
 
-.btn-icon:hover, .btn-icon.active {
+.btn-icon:hover,
+.btn-icon.active {
   background: #003366;
   color: white;
 }
@@ -693,16 +726,17 @@ const formatDate = (dateString) => {
   border-radius: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   padding: 15px;
-  margin-bottom: 15px;
+  margin-bottom: 0;
+  flex-shrink: 0;
 }
 
 .card-title {
   font-size: 16px;
   font-weight: 600;
-  margin-bottom: 12px;
+  margin-bottom: 4px;
   color: #003366;
   padding-bottom: 8px;
-  border-bottom: 1px solid #ffffff;
+  border-bottom: 1px solid #eee;
   display: flex;
   align-items: center;
 }
@@ -761,6 +795,9 @@ const formatDate = (dateString) => {
   padding: 8px 10px;
   border-radius: 4px;
   border-left: 3px solid #003366;
+  max-height: 120px;
+  /* 限制描述文本高度 */
+  overflow-y: auto;
 }
 
 .review-comment {
@@ -771,6 +808,9 @@ const formatDate = (dateString) => {
   padding: 8px 10px;
   border-radius: 4px;
   border-left: 4px solid #ffc107;
+  max-height: 120px;
+  /* 限制审核意见高度 */
+  overflow-y: auto;
 }
 
 /* 状态徽章 */
@@ -802,25 +842,68 @@ const formatDate = (dateString) => {
   color: #e74c3c;
 }
 
+/* 滚动条样式 */
+.file-list-compact::-webkit-scrollbar {
+  width: 6px;
+}
+
+.file-list-compact::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.file-list-compact::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.file-list-compact::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 确保右侧整体滚动 */
+.right-column::-webkit-scrollbar {
+  width: 8px;
+}
+
+.right-column::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.right-column::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.right-column::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
 /* 响应式设计 */
 @media (max-width: 1024px) {
- .two-column-layout {
-    max-height: 95vh;
+  .two-column-layout {
+    height: 95vh;
+    /* 调整移动端高度 */
   }
-  
+
   .modal-body {
     flex-direction: column;
   }
-  
+
   .left-column {
     border-right: none;
     border-bottom: 1px solid #eee;
     max-height: 50%;
+    height: 50%;
+    /* 固定高度 */
   }
-  
+
   .right-column {
     width: 100%;
     max-height: 50%;
+    height: 50%;
+    /* 固定高度 */
   }
 }
 
@@ -828,28 +911,36 @@ const formatDate = (dateString) => {
   .two-column-layout {
     width: 98%;
     margin: 10px;
-    max-height: 95vh;
+    height: 95vh;
+    /* 调整移动端高度 */
   }
-  
+
   .modal-header {
     padding: 12px 15px;
   }
-  
+
   .modal-header h3 {
     font-size: 16px;
   }
-  
-  .left-column, .right-column {
+
+  .left-column {
     padding: 15px;
   }
-  
+
+  .right-column {
+    padding: 15px;
+    max-height: 40%;
+    height: 40%;
+    /* 固定高度 */
+  }
+
   .preview-controls {
     flex-wrap: wrap;
     justify-content: center;
     margin-top: 8px;
     margin-left: 0;
   }
-  
+
   .card-title {
     display: flex;
     flex-direction: column;

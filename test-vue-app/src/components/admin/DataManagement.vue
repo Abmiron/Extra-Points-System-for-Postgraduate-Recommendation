@@ -12,12 +12,10 @@
     <!-- 搜索区域 - 修改为与用户管理组件相同样式 -->
     <div class="filters">
       <div class="filter-group">
-        <input type="text" class="form-control" v-model="filters.studentName" 
-               placeholder="学生姓名">
+        <input type="text" class="form-control" v-model="filters.studentName" placeholder="学生姓名">
       </div>
       <div class="filter-group">
-        <input type="text" class="form-control" v-model="filters.studentId" 
-               placeholder="学号">
+        <input type="text" class="form-control" v-model="filters.studentId" placeholder="学号">
       </div>
       <div class="filter-group">
         <span class="filter-label">申请类型:</span>
@@ -209,13 +207,13 @@ const filteredApplications = computed(() => {
     const idMatch = !filters.studentId || app.studentId.includes(filters.studentId)
     const typeMatch = filters.applicationType === 'all' || app.applicationType === filters.applicationType
     const statusMatch = filters.status === 'all' || app.status === filters.status
-    const dateMatch = !filters.startDate || !filters.endDate || 
-                     (new Date(app.appliedAt) >= new Date(filters.startDate) && 
-                      new Date(app.appliedAt) <= new Date(filters.endDate))
-    
+    const dateMatch = !filters.startDate || !filters.endDate ||
+      (new Date(app.appliedAt) >= new Date(filters.startDate) &&
+        new Date(app.appliedAt) <= new Date(filters.endDate))
+
     return nameMatch && idMatch && typeMatch && statusMatch && dateMatch
   })
-  
+
   return filtered
 })
 

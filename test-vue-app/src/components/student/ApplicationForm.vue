@@ -13,17 +13,15 @@
             <span>申请类型</span>
           </div>
           <div class="radio-cards compact">
-            <div class="radio-card" 
-                 :class="{ active: formData.applicationType === 'academic' }"
-                 @click="formData.applicationType = 'academic'">
+            <div class="radio-card" :class="{ active: formData.applicationType === 'academic' }"
+              @click="formData.applicationType = 'academic'">
               <div class="radio-icon">
                 <font-awesome-icon :icon="['fas', 'book']" />
               </div>
               <span>学术专长</span>
             </div>
-            <div class="radio-card" 
-                 :class="{ active: formData.applicationType === 'comprehensive' }"
-                 @click="formData.applicationType = 'comprehensive'">
+            <div class="radio-card" :class="{ active: formData.applicationType === 'comprehensive' }"
+              @click="formData.applicationType = 'comprehensive'">
               <div class="radio-icon">
                 <font-awesome-icon :icon="['fas', 'trophy']" />
               </div>
@@ -32,7 +30,7 @@
           </div>
         </div>
 
-        <!-- 基本信息 -->
+        <!-- 基本信息（通用） -->
         <div class="form-section">
           <div class="section-title">
             <font-awesome-icon :icon="['fas', 'info-circle']" />
@@ -43,75 +41,304 @@
               <label class="form-label">项目全称</label>
               <div class="input-with-icon">
                 <font-awesome-icon :icon="['fas', 'signature']" />
-                <input type="text" class="form-control" v-model="formData.projectName" 
-                       placeholder="请输入项目全称" maxlength="100" required>
+                <input type="text" class="form-control" v-model="formData.projectName" placeholder="请输入项目全称"
+                  maxlength="100" required>
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label">获奖时间</label>
+              <label class="form-label">获得时间</label>
               <div class="input-with-icon">
                 <font-awesome-icon :icon="['fas', 'calendar']" />
-                <input type="date" class="form-control" v-model="formData.awardDate" required>
+                <input type="text" class="form-control" v-model="formData.awardDate" placeholder="请输入获得年度" required>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 奖项信息 -->
-        <div class="form-section">
+        <!-- 学术专长特有信息 -->
+        <div class="form-section" v-if="formData.applicationType === 'academic'">
           <div class="section-title">
             <font-awesome-icon :icon="['fas', 'award']" />
-            <span>奖项信息</span>
+            <span>学术奖项信息</span>
+          </div>
+
+          <!-- 新增：学术类型选择（放在现有内容最前面） -->
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">学术类型 <span class="required">*</span></label>
+              <div class="radio-cards">
+                <div class="radio-card" :class="{ active: formData.academicType === 'research' }"
+                  @click="formData.academicType = 'research'">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'flask']" />
+                  </div>
+                  <span>科研成果</span>
+                </div>
+                <div class="radio-card" :class="{ active: formData.academicType === 'competition' }"
+                  @click="formData.academicType = 'competition'">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'trophy']" />
+                  </div>
+                  <span>学业竞赛</span>
+                </div>
+                <div class="radio-card" :class="{ active: formData.academicType === 'innovation' }"
+                  @click="formData.academicType = 'innovation'">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'lightbulb']" />
+                  </div>
+                  <span>创新创业训练</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 原有学业竞赛字段需要用v-if包裹 -->
+          <div v-if="formData.academicType === 'competition'">
+            <!-- 这里放原有的奖项级别、等级等学业竞赛字段 -->
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">奖项级别 <span class="required">*</span></label>
+                <div class="select-with-icon">
+                  <font-awesome-icon :icon="['fas', 'medal']" />
+                  <select class="form-control" v-model="formData.awardLevel" @change="handleLevelChange" required>
+                    <option value="">请选择奖项级别</option>
+                    <option value="national">国家级</option>
+                    <option value="provincial">省级</option>
+                  </select>
+                </div>
+              </div>
+              <!-- 其他学业竞赛字段... -->
+              <div class="form-group">
+                <label class="form-label">奖项等级 <span class="required">*</span></label>
+                <div class="select-with-icon">
+                  <font-awesome-icon :icon="['fas', 'trophy']" />
+                  <select class="form-control" v-model="formData.awardGrade" required :disabled="!formData.awardLevel">
+                    <option value="">请选择奖项等级</option>
+                    <!-- 国家级奖项等级 -->
+                    <template v-if="formData.awardLevel === 'national'">
+                      <option value="firstOrHigher">一等奖及以上</option>
+                      <option value="second">二等奖</option>
+                      <option value="third">三等奖</option>
+                    </template>
+                    <!-- 省级奖项等级 -->
+                    <template v-if="formData.awardLevel === 'provincial'">
+                      <option value="firstOrHigher">一等奖及以上</option>
+                      <option value="second">二等奖</option>
+                    </template>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">奖项类别 <span class="required">*</span></label>
+                <div class="select-with-icon">
+                  <font-awesome-icon :icon="['fas', 'tag']" />
+                  <select class="form-control" v-model="formData.awardCategory" required>
+                    <option value="">请选择奖项类别</option>
+                    <option value="A+类">A+类</option>
+                    <option value="A类">A类</option>
+                    <option value="A-类">A-类</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">参与类型</label>
+                <div class="radio-cards compact">
+                  <div class="radio-card small" :class="{ active: formData.awardType === 'individual' }"
+                    @click="formData.awardType = 'individual'">
+                    <div class="radio-icon">
+                      <font-awesome-icon :icon="['fas', 'user']" />
+                    </div>
+                    <span>个人</span>
+                  </div>
+                  <div class="radio-card small" :class="{ active: formData.awardType === 'team' }"
+                    @click="formData.awardType = 'team'">
+                    <div class="radio-icon">
+                      <font-awesome-icon :icon="['fas', 'users']" />
+                    </div>
+                    <span>集体</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-grid" v-if="formData.awardType === 'team'">
+                <div class="form-group">
+                  <label class="form-label">作者排序类型</label>
+                  <div class="radio-cards compact">
+                    <div class="radio-card small" :class="{ active: formData.authorRankType === 'ranked' }"
+                      @click="formData.authorRankType = 'ranked'">
+                      <div class="radio-icon">
+                        <font-awesome-icon :icon="['fas', 'list-ol']" />
+                      </div>
+                      <span>区分排名</span>
+                    </div>
+                    <div class="radio-card small" :class="{ active: formData.authorRankType === 'unranked' }"
+                      @click="formData.authorRankType = 'unranked'">
+                      <div class="radio-icon">
+                        <font-awesome-icon :icon="['fas', 'users']" />
+                      </div>
+                      <span>不区分排名</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- 修改：仅当选择"有排名"时显示作者排序输入框 -->
+              <div class="form-grid" v-if="formData.awardType === 'team' && formData.authorRankType === 'ranked'">
+                <div class="form-group">
+                  <label class="form-label">作者排序</label>
+                  <div class="input-with-icon">
+                    <font-awesome-icon :icon="['fas', 'hashtag']" />
+                    <input type="number" class="form-control" v-model="formData.authorOrder" min="1"
+                      placeholder="请输入作者排序">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 新增：科研成果特有字段 -->
+          <div v-if="formData.academicType === 'research'">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">成果类型 <span class="required">*</span></label>
+                <div class="select-with-icon">
+                  <font-awesome-icon :icon="['fas', 'file-alt']" />
+                  <select class="form-control" v-model="formData.researchType" required>
+                    <option value="">请选择成果类型</option>
+                    <option value="thesis">学术论文</option>
+                    <option value="patent">发明专利</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- 其他科研成果字段... -->
+            </div>
+          </div>
+
+
+          <!-- 新增：创新创业训练特有字段 -->
+          <div v-if="formData.academicType === 'innovation'">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">项目级别 <span class="required">*</span></label>
+                <div class="select-with-icon">
+                  <font-awesome-icon :icon="['fas', 'certificate']" />
+                  <select class="form-control" v-model="formData.innovationLevel" required>
+                    <option value="">请选择项目级别</option>
+                    <option value="national">国家级</option>
+                    <option value="provincial">省级</option>
+                    <option value="school">校级</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- 团队角色选择 -->
+              <div class="form-group">
+                <label class="form-label">角色 <span class="required">*</span></label>
+                <div class="radio-cards compact">
+                  <div class="radio-card small" :class="{ active: formData.innovationRole === 'leader' }"
+                    @click="formData.innovationRole = 'leader'">
+                    <div class="radio-icon">
+                      <font-awesome-icon :icon="['fas', 'flag']" />
+                    </div>
+                    <span>组长</span>
+                  </div>
+                  <div class="radio-card small" :class="{ active: formData.innovationRole === 'member' }"
+                    @click="formData.innovationRole = 'member'">
+                    <div class="radio-icon">
+                      <font-awesome-icon :icon="['fas', 'user-friends']" />
+                    </div>
+                    <span>组员</span>
+                  </div>
+                </div>
+              </div>
+              <!-- 其他创新创业字段... -->
+            </div>
+          </div>
+
+        </div>
+
+
+        <!-- 综合表现特有信息 -->
+        <div class="form-section" v-if="formData.applicationType === 'comprehensive'">
+          <div class="section-title">
+            <font-awesome-icon :icon="['fas', 'hands-helping']" />
+            <span>综合表现信息</span>
           </div>
           <div class="form-grid">
             <div class="form-group">
-              <label class="form-label">奖项级别</label>
+              <label class="form-label">表现类型 <span class="required">*</span></label>
               <div class="select-with-icon">
-                <font-awesome-icon :icon="['fas', 'medal']" />
-                <select class="form-control" v-model="formData.awardLevel" required>
-                  <option value="">请选择奖项级别</option>
-                  <option value="national">国家级</option>
-                  <option value="provincial">省级</option>
-                  <option value="municipal">市级</option>
-                  <option value="school">校级</option>
+                <font-awesome-icon :icon="['fas', 'list-check']" />
+                <select class="form-control" v-model="formData.performanceType" required>
+                  <option value="">请选择表现类型</option>
+                  <option value="international_internship">国际组织实习</option>
+                  <option value="military_service">参军入伍服兵役</option>
+                  <option value="volunteer">志愿服务</option>
+                  <option value="social_work">社会工作</option>
+                  <option value="sports">体育比赛</option>
+                  <option value="honor_title">荣誉称号</option>
                 </select>
               </div>
             </div>
+
             <div class="form-group">
-              <label class="form-label">奖项类型</label>
+              <label class="form-label">奖项级别 <span class="required">*</span></label>
+              <div class="select-with-icon">
+                <font-awesome-icon :icon="['fas', 'medal']" />
+                <select class="form-control" v-model="formData.performanceLevel" required>
+                  <option value="">请选择奖项级别</option>
+                  <option value="provincial">省级</option>
+                  <option value="school">校级</option>
+                  <option value="college">院级</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">参与类型 <span class="required">*</span></label>
               <div class="radio-cards compact">
-                <div class="radio-card small" 
-                     :class="{ active: formData.awardType === 'individual' }"
-                     @click="formData.awardType = 'individual'">
+                <div class="radio-card small" :class="{ active: formData.performanceParticipation === 'individual' }"
+                  @click="formData.performanceParticipation = 'individual'">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'user']" />
                   </div>
                   <span>个人</span>
                 </div>
-                <div class="radio-card small" 
-                     :class="{ active: formData.awardType === 'team' }"
-                     @click="formData.awardType = 'team'">
+                <div class="radio-card small" :class="{ active: formData.performanceParticipation === 'team' }"
+                  @click="formData.performanceParticipation = 'team'">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'users']" />
                   </div>
-                  <span>团队</span>
+                  <span>集体</span>
                 </div>
               </div>
             </div>
-          </div>
-          <div class="form-grid" v-if="formData.awardType === 'team'">
-            <div class="form-group">
-              <label class="form-label">作者排序</label>
-              <div class="input-with-icon">
-                <font-awesome-icon :icon="['fas', 'hashtag']" />
-                <input type="number" class="form-control" v-model="formData.authorOrder" 
-                       min="1" placeholder="请输入作者排序">
+
+            <div class="form-group" v-if="formData.performanceParticipation === 'team'">
+              <label class="form-label">角色 <span class="required">*</span></label>
+              <div class="radio-cards compact">
+                <div class="radio-card small" :class="{ active: formData.teamRole === 'leader' }"
+                  @click="formData.teamRole = 'leader'">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'flag']" />
+                  </div>
+                  <span>队长</span>
+                </div>
+                <div class="radio-card small" :class="{ active: formData.teamRole === 'member' }"
+                  @click="formData.teamRole = 'member'">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'user-friends']" />
+                  </div>
+                  <span>队员</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 加分详情 -->
+        <!-- 加分详情（通用） -->
         <div class="form-section">
           <div class="section-title">
             <font-awesome-icon :icon="['fas', 'star']" />
@@ -122,30 +349,27 @@
               <label class="form-label">自评加分</label>
               <div class="input-with-icon">
                 <font-awesome-icon :icon="['fas', 'calculator']" />
-                <input type="number" class="form-control" v-model="formData.selfScore" 
-                       step="0.1" min="0" placeholder="请输入自评加分" required>
+                <input type="number" class="form-control" v-model="formData.selfScore" step="0.1" min="0"
+                  placeholder="请输入自评加分" required>
               </div>
             </div>
           </div>
           <div class="form-group">
             <label class="form-label">加分依据说明</label>
-            <textarea class="form-control" v-model="formData.description" 
-                      rows="3" maxlength="300" placeholder="请详细说明加分依据..." required></textarea>
+            <textarea class="form-control" v-model="formData.description" rows="3" maxlength="300"
+              placeholder="请详细说明加分依据..." required></textarea>
             <div class="char-counter">{{ formData.description.length }}/300</div>
           </div>
         </div>
 
-        <!-- 证明材料 -->
+        <!-- 证明材料（通用） -->
         <div class="form-section">
           <div class="section-title">
             <font-awesome-icon :icon="['fas', 'paperclip']" />
             <span>证明材料</span>
           </div>
-          <div class="file-upload-area" 
-               @click="triggerFileInput" 
-               @drop="handleDrop" 
-               @dragover.prevent 
-               @dragenter.prevent>
+          <div class="file-upload-area" @click="triggerFileInput" @drop="handleDrop" @dragover.prevent
+            @dragenter.prevent>
             <div class="upload-icon">
               <font-awesome-icon :icon="['fas', 'cloud-upload-alt']" />
             </div>
@@ -154,9 +378,9 @@
               <p class="help-text">支持 PDF, JPG, PNG 格式，单个文件不超过10MB</p>
             </div>
           </div>
-          <input type="file" ref="fileInput" style="display: none;" 
-                 accept=".pdf,.jpg,.jpeg,.png" @change="handleFileSelect" multiple>
-          
+          <input type="file" ref="fileInput" style="display: none;" accept=".pdf,.jpg,.jpeg,.png"
+            @change="handleFileSelect" multiple>
+
           <div class="file-list" v-if="formData.files.length > 0">
             <div class="file-list-header">
               <span>已上传文件 ({{ formData.files.length }})</span>
@@ -225,7 +449,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, watch } from 'vue'
 
 const fileInput = ref(null)
 const previewFileData = ref(null)
@@ -234,14 +458,39 @@ const formData = reactive({
   applicationType: 'academic',
   projectName: '',
   awardDate: '',
+  // 新增：学术类型（科研/竞赛/创新）
+  academicType: '',
+  // 科研成果特有字段
+  researchType: '',       // 成果类型
+  // 创新创业特有字段
+  innovationLevel: '',    // 项目级别
+  innovationRole: '', // 存储组长(leader)/组员(member)
+  // 学术专长特有字段
   awardLevel: '',
+  awardGrade: '', // 新增：奖项等级
+  awardCategory: '', // 新增：奖项类别（A+/A/A-）
   awardType: 'individual',
+  authorRankType: 'ranked', // 新增：排序类型（默认有排名）
   authorOrder: '',
+  // 综合表现特有字段
+  performanceType: '',
+  performanceLevel: '', // 奖项级别
+  performanceParticipation: 'individual', // 参与类型（个人/集体）
+  teamRole: '', // 团队角色（队长/队员）
+  // 通用字段
   selfScore: '',
   description: '',
   files: []
 })
 
+
+// 级别变更时重置等级
+const handleLevelChange = () => {
+  formData.awardGrade = ''
+}
+
+
+// 原有方法保持不变...
 const getFileIcon = (fileName) => {
   const ext = fileName.split('.').pop().toLowerCase()
   if (['jpg', 'jpeg', 'png', 'gif', 'bmp'].includes(ext)) {
@@ -333,6 +582,7 @@ const downloadFile = (fileData) => {
   URL.revokeObjectURL(url)
 }
 
+// 修改保存草稿和提交表单的验证逻辑
 const saveDraft = () => {
   const drafts = JSON.parse(localStorage.getItem('applicationDrafts') || '[]')
   const draft = {
@@ -346,29 +596,106 @@ const saveDraft = () => {
 }
 
 const submitForm = () => {
+  // 通用验证
   if (!formData.projectName) {
     alert('请输入项目全称')
     return
   }
-  
+
   if (!formData.awardDate) {
-    alert('请选择获奖时间')
+    alert('请输入获得时间')
     return
   }
-  
-  if (!formData.awardLevel) {
-    alert('请选择奖项级别')
-    return
+
+  // 学术专长特有验证增强
+  if (formData.applicationType === 'academic') {
+    // 新增：验证学术类型已选择
+    if (!formData.academicType) {
+      alert('请选择学术类型（科研成果/学业竞赛/创新创业训练）')
+      return
+    }
+
+    // 学业竞赛特有验证
+    if (!formData.awardLevel) {
+      alert('请选择奖项级别')
+      return
+    }
+    if (!formData.awardGrade) { // 新增：验证奖项等级
+      alert('请选择奖项等级')
+      return
+    }
+    if (!formData.awardCategory) {
+      alert('请选择奖项类别')
+      return
+    }
+
+    // 新增：科研成果验证
+    if (formData.academicType === 'research') {
+      if (!formData.researchType) {
+        alert('请选择成果类型')
+        return
+      }
+    }
+
+    // 新增：创新创业验证
+    if (formData.academicType === 'innovation') {
+      if (!formData.innovationLevel) {
+        alert('请选择项目级别')
+        return
+      }
+    }
   }
-  
+
+  // 新增：团队奖项的排序验证
+  if (formData.awardType === 'team') {
+    // 当选择"有排名"时必须填写作者排序
+    if (formData.authorRankType === 'ranked' && !formData.authorOrder) {
+      alert('请输入作者排序')
+      return
+    }
+  }
+
   if (!formData.selfScore) {
     alert('请输入自评加分')
     return
   }
-  
+
   if (formData.files.length === 0) {
     alert('请上传证明文件')
     return
+  }
+
+  // 类型特有验证
+  if (formData.applicationType === 'academic') {
+    if (!formData.awardLevel) {
+      alert('请选择奖项级别')
+      return
+    }
+  } else {
+    if (!formData.performanceType) {
+      alert('请选择表现类型')
+      return
+    }
+  }
+
+  // 综合表现特有验证
+  if (formData.applicationType === 'comprehensive') {
+    if (!formData.performanceType) {
+      alert('请选择表现类型')
+      return
+    }
+    if (!formData.performanceLevel) {
+      alert('请选择奖项级别')
+      return
+    }
+    if (!formData.performanceParticipation) {
+      alert('请选择参与类型')
+      return
+    }
+    if (formData.performanceParticipation === 'team' && !formData.teamRole) {
+      alert('请选择团队角色')
+      return
+    }
   }
 
   const applications = JSON.parse(localStorage.getItem('studentApplications') || '[]')
@@ -380,12 +707,13 @@ const submitForm = () => {
     finalScore: null,
     reviewedAt: null
   }
-  
+
   applications.push(application)
   localStorage.setItem('studentApplications', JSON.stringify(applications))
-  
+
   alert('申请已提交，等待审核中...')
-  
+
+  // 重置表单
   Object.assign(formData, {
     applicationType: 'academic',
     projectName: '',
@@ -393,6 +721,9 @@ const submitForm = () => {
     awardLevel: '',
     awardType: 'individual',
     authorOrder: '',
+    performanceType: '',
+    duration: '',
+    organization: '',
     selfScore: '',
     description: '',
     files: []
@@ -404,13 +735,19 @@ const submitForm = () => {
 /* 引入共享样式 */
 @import '../common/shared-styles.css';
 
+/* 必填项红色星号 */
+.required {
+  color: #ff4d4f;
+}
+
 /* 应用表单特有样式 */
 .application-form {
   padding: 0;
 }
 
 .form-section {
-  padding: 10px 15px; /* 减少垂直padding */
+  padding: 10px 15px;
+  /* 减少垂直padding */
   border-bottom: 1px solid #f0f4f8;
 }
 
@@ -423,7 +760,8 @@ const submitForm = () => {
   align-items: center;
   font-weight: 600;
   color: #333;
-  margin-bottom: 12px; /* 减少底部间距 */
+  margin-bottom: 12px;
+  /* 减少底部间距 */
   font-size: 1rem;
 }
 
@@ -436,7 +774,8 @@ const submitForm = () => {
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px; /* 减少网格间距 */
+  gap: 12px;
+  /* 减少网格间距 */
 }
 
 .form-group {
@@ -448,16 +787,19 @@ const submitForm = () => {
 .form-label {
   font-weight: 500;
   color: #333;
-  margin-bottom: 6px; /* 减少标签底部间距 */
+  margin-bottom: 6px;
+  /* 减少标签底部间距 */
   font-size: 0.95rem;
 }
 
 /* 输入框图标样式 */
-.input-with-icon, .select-with-icon {
+.input-with-icon,
+.select-with-icon {
   position: relative;
 }
 
-.input-with-icon svg, .select-with-icon svg {
+.input-with-icon svg,
+.select-with-icon svg {
   position: absolute;
   left: 12px;
   top: 50%;
@@ -466,14 +808,16 @@ const submitForm = () => {
   z-index: 2;
 }
 
-.input-with-icon .form-control, .select-with-icon .form-control {
+.input-with-icon .form-control,
+.select-with-icon .form-control {
   padding-left: 35px;
 }
 
 /* 单选卡片样式 */
 .radio-cards {
   display: flex;
-  gap: 8px; /* 减少卡片间距 */
+  gap: 8px;
+  /* 减少卡片间距 */
 }
 
 .radio-cards.compact {
@@ -483,7 +827,8 @@ const submitForm = () => {
 .radio-card {
   display: flex;
   align-items: center;
-  padding: 8px 12px; /* 减少卡片内边距 */
+  padding: 8px 12px;
+  /* 减少卡片内边距 */
   border: 1px solid #ddd;
   border-radius: 4px;
   cursor: pointer;
@@ -492,7 +837,8 @@ const submitForm = () => {
 }
 
 .radio-card.small {
-  padding: 6px 10px; /* 减少小卡片内边距 */
+  padding: 6px 10px;
+  /* 减少小卡片内边距 */
   font-size: 0.9rem;
 }
 
@@ -507,7 +853,8 @@ const submitForm = () => {
 }
 
 .radio-icon {
-  margin-right: 6px; /* 减少图标右边距 */
+  margin-right: 6px;
+  /* 减少图标右边距 */
   color: #666;
 }
 
@@ -521,11 +868,13 @@ const submitForm = () => {
   align-items: center;
   border: 2px dashed #ddd;
   border-radius: 6px;
-  padding: 15px; /* 减少内边距 */
+  padding: 15px;
+  /* 减少内边距 */
   cursor: pointer;
   transition: all 0.2s;
   background: #fafafa;
-  margin-bottom: 12px; /* 减少底部间距 */
+  margin-bottom: 12px;
+  /* 减少底部间距 */
 }
 
 .file-upload-area:hover {
@@ -534,9 +883,11 @@ const submitForm = () => {
 }
 
 .upload-icon {
-  font-size: 1.8rem; /* 稍微减小图标大小 */
+  font-size: 1.8rem;
+  /* 稍微减小图标大小 */
   color: #666;
-  margin-right: 12px; /* 减少右边距 */
+  margin-right: 12px;
+  /* 减少右边距 */
 }
 
 .upload-text p {
@@ -547,7 +898,8 @@ const submitForm = () => {
 .help-text {
   font-size: 0.85rem;
   color: #666;
-  margin-top: 4px; /* 减少顶部间距 */
+  margin-top: 4px;
+  /* 减少顶部间距 */
 }
 
 /* 文件列表 */
@@ -558,7 +910,8 @@ const submitForm = () => {
 }
 
 .file-list-header {
-  padding: 8px 12px; /* 减少内边距 */
+  padding: 8px 12px;
+  /* 减少内边距 */
   background-color: #f8f9fa;
   border-bottom: 1px solid #e0e0e0;
   font-weight: 500;
@@ -568,7 +921,8 @@ const submitForm = () => {
 .file-item {
   display: flex;
   align-items: center;
-  padding: 10px 12px; /* 减少内边距 */
+  padding: 10px 12px;
+  /* 减少内边距 */
   background-color: white;
   border-bottom: 1px solid #f0f0f0;
 }
@@ -580,13 +934,15 @@ const submitForm = () => {
 .file-icon {
   font-size: 1.2rem;
   color: #666;
-  margin-right: 10px; /* 减少右边距 */
+  margin-right: 10px;
+  /* 减少右边距 */
   width: 20px;
 }
 
 .file-info {
   flex: 1;
-  padding-bottom:10px; ;
+  padding-bottom: 10px;
+  ;
 }
 
 .file-name {
@@ -602,13 +958,15 @@ const submitForm = () => {
 
 .file-actions {
   display: flex;
-  gap: 6px; /* 减少操作按钮间距 */
+  gap: 6px;
+  /* 减少操作按钮间距 */
 }
 
 .file-action-btn {
   background: none;
   border: none;
-  padding: 5px; /* 减少内边距 */
+  padding: 5px;
+  /* 减少内边距 */
   cursor: pointer;
   color: #666;
   border-radius: 3px;
@@ -629,12 +987,14 @@ const submitForm = () => {
 
 /* 操作按钮 */
 .form-actions {
-  padding: 15px 20px; /* 减少内边距 */
+  padding: 15px 20px;
+  /* 减少内边距 */
   background: #ffffff;
   border-top: 1px solid #ffffff;
   display: flex;
   justify-content: flex-end;
-  gap: 12px; /* 减少按钮间距 */
+  gap: 12px;
+  /* 减少按钮间距 */
 }
 
 /* 模态框特有样式 */
@@ -745,29 +1105,33 @@ const submitForm = () => {
 @media (max-width: 768px) {
   .form-grid {
     grid-template-columns: 1fr;
-    gap: 10px; /* 移动端也减少间距 */
+    gap: 10px;
+    /* 移动端也减少间距 */
   }
-  
+
   .radio-cards {
     flex-direction: column;
   }
-  
+
   .file-upload-area {
     flex-direction: column;
     text-align: center;
-    padding: 12px; /* 移动端减少内边距 */
+    padding: 12px;
+    /* 移动端减少内边距 */
   }
-  
+
   .upload-icon {
     margin-right: 0;
-    margin-bottom: 8px; /* 减少底部间距 */
+    margin-bottom: 8px;
+    /* 减少底部间距 */
   }
-  
+
   .form-actions {
     flex-direction: column;
-    padding: 12px 15px; /* 移动端减少内边距 */
+    padding: 12px 15px;
+    /* 移动端减少内边距 */
   }
-  
+
   .btn {
     justify-content: center;
   }
@@ -778,19 +1142,19 @@ const submitForm = () => {
     max-width: none;
     max-height: none;
   }
-  
+
   .modal-header {
     padding: 12px 15px;
   }
-  
+
   .modal-body {
     padding: 15px;
   }
-  
+
   .file-preview {
     padding: 30px 15px;
   }
-  
+
   .file-preview h4 {
     font-size: 1.1rem;
   }

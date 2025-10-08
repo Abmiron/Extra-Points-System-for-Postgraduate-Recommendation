@@ -4,7 +4,8 @@
   box-sizing: border-box;
 }
 
-html,body {
+html,
+body {
   margin: 0;
   padding: 0;
   height: 100%;
@@ -148,7 +149,9 @@ html,body {
   color: #333;
 }
 
-.user-faculty, .user-major, .user-role {
+.user-faculty,
+.user-major,
+.user-role {
   font-size: 13px;
   color: #666;
   line-height: 1.3;
@@ -631,17 +634,23 @@ textarea.form-control {
 }
 
 /* 过渡动画 */
-.fade-enter-active, .fade-leave-active {
+.fade-enter-active,
+.fade-leave-active {
   transition: opacity 0.3s;
 }
-.fade-enter, .fade-leave-to {
+
+.fade-enter,
+.fade-leave-to {
   opacity: 0;
 }
 
-.slide-enter-active, .slide-leave-active {
+.slide-enter-active,
+.slide-leave-active {
   transition: transform 0.3s;
 }
-.slide-enter, .slide-leave-to {
+
+.slide-enter,
+.slide-leave-to {
   transform: translateX(-100%);
 }
 
@@ -699,95 +708,95 @@ textarea.form-control {
   .container {
     flex-direction: column;
   }
-  
+
   .content-wrapper {
     flex-direction: column;
   }
-  
+
   .sidebar {
     width: 100%;
     height: auto;
     border-right: none;
     border-bottom: 1px solid #e1e4e8;
   }
-  
+
   .sidebar-nav ul {
     display: flex;
     overflow-x: auto;
   }
-  
+
   .sidebar-nav li {
     flex-shrink: 0;
     margin-bottom: 0;
   }
-  
+
   .sidebar-nav li a {
     border-radius: 4px;
     margin: 0 4px;
     white-space: nowrap;
   }
-  
+
   .form-row {
     flex-direction: column;
     gap: 0;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .filters {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .filter-group {
     width: 100%;
   }
-  
+
   .header {
     padding: 10px;
   }
-  
+
   .logo {
     width: 120px;
   }
-  
+
   .university-name {
     font-size: 16px;
   }
-  
+
   .header-right {
     gap: 10px;
   }
-  
+
   .user-menu span {
     display: none;
   }
-  
+
   .main-content {
     padding: 15px;
   }
-  
+
   .page-title {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
   }
-  
+
   .card {
     padding: 15px;
   }
-  
+
   .table-container {
     font-size: 14px;
   }
-  
+
   .application-table th,
   .application-table td {
     padding: 8px 10px;
   }
-  
+
   .pagination {
     flex-direction: column;
     gap: 10px;
@@ -800,25 +809,25 @@ textarea.form-control {
     flex-direction: column;
     gap: 10px;
   }
-  
+
   .tabs {
     flex-wrap: wrap;
   }
-  
+
   .tab-btn {
     flex: 1;
     min-width: 120px;
     text-align: center;
   }
-  
+
   .batch-actions {
     flex-wrap: wrap;
   }
-  
+
   .form-actions {
     flex-direction: column;
   }
-  
+
   .form-actions .btn {
     width: 100%;
   }
@@ -826,6 +835,7 @@ textarea.form-control {
 
 /* 打印样式 */
 @media print {
+
   .header,
   .sidebar,
   .filters,
@@ -834,22 +844,22 @@ textarea.form-control {
   .pagination {
     display: none !important;
   }
-  
+
   .main-content {
     padding: 0;
     background: white;
   }
-  
+
   .card {
     box-shadow: none;
     border: 1px solid #ddd;
   }
-  
+
   .application-table {
     width: 100%;
     border: 1px solid #ddd;
   }
-  
+
   .application-table th {
     background: #f0f0f0;
   }

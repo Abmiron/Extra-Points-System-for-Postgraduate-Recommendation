@@ -14,17 +14,14 @@
 
     <!-- 选项卡 -->
     <div class="tabs">
-      <button class="tab-btn" :class="{ active: activeTab === 'student' }" 
-              @click="activeTab = 'student'">学生账户</button>
-      <button class="tab-btn" :class="{ active: activeTab === 'teacher' }" 
-              @click="activeTab = 'teacher'">教师账户</button>
+      <button class="tab-btn" :class="{ active: activeTab === 'student' }" @click="activeTab = 'student'">学生账户</button>
+      <button class="tab-btn" :class="{ active: activeTab === 'teacher' }" @click="activeTab = 'teacher'">教师账户</button>
     </div>
 
     <!-- 筛选区域 -->
     <div class="filters">
       <div class="filter-group">
-        <input type="text" class="form-control" v-model="filters.keyword" 
-               placeholder="搜索姓名或学号/工号">
+        <input type="text" class="form-control" v-model="filters.keyword" placeholder="搜索姓名或学号/工号">
       </div>
       <div class="filter-group">
         <span class="filter-label">学院:</span>
@@ -96,16 +93,12 @@
                   <button class="btn-outline btn small-btn" @click="editUser(user)" title="编辑">
                     <font-awesome-icon :icon="['fas', 'edit']" />
                   </button>
-                  <button v-if="user.status === 'active'" 
-                          class="btn-outline btn small-btn" 
-                          @click="toggleUserStatus(user.id, 'disabled')"
-                          title="禁用">
+                  <button v-if="user.status === 'active'" class="btn-outline btn small-btn"
+                    @click="toggleUserStatus(user.id, 'disabled')" title="禁用">
                     <font-awesome-icon :icon="['fas', 'ban']" />
                   </button>
-                  <button v-else 
-                          class="btn-outline btn small-btn" 
-                          @click="toggleUserStatus(user.id, 'active')"
-                          title="启用">
+                  <button v-else class="btn-outline btn small-btn" @click="toggleUserStatus(user.id, 'active')"
+                    title="启用">
                     <font-awesome-icon :icon="['fas', 'check']" />
                   </button>
                   <button class="btn-outline btn small-btn" @click="resetPassword(user.id)" title="重置密码">
@@ -190,15 +183,14 @@
             <div class="form-row" v-else>
               <div class="form-group">
                 <label class="form-label">角色</label>
-                <input type="text" class="form-control" v-model="userForm.roleName" 
-                       :placeholder="userForm.role === 'teacher' ? '如：审核员' : '如：系统管理员'" required>
+                <input type="text" class="form-control" v-model="userForm.roleName"
+                  :placeholder="userForm.role === 'teacher' ? '如：审核员' : '如：系统管理员'" required>
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">初始密码</label>
-                <input type="password" class="form-control" v-model="userForm.password" 
-                       :required="!editingUser">
+                <input type="password" class="form-control" v-model="userForm.password" :required="!editingUser">
                 <div class="help-text">若不修改密码请留空</div>
               </div>
               <div class="form-group">
@@ -377,12 +369,12 @@ const users = ref([
 const filteredUsers = computed(() => {
   return users.value.filter(user => {
     const tabMatch = activeTab.value === user.role
-    const keywordMatch = !filters.keyword || 
-                         user.name.includes(filters.keyword) || 
-                         user.account.includes(filters.keyword)
+    const keywordMatch = !filters.keyword ||
+      user.name.includes(filters.keyword) ||
+      user.account.includes(filters.keyword)
     const facultyMatch = filters.faculty === 'all' || user.faculty === filters.faculty
     const statusMatch = filters.status === 'all' || user.status === filters.status
-    
+
     return tabMatch && keywordMatch && facultyMatch && statusMatch
   })
 })
@@ -450,7 +442,7 @@ const saveUser = () => {
     }
     users.value.push(newUser)
   }
-  
+
   closeModal()
   alert('用户保存成功')
 }

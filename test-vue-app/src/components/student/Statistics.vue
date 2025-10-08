@@ -121,13 +121,13 @@ const statistics = reactive({
 
 // 计算属性
 const academicApplications = computed(() => {
-  return applications.value.filter(app => 
+  return applications.value.filter(app =>
     app.applicationType === 'academic' && app.status === 'approved'
   )
 })
 
 const comprehensiveApplications = computed(() => {
-  return applications.value.filter(app => 
+  return applications.value.filter(app =>
     app.applicationType === 'comprehensive' && app.status === 'approved'
   )
 })
@@ -163,16 +163,16 @@ const calculateStatistics = () => {
   statistics.specialtyScore = academicApplications.value.reduce((total, app) => {
     return total + (app.finalScore || app.selfScore || 0)
   }, 0)
-  
+
   // 计算综合表现总分
   statistics.comprehensiveScore = comprehensiveApplications.value.reduce((total, app) => {
     return total + (app.finalScore || app.selfScore || 0)
   }, 0)
-  
+
   // 计算推免综合成绩（这里是一个简化公式）
-  statistics.totalScore = statistics.academicScore * 0.8 + 
-                         statistics.specialtyScore + 
-                         statistics.comprehensiveScore
+  statistics.totalScore = statistics.academicScore * 0.8 +
+    statistics.specialtyScore +
+    statistics.comprehensiveScore
 }
 
 // 生命周期
@@ -180,7 +180,7 @@ onMounted(() => {
   // 从本地存储加载数据
   const savedApplications = JSON.parse(localStorage.getItem('studentApplications') || '[]')
   applications.value = savedApplications
-  
+
   // 计算统计信息
   calculateStatistics()
 })
