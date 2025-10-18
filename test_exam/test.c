@@ -1,164 +1,81 @@
 #include <stdio.h>
-#include <stdlib.h>
 
-typedef struct Node
+int get_h(int m)
 {
-    int data1;
-    int data2;
-    struct Node *next;
-} Node;
-
-typedef struct Stack
-{
-    Node *top;
-    int size;
-} Stack;
-
-void initStack(Stack *s)
-{
-    s->top = NULL;
-    s->size = 0;
-}
-
-int isEmpty(Stack *s)
-{
-    return s->size == 0;
-}
-
-// 入栈
-void push(Stack *s, int data1, int data2)
-{
-    Node *newNode = (Node *)malloc(sizeof(Node));
-    newNode->data1 = data1;
-    newNode->data2 = data2;
-    newNode->next = s->top;
-    s->top = newNode;
-    s->size++;
-}
-
-// 出栈
-int pop(Stack *s, int *data1, int *data2)
-{
-    if (isEmpty(s))
-        return -1;
-    Node *temp = s->top;
-    *data1 = temp->data1;
-    *data2 = temp->data2;
-    s->top = s->top->next;
-    free(temp);
-    s->size--;
-    return 0;
-}
-
-// 获取栈顶
-int peek(Stack *s, int *data1, int *data2)
-{
-    if (isEmpty(s))
-        return -1;
-    *data1 = s->top->data1;
-    *data2 = s->top->data2;
-    return 0;
-}
-
-void printPath(Stack *s)
-{
-    // 反转栈打印正向路径
-    Stack tempStack;
-    initStack(&tempStack);
-    Node *current = s->top;
-    while (current)
+    if (m == 0)
+        return 0;
+    int h = 0;
+    int total = 0;
+    while (total < m)
     {
-        push(&tempStack, current->data1, current->data2);
-        current = current->next;
+        h++;
+        total += (1 << (h - 1)); // 累加第h层节点数（2^(h-1)）
     }
+    return h;
+}
 
-    while (!isEmpty(&tempStack))
+// 计算节点数为m的完全二叉树中左子树的节点数
+int get_left_count(int m)
+{
+    if (m <= 1)
+        return 0;
+    int h = get_h(m);
+    int s = (1 << (h - 1)) - 1;       // 前h-1层的总节点数（完美二叉树）
+    int t = m - s;                    // 最后一层的节点数
+    int max_left_last = 1 << (h - 2); // 最后一层左子树最多节点数（2^(h-2)）
+
+    if (t <= max_left_last)
     {
-        int x, y;
-        pop(&tempStack, &x, &y);
-        printf("(%d,%d)", x, y);
+        // 最后一层节点均在左子树
+        return ((1 << (h - 2)) - 1) + t;
     }
-    printf("\n");
+    else
+    {
+        // 左子树为完美二叉树（h-1层）
+        return (1 << (h - 1)) - 1;
+    }
+}
+
+// 递归构建层序序列
+// post后序，res层序，start后序索引，index当前层序位置
+void build_level(int post[], int res[], int start, int end, int index)
+{
+    if (start > end)
+        return; //递归终止
+
+    // 根节点是后序序列的最后一个元素，放入层序对应位置
+    res[index] = post[end];
+    int m = end - start + 1; // 当前子树的节点数
+    if (m == 1)
+        return; //递归终止
+
+    int k = get_left_count(m); // 左子树节点数
+    // 递归处理左子树：后序[start, start+k-1]，层序位置2*index+1
+    build_level(post, res, start, start + k - 1, 2 * index + 1);
+    // 递归处理右子树：后序[start+k, end-1]，层序位置2*index+2
+    build_level(post, res, start + k, end - 1, 2 * index + 2);
 }
 
 int main()
 {
-    int n;
-    scanf("%d", &n);
-
-    int **maze = (int **)malloc(n * sizeof(int *));
-    for (int i = 0; i < n; i++)
-        maze[i] = (int *)malloc(n * sizeof(int));
-
-    for (int i = 0; i < n; i++)
+    int N;
+    scanf("%d", &N);
+    int post[30];
+    for (int i = 0; i < N; i++)
     {
-        for (int j = 0; j < n; j++)
-        {
-            scanf("%d", &maze[i][j]);
-        }
+        scanf("%d", &post[i]);
     }
 
-    Stack s;
-    initStack(&s);
+    int res[30];
+    build_level(post, res, 0, N - 1, 0);
 
-    int x = 1, y = 1;
-    push(&s, x, y);
-    maze[x][y] = 1;//记录起点并标记为已访问
-
-    int found = 0;
-    int directions[4][2] = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}}; // 右下左上
-
-    while (!isEmpty(&s))
+    for (int i = 0; i < N; i++)
     {
-        int currX, currY;
-        peek(&s, &currX, &currY);
-        if (currX == n - 2 && currY == n - 2)
-        {
-            found = 1;
-            break;
-        }
-
-        int moved = 0;
-        
-        for (int i = 0; i < 4; i++)
-        {
-            int newX = currX + directions[i][0];
-            int newY = currY + directions[i][1];
-
-            if (newX > 0 && newX < n - 1 && newY > 0 && newY < n - 1 && maze[newX][newY] == 0)
-            {
-                push(&s, newX, newY);
-                maze[newX][newY] = 1;
-                moved = 1;
-                break;
-            }
-        }
-        if (!moved)
-        {
-            int discardX, discardY;
-            pop(&s, &discardX, &discardY);
-        }
+        if (i != 0)
+            printf(" ");
+        printf("%d", res[i]);
     }
-
-    if (found)
-    {
-        printPath(&s);
-    }
-    else
-    {
-        printf("NO\n");
-    }
-
-    // 释放内存
-    while (!isEmpty(&s))
-    {
-        int discardX, discardY;
-        pop(&s, &discardX, &discardY);
-    }
-
-    for (int i = 0; i < n; i++)
-        free(maze[i]);
-    free(maze);
+    printf("\n");
 
     return 0;
 }

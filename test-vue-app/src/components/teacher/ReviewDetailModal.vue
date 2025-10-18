@@ -234,7 +234,9 @@ const previewLastDragPos = reactive({ x: 0, y: 0 })
 
 // 计算属性
 const imageFiles = computed(() => {
-  return props.application.files?.filter(file => isImage(file)) || []
+  // 确保 application.files 是数组（若未定义则转为空数组）
+  const files = props.application.files || [];
+  return files.filter(file => isImage(file));
 })
 
 const hasImages = computed(() => imageFiles.value.length > 0)
@@ -243,6 +245,8 @@ const currentImage = computed(() => imageFiles.value[currentImageIndex.value] ||
 
 // 方法
 const isImage = (file) => {
+  // 先判断 file 和 file.name 是否存在
+  if (!file || !file.name) return false;
   const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg']
   const ext = file.name.split('.').pop().toLowerCase()
   return imageExtensions.includes(ext)

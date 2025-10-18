@@ -49,7 +49,7 @@
               <label class="form-label">获得时间</label>
               <div class="input-with-icon">
                 <font-awesome-icon :icon="['fas', 'calendar']" />
-                <input type="text" class="form-control" v-model="formData.awardDate" placeholder="请输入获得年度" required>
+                <input type="date" class="form-control" v-model="formData.awardDate" required>
               </div>
             </div>
           </div>
@@ -394,10 +394,10 @@
                 <div class="file-meta">{{ formatFileSize(file.size) }}</div>
               </div>
               <div class="file-actions">
-                <button class="file-action-btn" @click="previewFile(file)" title="预览">
+                <button type="button" class="file-action-btn" @click.stop="previewFile(file)" title="预览">
                   <font-awesome-icon :icon="['fas', 'eye']" />
                 </button>
-                <button class="file-action-btn" @click="removeFile(index)" title="删除">
+                <button type="button" class="file-action-btn" @click.stop="removeFile(index)" title="删除">
                   <font-awesome-icon :icon="['fas', 'times']" />
                 </button>
               </div>
@@ -616,17 +616,27 @@ const submitForm = () => {
     }
 
     // 学业竞赛特有验证
-    if (!formData.awardLevel) {
-      alert('请选择奖项级别')
-      return
-    }
-    if (!formData.awardGrade) { // 新增：验证奖项等级
-      alert('请选择奖项等级')
-      return
-    }
-    if (!formData.awardCategory) {
-      alert('请选择奖项类别')
-      return
+    if (formData.academicType === 'competition') {
+      if (!formData.awardLevel) {
+        alert('请选择奖项级别')
+        return
+      }
+      if (!formData.awardGrade) { // 新增：验证奖项等级
+        alert('请选择奖项等级')
+        return
+      }
+      if (!formData.awardCategory) {
+        alert('请选择奖项类别')
+        return
+      }
+      // 新增：团队奖项的排序验证
+      if (formData.awardType === 'team') {
+        // 当选择"有排名"时必须填写作者排序
+        if (formData.authorRankType === 'ranked' && !formData.authorOrder) {
+          alert('请输入作者排序')
+          return
+        }
+      }
     }
 
     // 新增：科研成果验证
@@ -643,38 +653,11 @@ const submitForm = () => {
         alert('请选择项目级别')
         return
       }
-    }
-  }
 
-  // 新增：团队奖项的排序验证
-  if (formData.awardType === 'team') {
-    // 当选择"有排名"时必须填写作者排序
-    if (formData.authorRankType === 'ranked' && !formData.authorOrder) {
-      alert('请输入作者排序')
-      return
-    }
-  }
-
-  if (!formData.selfScore) {
-    alert('请输入自评加分')
-    return
-  }
-
-  if (formData.files.length === 0) {
-    alert('请上传证明文件')
-    return
-  }
-
-  // 类型特有验证
-  if (formData.applicationType === 'academic') {
-    if (!formData.awardLevel) {
-      alert('请选择奖项级别')
-      return
-    }
-  } else {
-    if (!formData.performanceType) {
-      alert('请选择表现类型')
-      return
+      if (!formData.innovationRole) {
+        alert('请选择您的角色（组长/组员）')
+        return
+      }
     }
   }
 
@@ -688,14 +671,17 @@ const submitForm = () => {
       alert('请选择奖项级别')
       return
     }
-    if (!formData.performanceParticipation) {
-      alert('请选择参与类型')
-      return
-    }
-    if (formData.performanceParticipation === 'team' && !formData.teamRole) {
-      alert('请选择团队角色')
-      return
-    }
+  }
+
+  // 通用字段验证
+  if (!formData.selfScore) {
+    alert('请输入自评加分')
+    return
+  }
+
+  if (formData.files.length === 0) {
+    alert('请上传证明文件')
+    return
   }
 
   const applications = JSON.parse(localStorage.getItem('studentApplications') || '[]')
