@@ -238,8 +238,18 @@ export const validateLogin = (username, password) => {
   const user = users[username]
   
   if (user && user.password === password) {
+    // 检查用户状态，如果账户被禁用则拒绝登录
+    if (user.status === 'disabled') {
+      console.log('登录失败：账户已被禁用', username)
+      return null
+    }
+    
+    // 更新最后登录时间
+    user.lastLogin = new Date().toISOString()
+    localStorage.setItem('users', JSON.stringify(users))
+    
     // 返回用户信息（不包含密码）
-    const { password, ...userInfo } = user
+    const { password: pwd, ...userInfo } = user
     return userInfo
   }
   return null

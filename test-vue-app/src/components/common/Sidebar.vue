@@ -61,7 +61,8 @@ const menuConfig = {
     { key: 'data-management', icon: ['fas', 'database'], title: '数据管理' },
     { key: 'rule-management', icon: ['fas', 'ruler'], title: '规则管理' },
     { key: 'statistics-report', icon: ['fas', 'chart-pie'], title: '统计报表' },
-    { key: 'system-settings', icon: ['fas', 'cog'], title: '系统设置' }
+    { key: 'system-settings', icon: ['fas', 'cog'], title: '系统设置' },
+    { key: 'profile', icon: ['fas', 'user'], title: '个人信息' }
   ]
 }
 

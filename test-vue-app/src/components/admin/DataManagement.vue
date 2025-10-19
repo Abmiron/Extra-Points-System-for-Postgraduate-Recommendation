@@ -2,11 +2,7 @@
   <div class="page-content">
     <div class="page-title">
       <span>数据管理</span>
-      <div class="page-title-actions">
-        <button class="btn btn-outline" @click="showCreateApplicationModal = true">
-          <font-awesome-icon :icon="['fas', 'plus']" /> 代创建申请
-        </button>
-      </div>
+  
     </div>
 
     <!-- 搜索区域 - 修改为与用户管理组件相同样式 -->
@@ -133,21 +129,16 @@
       @close="closeDetailModal"
     /> -->
 
-    <!-- 代创建申请模态框 -->
-    <!-- <CreateApplicationModal 
-      v-if="showCreateApplicationModal"
-      @save="createApplication"
-      @close="closeCreateModal"
-    /> -->
+
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 // import ApplicationDetailModal from './ApplicationDetailModal.vue'
-// import CreateApplicationModal from './CreateApplicationModal.vue'
 
-const showCreateApplicationModal = ref(false)
+
+
 const selectedApplication = ref(null)
 const selectAll = ref(false)
 const selectedApplications = ref([])
@@ -294,24 +285,8 @@ const viewHistory = (applicationId) => {
   alert(`查看申请 ${applicationId} 的历史记录`)
 }
 
-const createApplication = (applicationData) => {
-  const newApplication = {
-    id: 'APP' + Date.now(),
-    ...applicationData,
-    appliedAt: new Date().toISOString(),
-    status: 'pending'
-  }
-  applications.value.push(newApplication)
-  closeCreateModal()
-  alert('申请创建成功')
-}
-
 const closeDetailModal = () => {
   selectedApplication.value = null
-}
-
-const closeCreateModal = () => {
-  showCreateApplicationModal.value = false
 }
 
 const prevPage = () => {

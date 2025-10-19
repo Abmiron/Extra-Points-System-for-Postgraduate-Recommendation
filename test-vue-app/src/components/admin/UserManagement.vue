@@ -16,6 +16,7 @@
     <div class="tabs">
       <button class="tab-btn" :class="{ active: activeTab === 'student' }" @click="activeTab = 'student'">学生账户</button>
       <button class="tab-btn" :class="{ active: activeTab === 'teacher' }" @click="activeTab = 'teacher'">教师账户</button>
+      <button class="tab-btn" :class="{ active: activeTab === 'admin' }" @click="activeTab = 'admin'">管理员账户</button>
     </div>
 
     <!-- 筛选区域 -->
@@ -81,7 +82,7 @@
               <td>{{ user.account }}</td>
               <td>{{ user.name }}</td>
               <td>{{ getFacultyText(user.faculty) }}</td>
-              <td>{{ user.role === 'student' ? user.major : user.roleName }}</td>
+              <td>{{ user.role === 'student' ? user.major : (user.role === 'teacher' ? user.roleName : user.roleName || '管理员') }}</td>
               <td>
                 <span :class="`status-badge status-${user.status === 'active' ? 'approved' : 'rejected'}`">
                   {{ user.status === 'active' ? '启用' : '禁用' }}
@@ -152,7 +153,7 @@
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">{{ userForm.role === 'student' ? '学号' : '工号' }}</label>
+                <label class="form-label">{{ userForm.role === 'student' ? '学号' : (userForm.role === 'teacher' ? '工号' : '管理员账号') }}</label>
                 <input type="text" class="form-control" v-model="userForm.account" required>
               </div>
             </div>
@@ -180,11 +181,18 @@
                 </select>
               </div>
             </div>
-            <div class="form-row" v-else>
+            <div class="form-row" v-else-if="userForm.role === 'teacher'">
               <div class="form-group">
                 <label class="form-label">角色</label>
                 <input type="text" class="form-control" v-model="userForm.roleName"
-                  :placeholder="userForm.role === 'teacher' ? '如：审核员' : '如：系统管理员'" required>
+                  placeholder="如：审核员" required>
+              </div>
+            </div>
+            <div class="form-row" v-else-if="userForm.role === 'admin'">
+              <div class="form-group">
+                <label class="form-label">管理员类型</label>
+                <input type="text" class="form-control" v-model="userForm.roleName"
+                  placeholder="如：系统管理员" required>
               </div>
             </div>
             <div class="form-row">
@@ -240,130 +248,43 @@ const userForm = reactive({
   status: 'active'
 })
 
-// 模拟用户数据
-const users = ref([
-  {
-    id: 1,
-    role: 'student',
-    account: '12320253211234',
-    name: '张同学',
-    faculty: 'cs',
-    major: 'cs',
-    status: 'active',
-    lastLogin: '2023-09-10T15:30:00Z'
-  },
-  {
-    id: 2,
-    role: 'teacher',
-    account: '2000123456',
-    name: '张老师',
-    faculty: 'cs',
-    roleName: '审核员',
-    status: 'active',
-    lastLogin: '2023-09-11T09:45:00Z'
-  },
-  {
-    id: 3,
-    role: 'student',
-    account: '12320253215678',
-    name: '李同学',
-    faculty: 'se',
-    major: 'se',
-    status: 'disabled',
-    lastLogin: '2023-08-25T14:20:00Z'
-  },
-  {
-    id: 4,
-    role: 'admin',
-    account: 'admin001',
-    name: '管理员',
-    faculty: 'cs',
-    roleName: '系统管理员',
-    status: 'active',
-    lastLogin: '2023-09-12T10:15:00Z'
-  },
-  // 添加更多测试数据
-  {
-    id: 5,
-    role: 'student',
-    account: '12320253219876',
-    name: '王同学',
-    faculty: 'ai',
-    major: 'ai',
-    status: 'active',
-    lastLogin: '2023-09-05T11:20:00Z'
-  },
-  {
-    id: 6,
-    role: 'teacher',
-    account: '2000654321',
-    name: '李老师',
-    faculty: 'se',
-    roleName: '评审员',
-    status: 'active',
-    lastLogin: '2023-09-08T16:45:00Z'
-  },
-  {
-    id: 7,
-    role: 'student',
-    account: '12320253214321',
-    name: '赵同学',
-    faculty: 'cs',
-    major: 'cs',
-    status: 'disabled',
-    lastLogin: '2023-08-20T09:30:00Z'
-  },
-  {
-    id: 8,
-    role: 'student',
-    account: '12320253218765',
-    name: '钱同学',
-    faculty: 'se',
-    major: 'se',
-    status: 'active',
-    lastLogin: '2023-09-15T14:10:00Z'
-  },
-  {
-    id: 9,
-    role: 'teacher',
-    account: '2000789012',
-    name: '陈老师',
-    faculty: 'ai',
-    roleName: '审核员',
-    status: 'active',
-    lastLogin: '2023-09-14T10:25:00Z'
-  },
-  {
-    id: 10,
-    role: 'student',
-    account: '12320253215432',
-    name: '孙同学',
-    faculty: 'ai',
-    major: 'ai',
-    status: 'active',
-    lastLogin: '2023-09-12T13:40:00Z'
-  },
-  {
-    id: 11,
-    role: 'student',
-    account: '12320253217654',
-    name: '周同学',
-    faculty: 'cs',
-    major: 'cs',
-    status: 'disabled',
-    lastLogin: '2023-08-18T15:55:00Z'
-  },
-  {
-    id: 12,
-    role: 'admin',
-    account: 'admin002',
-    name: '超级管理员',
-    faculty: 'cs',
-    roleName: '系统管理员',
-    status: 'active',
-    lastLogin: '2023-09-16T08:20:00Z'
+// 从localStorage获取实际用户数据
+const users = ref([])
+
+// 从localStorage加载用户数据的函数
+const loadUsersFromStorage = () => {
+  try {
+    const storedUsers = JSON.parse(localStorage.getItem('users') || '{}')
+    // 转换为数组并添加必要的字段
+    const usersArray = Object.values(storedUsers).map((user, index) => ({
+      id: index + 1,
+      account: user.username || user.studentId || user.account,
+      name: user.name || user.studentName || '未知用户',
+      role: user.role || 'student',
+      faculty: user.faculty || 'cs',
+      major: user.major || '',
+      roleName: user.roleName || '',
+      status: user.status || 'active',
+      lastLogin: user.lastLogin || new Date().toISOString()
+    }))
+    users.value = usersArray
+  } catch (error) {
+    console.error('加载用户数据失败:', error)
+    // 如果加载失败，提供一些默认用户数据
+    users.value = [
+      {
+        id: 1,
+        role: 'admin',
+        account: 'admin',
+        name: '系统管理员',
+        faculty: 'cs',
+        roleName: '系统管理员',
+        status: 'active',
+        lastLogin: new Date().toISOString()
+      }
+    ]
   }
-])
+}
 
 // 计算属性
 const filteredUsers = computed(() => {
@@ -372,7 +293,8 @@ const filteredUsers = computed(() => {
     const keywordMatch = !filters.keyword ||
       user.name.includes(filters.keyword) ||
       user.account.includes(filters.keyword)
-    const facultyMatch = filters.faculty === 'all' || user.faculty === filters.faculty
+    // 管理员账户不过滤学院
+    const facultyMatch = user.role === 'admin' || filters.faculty === 'all' || user.faculty === filters.faculty
     const statusMatch = filters.status === 'all' || user.status === filters.status
 
     return tabMatch && keywordMatch && facultyMatch && statusMatch
@@ -428,36 +350,141 @@ const editUser = (user) => {
 }
 
 const saveUser = () => {
-  if (editingUser.value) {
-    // 更新用户
-    const index = users.value.findIndex(u => u.id === editingUser.value.id)
-    if (index !== -1) {
-      users.value[index] = { ...userForm, id: editingUser.value.id }
+  try {
+    // 从localStorage获取当前用户数据
+    let storedUsers = JSON.parse(localStorage.getItem('users') || '{}')
+    const username = userForm.account
+    
+    // 检查账号是否已存在（添加用户时）
+    if (!editingUser.value && storedUsers[username]) {
+      alert('账号已存在，请使用其他账号')
+      return
     }
-  } else {
-    // 添加新用户
-    const newUser = {
-      id: Math.max(...users.value.map(u => u.id)) + 1,
-      ...userForm
+    
+    // 检查账号是否已被其他用户使用（编辑用户且修改了账号时）
+    if (editingUser.value && username !== editingUser.value.account && storedUsers[username]) {
+      alert('新账号已存在，请使用其他账号')
+      return
     }
-    users.value.push(newUser)
+    
+    if (editingUser.value) {
+      // 更新用户
+      const index = users.value.findIndex(u => u.id === editingUser.value.id)
+      if (index !== -1) {
+        // 检查是否修改了账号
+        const oldUsername = editingUser.value.account
+        const isUsernameChanged = oldUsername !== username
+        
+        // 更新本地用户列表
+        users.value[index] = { ...userForm, id: editingUser.value.id }
+        
+        // 如果修改了账号，需要删除旧账号数据
+        if (isUsernameChanged && storedUsers[oldUsername]) {
+          // 创建新账号数据
+          storedUsers[username] = { ...storedUsers[oldUsername] }
+          // 删除旧账号数据
+          delete storedUsers[oldUsername]
+        }
+        
+        // 更新用户数据
+        storedUsers[username] = {
+          // 确保包含所有必要的登录字段
+          username: username,
+          password: userForm.password || storedUsers[username].password || '123456',
+          name: userForm.name,
+          role: userForm.role,
+          faculty: userForm.faculty,
+          status: userForm.status,
+          avatar: storedUsers[username].avatar || (userForm.role === 'student' ? '/images/头像1.jpg' : '/images/头像2.jpg'),
+          // 根据角色设置特定字段
+          ...(userForm.role === 'student' ? {
+            major: userForm.major,
+            studentName: userForm.name,
+            studentId: username
+          } : {
+            roleName: userForm.roleName
+          })
+        }
+      }
+    } else {
+      // 添加新用户
+      const newUser = {
+        id: users.value.length > 0 ? Math.max(...users.value.map(u => u.id)) + 1 : 1,
+        ...userForm
+      }
+      users.value.push(newUser)
+      
+      // 添加到localStorage，确保包含所有必要的登录字段
+      storedUsers[username] = {
+        username: username,
+        password: userForm.password || '123456', // 默认密码
+        name: userForm.name,
+        role: userForm.role,
+        faculty: userForm.faculty,
+        status: userForm.status,
+        avatar: userForm.role === 'student' ? '/images/头像1.jpg' : '/images/头像2.jpg',
+        // 根据角色添加额外信息
+        ...(userForm.role === 'student' ? {
+          major: userForm.major,
+          studentName: userForm.name,
+          studentId: username
+        } : {
+          roleName: userForm.roleName
+        })
+      }
+    }
+    
+    // 保存回localStorage
+    localStorage.setItem('users', JSON.stringify(storedUsers))
+    
+    closeModal()
+    alert('用户保存成功')
+  } catch (error) {
+    console.error('保存用户失败:', error)
+    alert('保存失败，请稍后重试')
   }
-
-  closeModal()
-  alert('用户保存成功')
 }
 
 const toggleUserStatus = (userId, status) => {
-  const user = users.value.find(u => u.id === userId)
-  if (user) {
-    user.status = status
-    alert(`用户已${status === 'active' ? '启用' : '禁用'}`)
+  try {
+    const user = users.value.find(u => u.id === userId)
+    if (user) {
+      user.status = status
+      
+      // 更新localStorage中的用户状态
+      let storedUsers = JSON.parse(localStorage.getItem('users') || '{}')
+      const username = user.account
+      if (storedUsers[username]) {
+        storedUsers[username].status = status
+        localStorage.setItem('users', JSON.stringify(storedUsers))
+      }
+      
+      alert(`用户已${status === 'active' ? '启用' : '禁用'}`)
+    }
+  } catch (error) {
+    console.error('更新用户状态失败:', error)
+    alert('操作失败，请稍后重试')
   }
 }
 
 const resetPassword = (userId) => {
   if (confirm('确定要重置该用户的密码吗？')) {
-    alert('密码已重置为默认密码（123456）')
+    try {
+      const user = users.value.find(u => u.id === userId)
+      if (user) {
+        // 更新localStorage中的用户密码
+        let storedUsers = JSON.parse(localStorage.getItem('users') || '{}')
+        const username = user.account
+        if (storedUsers[username]) {
+          storedUsers[username].password = '123456' // 默认密码
+          localStorage.setItem('users', JSON.stringify(storedUsers))
+        }
+        alert('密码已重置为默认密码（123456）')
+      }
+    } catch (error) {
+      console.error('重置密码失败:', error)
+      alert('重置密码失败，请稍后重试')
+    }
   }
 }
 
@@ -467,39 +494,119 @@ const viewUserHistory = (userId) => {
 
 const batchDisable = () => {
   if (confirm(`确定要禁用选中的 ${selectedUsers.value.length} 个用户吗？`)) {
-    selectedUsers.value.forEach(userId => {
-      const user = users.value.find(u => u.id === userId)
-      if (user) user.status = 'disabled'
-    })
-    selectedUsers.value = []
-    selectAll.value = false
+    try {
+      let storedUsers = JSON.parse(localStorage.getItem('users') || '{}')
+      
+      selectedUsers.value.forEach(userId => {
+        const user = users.value.find(u => u.id === userId)
+        if (user) {
+          user.status = 'disabled'
+          // 更新localStorage中的用户状态
+          const username = user.account
+          if (storedUsers[username]) {
+            storedUsers[username].status = 'disabled'
+          }
+        }
+      })
+      
+      // 保存回localStorage
+      localStorage.setItem('users', JSON.stringify(storedUsers))
+      
+      selectedUsers.value = []
+      selectAll.value = false
+      alert('选中用户已禁用')
+    } catch (error) {
+      console.error('批量禁用失败:', error)
+      alert('操作失败，请稍后重试')
+    }
   }
 }
 
 const batchEnable = () => {
   if (confirm(`确定要启用选中的 ${selectedUsers.value.length} 个用户吗？`)) {
-    selectedUsers.value.forEach(userId => {
-      const user = users.value.find(u => u.id === userId)
-      if (user) user.status = 'active'
-    })
-    selectedUsers.value = []
-    selectAll.value = false
+    try {
+      let storedUsers = JSON.parse(localStorage.getItem('users') || '{}')
+      
+      selectedUsers.value.forEach(userId => {
+        const user = users.value.find(u => u.id === userId)
+        if (user) {
+          user.status = 'active'
+          // 更新localStorage中的用户状态
+          const username = user.account
+          if (storedUsers[username]) {
+            storedUsers[username].status = 'active'
+          }
+        }
+      })
+      
+      // 保存回localStorage
+      localStorage.setItem('users', JSON.stringify(storedUsers))
+      
+      selectedUsers.value = []
+      selectAll.value = false
+      alert('选中用户已启用')
+    } catch (error) {
+      console.error('批量启用失败:', error)
+      alert('操作失败，请稍后重试')
+    }
   }
 }
 
 const batchResetPassword = () => {
   if (confirm(`确定要重置选中 ${selectedUsers.value.length} 个用户的密码吗？`)) {
-    alert('选中用户的密码已重置为默认密码（123456）')
-    selectedUsers.value = []
-    selectAll.value = false
+    try {
+      let storedUsers = JSON.parse(localStorage.getItem('users') || '{}')
+      
+      selectedUsers.value.forEach(userId => {
+        const user = users.value.find(u => u.id === userId)
+        if (user) {
+          // 更新localStorage中的用户密码
+          const username = user.account
+          if (storedUsers[username]) {
+            storedUsers[username].password = '123456'
+          }
+        }
+      })
+      
+      // 保存回localStorage
+      localStorage.setItem('users', JSON.stringify(storedUsers))
+      
+      selectedUsers.value = []
+      selectAll.value = false
+      alert('选中用户的密码已重置为默认密码（123456）')
+    } catch (error) {
+      console.error('批量重置密码失败:', error)
+      alert('操作失败，请稍后重试')
+    }
   }
 }
 
 const batchDelete = () => {
   if (confirm(`确定要删除选中的 ${selectedUsers.value.length} 个用户吗？此操作不可恢复！`)) {
-    users.value = users.value.filter(user => !selectedUsers.value.includes(user.id))
-    selectedUsers.value = []
-    selectAll.value = false
+    try {
+      let storedUsers = JSON.parse(localStorage.getItem('users') || '{}')
+      
+      // 删除localStorage中的用户数据
+      selectedUsers.value.forEach(userId => {
+        const user = users.value.find(u => u.id === userId)
+        if (user) {
+          delete storedUsers[user.account]
+        }
+      })
+      
+      // 保存回localStorage
+      localStorage.setItem('users', JSON.stringify(storedUsers))
+      
+      // 更新本地用户列表
+      users.value = users.value.filter(user => !selectedUsers.value.includes(user.id))
+      
+      selectedUsers.value = []
+      selectAll.value = false
+      alert('选中用户已删除')
+    } catch (error) {
+      console.error('批量删除失败:', error)
+      alert('操作失败，请稍后重试')
+    }
   }
 }
 
@@ -533,7 +640,8 @@ const nextPage = () => {
 
 // 生命周期
 onMounted(() => {
-  // 可以从API加载用户数据
+  // 从localStorage加载用户数据
+  loadUsersFromStorage()
 })
 </script>
 

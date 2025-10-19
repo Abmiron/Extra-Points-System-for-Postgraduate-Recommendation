@@ -90,7 +90,15 @@ const handleLogin = async () => {
 
       router.push(routeMap[userData.role])
     } else {
-      alert('登录失败，请检查用户名和密码')
+      // 检查用户是否存在以及状态
+      const users = JSON.parse(localStorage.getItem('users') || '{}')
+      const user = users[loginForm.username]
+      
+      if (user && user.status === 'disabled') {
+        alert('登录失败：您的账户已被禁用，请联系管理员')
+      } else {
+        alert('登录失败，请检查用户名和密码')
+      }
     }
   } catch (error) {
     console.error('登录错误:', error)

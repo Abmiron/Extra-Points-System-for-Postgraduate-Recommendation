@@ -27,6 +27,7 @@ import DataManagement from '../components/admin/DataManagement.vue'
 import RuleManagement from '../components/admin/RuleManagement.vue'
 import StatisticsReport from '../components/admin/StatisticsReport.vue'
 import SystemSettings from '../components/admin/SystemSettings.vue'
+import AdminProfile from '../components/admin/AdminProfile.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -40,7 +41,8 @@ const pageComponents = {
   'data-management': DataManagement,
   'rule-management': RuleManagement,
   'statistics-report': StatisticsReport,
-  'system-settings': SystemSettings
+  'system-settings': SystemSettings,
+  'profile': AdminProfile
 }
 
 const currentPageComponent = computed(() => pageComponents[currentPage.value])

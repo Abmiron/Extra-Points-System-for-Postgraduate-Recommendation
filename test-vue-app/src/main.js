@@ -34,6 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const authStore = useAuthStore()
   const applicationsStore = useApplicationsStore()
   
+  // 初始化auth store（检查是否有保存的登录状态）
+  authStore.initialize()
+  
   // 加载申请数据
   applicationsStore.loadApplications()
   

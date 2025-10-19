@@ -70,6 +70,9 @@
                     title="启用">
                     <font-awesome-icon :icon="['fas', 'check']" />
                   </button>
+                  <button class="btn-outline btn small-btn delete-btn" @click="deleteRule(rule)" title="删除">
+                    <font-awesome-icon :icon="['fas', 'trash-alt']" />
+                  </button>
                 </div>
               </td>
             </tr>
@@ -367,6 +370,20 @@ const toggleRuleStatus = (ruleId, status) => {
   }
 }
 
+const deleteRule = (rule) => {
+  if (confirm(`确定要删除规则「${rule.name}」吗？此操作不可撤销。`)) {
+    const index = rules.value.findIndex(r => r.id === rule.id)
+    if (index !== -1) {
+      rules.value.splice(index, 1)
+      // 如果当前页没有数据了，且不是第一页，则回到上一页
+      if (paginatedRules.value.length === 0 && currentPage.value > 1) {
+        currentPage.value--
+      }
+      alert('规则删除成功')
+    }
+  }
+}
+
 const prevPage = () => {
   if (currentPage.value > 1) {
     currentPage.value--
@@ -403,9 +420,19 @@ onMounted(() => {
 /* 覆盖或补充共享样式 */
 .application-table th:last-child,
 .application-table td:last-child {
-  width: 120px;
-  min-width: 120px;
+  width: 160px; /* 增加宽度以容纳删除按钮 */
+  min-width: 160px;
   text-align: center;
+}
+
+/* 删除按钮样式 */
+.delete-btn {
+  color: #dc3545; /* 红色表示危险操作 */
+}
+
+.delete-btn:hover {
+  background-color: #f8d7da;
+  border-color: #dc3545;
 }
 </style>
 
