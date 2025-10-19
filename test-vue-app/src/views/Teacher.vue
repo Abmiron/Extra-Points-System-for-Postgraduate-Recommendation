@@ -17,6 +17,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useApplicationsStore } from '../stores/applications'
 
 import Header from '../components/common/Header.vue'
 import Sidebar from '../components/common/Sidebar.vue'
@@ -31,6 +32,7 @@ import DebugPage from '../components/teacher/DebugPage.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const applicationsStore = useApplicationsStore()
 
 // 当前活动页面
 const currentPage = ref('pending-review')
@@ -63,11 +65,16 @@ const switchToPendingReview = () => {
   currentPage.value = 'pending-review'
 }
 
-// 权限验证
+// 权限验证和数据加载
 onMounted(() => {
   if (authStore.role !== 'teacher') {
     alert('您没有权限访问教师端')
     router.push('/login')
+  } else {
+    // 确保数据已加载
+    if (applicationsStore.applications.length === 0) {
+      applicationsStore.loadApplications()
+    }
   }
 })
 </script>

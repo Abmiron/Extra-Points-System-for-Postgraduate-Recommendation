@@ -1,5 +1,5 @@
 <template>
-  <div class="login-page">
+  <div class="forgot-password-page">
     <div class="background-blur"></div>
     <div class="login-container">
       <div class="login-box">
@@ -12,31 +12,34 @@
         </div>
 
         <div class="login-tabs">
-          <button class="tab-btn active">账号登录</button>
+          <button class="tab-btn active">密码重置</button>
         </div>
 
         <div class="form-container">
-          <form class="login-form" @submit.prevent="handleLogin">
+          <form class="login-form" @submit.prevent="handleResetPassword">
             <div class="input-group">
               <font-awesome-icon :icon="['fas', 'user']" class="input-icon" />
-              <input type="text" v-model="loginForm.username" placeholder="请输入学号/工号" required>
+              <input type="text" v-model="resetForm.username" placeholder="请输入学号/工号" required>
             </div>
+            
             <div class="input-group">
               <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
-              <input type="password" v-model="loginForm.password" placeholder="请输入密码" required>
+              <input type="password" v-model="resetForm.newPassword" placeholder="请设置新密码" required minlength="6">
+            </div>
+            
+            <div class="input-group">
+              <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
+              <input type="password" v-model="resetForm.confirmPassword" placeholder="请确认新密码" required minlength="6">
             </div>
 
             <div class="form-actions">
               <div class="links-container">
-                <a href="#" class="forgot-password" @click.prevent="handleForgotPassword">
-                  忘记密码?
-                </a>
-                <a href="#" class="register-account" @click.prevent="handleRegister">
-                  注册账号
+                <a href="#" class="login-link" @click.prevent="goToLogin">
+                  返回登录
                 </a>
               </div>
               <button type="submit" class="login-btn" :class="{ loading }" :disabled="loading">
-                <span class="btn-text">登录</span>
+                <span class="btn-text">重置</span>
                 <div class="btn-loading">
                   <font-awesome-icon :icon="['fas', 'spinner']" spin />
                 </div>
@@ -46,8 +49,8 @@
         </div>
 
         <div class="help-area">
-          <p class="help-text">首次登录请点击"忘记密码"进行设置</p>
-          <p class="help-text">学生校友账号禁用可通过"忘记密码"进行重置</p>
+          <p class="help-text">首次登录用户请输入学号/工号并设置密码</p>
+          <p class="help-text">请妥善保管您的密码信息</p>
         </div>
       </div>
       <div class="copyright">© 2025 厦门大学软件工程系</div>
@@ -58,60 +61,70 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
-import { validateLogin } from '../utils/mockData'
+import { resetPassword } from '../utils/mockData'
 
 const router = useRouter()
-const authStore = useAuthStore()
-
 const loading = ref(false)
 
-const loginForm = reactive({
+const resetForm = reactive({
   username: '',
-  password: ''
+  newPassword: '',
+  confirmPassword: ''
 })
 
-const handleLogin = async () => {
+const handleResetPassword = async () => {
+  // 检测输入框是否为空
+  if (!resetForm.username.trim()) {
+    alert('请输入学号/工号')
+    return
+  }
+  if (!resetForm.newPassword) {
+    alert('请设置新密码')
+    return
+  }
+  if (!resetForm.confirmPassword) {
+    alert('请确认新密码')
+    return
+  }
+  
+  // 密码一致性和长度验证
+  if (resetForm.newPassword !== resetForm.confirmPassword) {
+    alert('两次输入的密码不一致')
+    return
+  }
+  if (resetForm.newPassword.length < 6) {
+    alert('密码长度不能少于6位')
+    return
+  }
+  
   loading.value = true
 
   try {
-    // 使用validateLogin函数验证用户登录
-    const userData = validateLogin(loginForm.username, loginForm.password)
+    // 调用密码重置函数
+    const success = await resetPassword(resetForm.username, resetForm.newPassword)
     
-    if (userData) {
-      authStore.login(userData)
-
-      // 根据角色跳转
-      const routeMap = {
-        student: '/student',
-        teacher: '/teacher',
-        admin: '/admin'
-      }
-
-      router.push(routeMap[userData.role])
+    if (success) {
+      alert('密码重置成功！请使用新密码登录')
+      router.push('/login')
     } else {
-      alert('登录失败，请检查用户名和密码')
+      alert('密码重置失败，请检查学号/工号是否正确')
     }
   } catch (error) {
-    console.error('登录错误:', error)
-    alert('登录失败，请稍后重试')
+    console.error('密码重置错误:', error)
+    alert(`密码重置失败: ${error.message || '请稍后重试'}`)
   } finally {
     loading.value = false
   }
 }
 
-const handleForgotPassword = () => {
-  router.push('/forgot-password')
-}
-
-const handleRegister = () => {
-  router.push('/register')
+const goToLogin = () => {
+  router.push('/login')
 }
 </script>
 
 <style scoped>
-/* 登录页面整体容器样式 */
-.login-page {
+/* 忘记密码页面整体容器样式 */
+.forgot-password-page {
   font-family: "Microsoft Yahei", "PingFang SC", "Helvetica Neue", sans-serif;
   line-height: 1.6;
   display: flex;
@@ -275,13 +288,13 @@ const handleRegister = () => {
 /* 链接容器样式 */
 .links-container {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   margin-bottom: 5px;
   gap: 5px;
 }
 
-/* 忘记密码链接样式 */
-.forgot-password {
+/* 登录链接样式 */
+.login-link {
   color: #0066cc;
   text-decoration: none;
   font-size: 14px;
@@ -290,24 +303,8 @@ const handleRegister = () => {
   padding: 0;
 }
 
-/* 注册账号链接样式 */
-.register-account {
-  color: #0066cc;
-  text-decoration: none;
-  font-size: 14px;
-  transition: all 0.3s ease;
-  font-weight: 500;
-  padding: 0;
-}
-
-/* 注册账号链接悬停效果 */
-.register-account:hover {
-  color: #0041a8;
-  text-decoration: underline;
-}
-
-/* 忘记密码链接悬停效果 */
-.forgot-password:hover {
+/* 登录链接悬停效果 */
+.login-link:hover {
   color: #0041a8;
   text-decoration: underline;
 }

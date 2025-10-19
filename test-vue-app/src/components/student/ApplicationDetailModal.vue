@@ -96,19 +96,19 @@
             <div class="compact-row">
               <div class="compact-group">
                 <label>姓名</label>
-                <span>{{ application.studentName || '当前用户' }}</span>
+                <span>{{ authStore.userName || application.studentName || '未知学生' }}</span>
               </div>
               <div class="compact-group">
                 <label>学号</label>
-                <span>{{ application.studentId || 'N/A' }}</span>
+                <span>{{ authStore.user?.studentId || application.studentId || 'N/A' }}</span>
               </div>
               <div class="compact-group">
                 <label>所在系</label>
-                <span>{{ getDepartmentText(application.department) }}</span>
+                <span>{{ authStore.user?.department || application.department || 'N/A' }}</span>
               </div>
               <div class="compact-group">
                 <label>专业</label>
-                <span>{{ getMajorText(application.major) }}</span>
+                <span>{{ authStore.user?.major || application.major || 'N/A' }}</span>
               </div>
             </div>
           </div>
@@ -213,6 +213,9 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
+import { useAuthStore } from '../../stores/auth'
+
+const authStore = useAuthStore()
 
 const props = defineProps({
   application: {
@@ -251,6 +254,9 @@ const isImage = (file) => {
 }
 
 const getFileIcon = (fileName) => {
+  if (!fileName) {
+    return ['fas', 'file-question']
+  }
   const ext = fileName.split('.').pop().toLowerCase()
   if (isImage({ name: fileName })) {
     return ['fas', 'file-image']

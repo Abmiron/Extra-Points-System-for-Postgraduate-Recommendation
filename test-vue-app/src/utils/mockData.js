@@ -1,12 +1,13 @@
 // 模拟数据生成器
+// 生成mock申请数据
 export const generateMockApplications = () => {
   const applications = [
     {
       id: 'app001',
       studentName: '张三',
       studentId: '2020318001',
-      department: 'cs',
-      major: 'cs',
+      department: '计算机科学与技术系',
+      major: '计算机科学与技术',
       applicationType: 'academic',
       appliedAt: '2024-03-15T10:30:00Z',
       selfScore: 4.5,
@@ -23,10 +24,10 @@ export const generateMockApplications = () => {
     },
     {
       id: 'app002',
-      studentName: '李四',
-      studentId: '2020318002',
-      department: 'se',
-      major: 'se',
+      studentName: '张三',
+      studentId: '2020318001',
+      department: '计算机科学与技术系',
+      major: '计算机科学与技术',
       applicationType: 'comprehensive',
       appliedAt: '2024-03-16T14:20:00Z',
       selfScore: 3.0,
@@ -42,10 +43,10 @@ export const generateMockApplications = () => {
     },
     {
       id: 'app003',
-      studentName: '王五',
-      studentId: '2020318003',
-      department: 'ai',
-      major: 'ai',
+      studentName: '张三',
+      studentId: '2020318001',
+      department: '计算机科学与技术系',
+      major: '计算机科学与技术',
       applicationType: 'academic',
       appliedAt: '2024-03-14T09:15:00Z',
       selfScore: 5.0,
@@ -63,10 +64,10 @@ export const generateMockApplications = () => {
     },
     {
       id: 'app004',
-      studentName: '赵六',
-      studentId: '2020318004',
-      department: 'cs',
-      major: 'cs',
+      studentName: '张三',
+      studentId: '2020318001',
+      department: '计算机科学与技术系',
+      major: '计算机科学与技术',
       applicationType: 'academic',
       appliedAt: '2024-03-17T16:45:00Z',
       selfScore: 2.5,
@@ -86,10 +87,10 @@ export const generateMockApplications = () => {
     },
     {
       id: 'app005',
-      studentName: '钱七',
-      studentId: '2020318005',
-      department: 'se',
-      major: 'se',
+      studentName: '张三',
+      studentId: '2020318001',
+      department: '计算机科学与技术系',
+      major: '计算机科学与技术',
       applicationType: 'comprehensive',
       appliedAt: '2024-03-13T11:10:00Z',
       selfScore: 4.0,
@@ -112,13 +113,136 @@ export const generateMockApplications = () => {
   return applications
 }
 
+// 初始化模拟用户数据
+export const initializeMockUsers = () => {
+  if (!localStorage.getItem('users')) {
+    const mockUsers = {
+      'student': {
+        username: 'student',
+        password: '123456',
+        name: '张同学',
+        studentName: '张同学',
+        studentId: '2020318001',
+        role: 'student',
+        avatar: '/images/头像1.jpg',
+        faculty: '信息学院',
+        department: '计算机科学与技术系',
+        major: '计算机科学与技术',
+        email: 'student@xmu.edu.cn',
+        phone: '13800138000'
+      },
+      'teacher': {
+        username: 'teacher',
+        password: '123456',
+        name: '张老师',
+        role: 'teacher',
+        avatar: '/images/头像2.jpg',
+        faculty: '信息学院',
+        roleName: '审核员',
+        email: 'teacher@xmu.edu.cn',
+        phone: '13900139000'
+      },
+      'admin': {
+        username: 'admin',
+        password: '123456',
+        name: '管理员',
+        role: 'admin',
+        avatar: '/images/头像2.jpg',
+        faculty: '信息学院',
+        roleName: '系统管理员',
+        email: 'admin@xmu.edu.cn',
+        phone: '13700137000'
+      }
+    }
+    
+    localStorage.setItem('users', JSON.stringify(mockUsers))
+    console.log('模拟用户数据已初始化到本地存储')
+    return mockUsers
+  }
+  return JSON.parse(localStorage.getItem('users') || '{}')
+}
+
 // 初始化本地存储数据
 export const initializeMockData = () => {
+  // 初始化用户数据
+  initializeMockUsers()
+  
+  // 初始化申请数据
   if (!localStorage.getItem('studentApplications')) {
     const mockApplications = generateMockApplications()
-    localStorage.setItem('studentApplications', JSON.stringify(mockApplications))
-    console.log('模拟数据已初始化到本地存储')
+    
+    // 为每个mock申请添加学生信息（与显示组件保持一致）
+    const enhancedMockApplications = mockApplications.map(app => ({
+      ...app,
+      studentName: app.studentName || '模拟学生',
+      studentId: app.studentId || '2020318000',
+      department: app.department || 'cs',
+      major: app.major || 'cs'
+    }))
+    
+    localStorage.setItem('studentApplications', JSON.stringify(enhancedMockApplications))
+    console.log('模拟申请数据已初始化到本地存储')
+    return enhancedMockApplications
   }
+  return JSON.parse(localStorage.getItem('studentApplications') || '[]')
+}
+
+// 用户注册函数
+export const registerUser = (userData) => {
+  try {
+    // 获取现有用户数据
+    let users = JSON.parse(localStorage.getItem('users') || '{}')
+    
+    // 检查用户名是否已存在
+    if (users[userData.username]) {
+      throw new Error('用户名已存在')
+    }
+    
+    // 创建新用户
+    const newUser = {
+      username: userData.username,
+      password: userData.password, // 实际应用中应该进行加密
+      name: userData.name,
+      role: userData.role,
+      avatar: userData.role === 'student' ? '/images/头像1.jpg' : '/images/头像2.jpg',
+      faculty: '信息学院', // 默认为信息学院
+      email: '', // 默认为空
+      phone: '' // 默认为空
+    }
+    
+    // 根据角色添加额外信息
+    if (userData.role === 'student') {
+      newUser.studentName = userData.name
+      newUser.studentId = userData.username
+      newUser.department = '计算机科学与技术系'
+      newUser.major = '计算机科学与技术'
+    } else if (userData.role === 'teacher') {
+      newUser.roleName = '审核员'
+    }
+    
+    // 添加到用户数据库
+    users[userData.username] = newUser
+    localStorage.setItem('users', JSON.stringify(users))
+    
+    console.log('用户注册成功:', userData.username)
+    return true
+  } catch (error) {
+    console.error('注册失败:', error.message)
+    throw error
+  }
+}
+
+// 用户登录验证函数
+export const validateLogin = (username, password) => {
+  const users = JSON.parse(localStorage.getItem('users') || '{}')
+  const user = users[username]
+  
+  if (user && user.password === password) {
+    // 返回用户信息（不包含密码）
+    const { password, ...userInfo } = user
+    return userInfo
+  }
+  return null
 }
 
 // 获取待审核申请
@@ -131,4 +255,28 @@ export const getPendingApplications = () => {
 export const getReviewedApplications = () => {
   const applications = JSON.parse(localStorage.getItem('studentApplications') || '[]')
   return applications.filter(app => app.status === 'approved' || app.status === 'rejected')
+}
+
+// 密码重置函数
+export const resetPassword = (username, newPassword) => {
+  try {
+    // 获取现有用户数据
+    let users = JSON.parse(localStorage.getItem('users') || '{}')
+    
+    // 检查用户是否存在
+    if (!users[username]) {
+      console.error('用户不存在:', username)
+      return false
+    }
+    
+    // 更新密码
+    users[username].password = newPassword
+    localStorage.setItem('users', JSON.stringify(users))
+    
+    console.log('密码重置成功:', username)
+    return true
+  } catch (error) {
+    console.error('密码重置失败:', error.message)
+    throw error
+  }
 }

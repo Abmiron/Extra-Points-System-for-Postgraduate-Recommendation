@@ -450,11 +450,25 @@
 
 <script setup>
 import { ref, reactive, watch } from 'vue'
+import { useAuthStore } from '../../stores/auth'
+import { useApplicationsStore } from '../../stores/applications'
 
+// 定义事件，用于通知父组件切换页面
+const emit = defineEmits(['switch-page'])
+
+const authStore = useAuthStore()
+const applicationsStore = useApplicationsStore()
 const fileInput = ref(null)
 const previewFileData = ref(null)
 
 const formData = reactive({
+  // 添加用户信息
+  studentId: authStore.user?.studentId || '',
+  name: authStore.userName,
+  department: authStore.user?.department || '',
+  major: authStore.user?.major || '',
+  
+  // 原有表单数据
   applicationType: 'academic',
   projectName: '',
   awardDate: '',
@@ -492,6 +506,9 @@ const handleLevelChange = () => {
 
 // 原有方法保持不变...
 const getFileIcon = (fileName) => {
+  if (!fileName) {
+    return ['fas', 'file-question']
+  }
   const ext = fileName.split('.').pop().toLowerCase()
   if (['jpg', 'jpeg', 'png', 'gif', 'bmp'].includes(ext)) {
     return ['fas', 'file-image']
@@ -684,36 +701,67 @@ const submitForm = () => {
     return
   }
 
-  const applications = JSON.parse(localStorage.getItem('studentApplications') || '[]')
-  const application = {
-    id: 'APP' + Date.now(),
-    ...formData,
+  // 从authStore获取实际的学生信息
+  const studentName = authStore.user?.studentName || authStore.userName || '未知学生'
+  const studentId = authStore.user?.studentId || '未知学号'
+  const department = authStore.user?.department || '未知系别'
+  const major = authStore.user?.major || '未知专业'
+  
+  console.log('提交申请时的学生信息:', { studentName, studentId, department, major })
+
+    // 准备申请数据
+    const applicationData = {
+      id: 'APP' + Date.now(),
+      ...formData,
+      // 确保使用正确的字段名，与显示组件保持一致
+      studentName,
+      studentId,
+      department,
+      major,
     status: 'pending',
     appliedAt: new Date().toISOString(),
     finalScore: null,
     reviewedAt: null
   }
 
-  applications.push(application)
-  localStorage.setItem('studentApplications', JSON.stringify(applications))
+  const success = applicationsStore.addApplication(applicationData)
 
-  alert('申请已提交，等待审核中...')
+  if (success) {
+    alert('申请已提交，等待审核中...')
 
-  // 重置表单
-  Object.assign(formData, {
-    applicationType: 'academic',
-    projectName: '',
-    awardDate: '',
-    awardLevel: '',
-    awardType: 'individual',
-    authorOrder: '',
-    performanceType: '',
-    duration: '',
-    organization: '',
-    selfScore: '',
-    description: '',
-    files: []
-  })
+    // 重置表单
+    Object.assign(formData, {
+      studentId: authStore.user?.studentId || '',
+      name: authStore.userName,
+      department: authStore.user?.department || '',
+      major: authStore.user?.major || '',
+      applicationType: 'academic',
+      projectName: '',
+      awardDate: '',
+      academicType: '',
+      researchType: '',
+      innovationLevel: '',
+      innovationRole: '',
+      awardLevel: '',
+      awardGrade: '',
+      awardCategory: '',
+      awardType: 'individual',
+      authorRankType: 'ranked',
+      authorOrder: '',
+      performanceType: '',
+      performanceLevel: '',
+      performanceParticipation: 'individual',
+      teamRole: '',
+      selfScore: '',
+      description: '',
+      files: []
+    })
+    
+    // 通知父组件切换到申请历史页面
+    emit('switch-page', 'application-history')
+  } else {
+    alert('提交失败，请稍后重试')
+  }
 }
 </script>
 

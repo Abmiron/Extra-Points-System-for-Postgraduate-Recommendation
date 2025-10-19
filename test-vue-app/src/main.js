@@ -14,6 +14,11 @@ library.add(fas)
 // 全局样式
 import './assets/styles/main.css'
 
+// 引入stores
+import { useAuthStore } from './stores/auth'
+import { useApplicationsStore } from './stores/applications'
+import { initializeMockData } from './utils/mockData'
+
 const app = createApp(App)
 const pinia = createPinia()
 
@@ -22,5 +27,15 @@ app.use(pinia)
 app.component('font-awesome-icon', FontAwesomeIcon)
 
 document.addEventListener('DOMContentLoaded', () => {
+  // 初始化模拟数据（用户和申请数据）
+  initializeMockData()
+  
+  // 初始化stores
+  const authStore = useAuthStore()
+  const applicationsStore = useApplicationsStore()
+  
+  // 加载申请数据
+  applicationsStore.loadApplications()
+  
   app.mount('#app')
 })

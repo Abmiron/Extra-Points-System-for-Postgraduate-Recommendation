@@ -1,8 +1,8 @@
 <template>
-  <div class="login-page">
+  <div class="register-page">
     <div class="background-blur"></div>
-    <div class="login-container">
-      <div class="login-box">
+    <div class="register-container">
+      <div class="register-box">
         <div class="logo-area">
           <img src="/src/images/logo.png" alt="厦门大学校徽" class="xmu-logo">
           <div class="logo-text">
@@ -11,32 +11,49 @@
           </div>
         </div>
 
-        <div class="login-tabs">
-          <button class="tab-btn active">账号登录</button>
+        <div class="register-tabs">
+          <button class="tab-btn active">账号注册</button>
         </div>
 
         <div class="form-container">
-          <form class="login-form" @submit.prevent="handleLogin">
+          <form class="register-form" @submit.prevent="handleRegister">
             <div class="input-group">
               <font-awesome-icon :icon="['fas', 'user']" class="input-icon" />
-              <input type="text" v-model="loginForm.username" placeholder="请输入学号/工号" required>
+              <input type="text" v-model="registerForm.username" placeholder="请输入学号/工号" required>
             </div>
+            
+            <div class="input-group">
+              <font-awesome-icon :icon="['fas', 'user-tag']" class="input-icon" />
+              <input type="text" v-model="registerForm.name" placeholder="请输入姓名" required>
+            </div>
+            
             <div class="input-group">
               <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
-              <input type="password" v-model="loginForm.password" placeholder="请输入密码" required>
+              <input type="password" v-model="registerForm.password" placeholder="请设置密码" required minlength="6">
+            </div>
+            
+            <div class="input-group">
+              <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
+              <input type="password" v-model="registerForm.confirmPassword" placeholder="请确认密码" required minlength="6">
+            </div>
+            
+            <div class="input-group">
+              <font-awesome-icon :icon="['fas', 'user-shield']" class="input-icon" />
+              <select v-model="registerForm.role" required>
+                <option value="">请选择角色</option>
+                <option value="student">学生</option>
+                <option value="teacher">教师</option>
+              </select>
             </div>
 
             <div class="form-actions">
               <div class="links-container">
-                <a href="#" class="forgot-password" @click.prevent="handleForgotPassword">
-                  忘记密码?
-                </a>
-                <a href="#" class="register-account" @click.prevent="handleRegister">
-                  注册账号
+                <a href="#" class="login-link" @click.prevent="goToLogin">
+                  已有账号？立即登录
                 </a>
               </div>
-              <button type="submit" class="login-btn" :class="{ loading }" :disabled="loading">
-                <span class="btn-text">登录</span>
+              <button type="submit" class="register-btn" :class="{ loading }" :disabled="loading">
+                <span class="btn-text">注册</span>
                 <div class="btn-loading">
                   <font-awesome-icon :icon="['fas', 'spinner']" spin />
                 </div>
@@ -46,8 +63,8 @@
         </div>
 
         <div class="help-area">
-          <p class="help-text">首次登录请点击"忘记密码"进行设置</p>
-          <p class="help-text">学生校友账号禁用可通过"忘记密码"进行重置</p>
+          <p class="help-text">管理员账号请联系系统管理员开通</p>
+          <p class="help-text">如有疑问，请联系系统技术支持</p>
         </div>
       </div>
       <div class="copyright">© 2025 厦门大学软件工程系</div>
@@ -56,62 +73,109 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { validateLogin } from '../utils/mockData'
+import { registerUser } from '../utils/mockData'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 const loading = ref(false)
 
-const loginForm = reactive({
+const registerForm = reactive({
   username: '',
-  password: ''
+  name: '',
+  password: '',
+  confirmPassword: '',
+  role: ''
 })
 
-const handleLogin = async () => {
+// 表单验证
+const isFormValid = computed(() => {
+  const { username, name, password, confirmPassword, role } = registerForm
+  
+  // 基本字段验证
+  if (!username || !name || !password || !confirmPassword || !role) {
+    return false
+  }
+  
+  // 密码一致性验证
+  if (password !== confirmPassword) {
+    return false
+  }
+  
+  // 密码长度验证
+  if (password.length < 6) {
+    return false
+  }
+  
+  return true
+})
+
+const handleRegister = async () => {
+  // 检测输入框是否为空
+  if (!registerForm.username.trim()) {
+    alert('请输入学号/工号')
+    return
+  }
+  if (!registerForm.name.trim()) {
+    alert('请输入姓名')
+    return
+  }
+  if (!registerForm.password) {
+    alert('请设置密码')
+    return
+  }
+  if (!registerForm.confirmPassword) {
+    alert('请确认密码')
+    return
+  }
+  if (!registerForm.role) {
+    alert('请选择角色')
+    return
+  }
+  
+  // 密码一致性和长度验证
+  if (registerForm.password !== registerForm.confirmPassword) {
+    alert('两次输入的密码不一致')
+    return
+  }
+  if (registerForm.password.length < 6) {
+    alert('密码长度不能少于6位')
+    return
+  }
+  
   loading.value = true
 
   try {
-    // 使用validateLogin函数验证用户登录
-    const userData = validateLogin(loginForm.username, loginForm.password)
+    // 调用注册函数
+    await registerUser({
+      username: registerForm.username,
+      name: registerForm.name,
+      password: registerForm.password,
+      role: registerForm.role
+    })
     
-    if (userData) {
-      authStore.login(userData)
-
-      // 根据角色跳转
-      const routeMap = {
-        student: '/student',
-        teacher: '/teacher',
-        admin: '/admin'
-      }
-
-      router.push(routeMap[userData.role])
-    } else {
-      alert('登录失败，请检查用户名和密码')
-    }
+    // 注册成功后跳转到登录页面
+    alert('注册成功！请使用您的账号密码登录')
+    router.push('/login')
   } catch (error) {
-    console.error('登录错误:', error)
-    alert('登录失败，请稍后重试')
+    console.error('注册错误:', error)
+    alert(`注册失败: ${error.message || '请稍后重试'}`)
   } finally {
     loading.value = false
   }
 }
 
-const handleForgotPassword = () => {
-  router.push('/forgot-password')
-}
-
-const handleRegister = () => {
-  router.push('/register')
+const goToLogin = () => {
+  router.push('/login')
 }
 </script>
 
 <style scoped>
-/* 登录页面整体容器样式 */
-.login-page {
+/* 注册页面整体容器样式 */
+.register-page {
   font-family: "Microsoft Yahei", "PingFang SC", "Helvetica Neue", sans-serif;
   line-height: 1.6;
   display: flex;
@@ -133,16 +197,16 @@ const handleRegister = () => {
   transform: scale(1.05);
 }
 
-/* 登录表单容器样式 */
-.login-container {
+/* 注册表单容器样式 */
+.register-container {
   width: 100%;
   max-width: 480px;
   padding: 20px;
   position: relative;
 }
 
-/* 登录框主体样式 */
-.login-box {
+/* 注册框主体样式 */
+.register-box {
   background: rgba(255, 255, 255, 0.95);
   padding: 40px 35px;
   border-radius: 16px;
@@ -191,8 +255,8 @@ const handleRegister = () => {
   font-weight: 500;
 }
 
-/* 登录标签页样式 */
-.login-tabs {
+/* 注册标签页样式 */
+.register-tabs {
   width: 80%;
   margin: 0 auto 25px;
   text-align: center;
@@ -200,6 +264,7 @@ const handleRegister = () => {
   padding-bottom: 10px;
 }
 
+/* 标签按钮样式 */
 .tab-btn {
   background: none;
   border: none;
@@ -217,18 +282,18 @@ const handleRegister = () => {
   margin-bottom: 20px;
 }
 
-/* 登录表单样式 */
-.login-form {
+/* 注册表单样式 */
+.register-form {
   width: 80%;
 }
 
-/* 输入框组样式 */
+/* 输入组样式 */
 .input-group {
   margin-bottom: 20px;
   position: relative;
 }
 
-/* 输入框图标样式 */
+/* 输入图标样式 */
 .input-icon {
   position: absolute;
   left: 16px;
@@ -240,7 +305,8 @@ const handleRegister = () => {
 }
 
 /* 输入框样式 */
-.input-group input {
+.input-group input,
+.input-group select {
   width: 100%;
   height: 52px;
   padding: 10px 20px 10px 45px;
@@ -250,17 +316,20 @@ const handleRegister = () => {
   font-size: 16px;
   transition: all 0.3s ease;
   background: #f9fafb;
+  box-sizing: border-box;
 }
 
 /* 输入框聚焦状态样式 */
-.input-group input:focus {
+.input-group input:focus,
+.input-group select:focus {
   border-color: #003d86;
   box-shadow: 0 0 0 1px rgba(0, 61, 134, 0.3);
   background: #fff;
 }
 
 /* 输入框聚焦时图标颜色变化 */
-.input-group input:focus+.input-icon {
+.input-group input:focus+.input-icon,
+.input-group select:focus+.input-icon {
   color: #003d86;
 }
 
@@ -275,13 +344,13 @@ const handleRegister = () => {
 /* 链接容器样式 */
 .links-container {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   margin-bottom: 5px;
   gap: 5px;
 }
 
-/* 忘记密码链接样式 */
-.forgot-password {
+/* 登录链接样式 */
+.login-link {
   color: #0066cc;
   text-decoration: none;
   font-size: 14px;
@@ -290,30 +359,14 @@ const handleRegister = () => {
   padding: 0;
 }
 
-/* 注册账号链接样式 */
-.register-account {
-  color: #0066cc;
-  text-decoration: none;
-  font-size: 14px;
-  transition: all 0.3s ease;
-  font-weight: 500;
-  padding: 0;
-}
-
-/* 注册账号链接悬停效果 */
-.register-account:hover {
+/* 登录链接悬停效果 */
+.login-link:hover {
   color: #0041a8;
   text-decoration: underline;
 }
 
-/* 忘记密码链接悬停效果 */
-.forgot-password:hover {
-  color: #0041a8;
-  text-decoration: underline;
-}
-
-/* 登录按钮样式 */
-.login-btn {
+/* 注册按钮样式 */
+.register-btn {
   width: 100%;
   padding: 16px;
   background: linear-gradient(135deg, #003d86, #0066cc);
@@ -329,21 +382,21 @@ const handleRegister = () => {
   box-shadow: 0 4px 15px rgba(0, 61, 134, 0.3);
 }
 
-/* 登录按钮悬停效果 */
-.login-btn:hover:not(:disabled) {
+/* 注册按钮悬停效果 */
+.register-btn:hover:not(:disabled) {
   background: linear-gradient(135deg, #002a5c, #0052a3);
   box-shadow: 0 6px 20px rgba(0, 61, 134, 0.4);
   transform: translateY(-1px);
 }
 
-/* 登录按钮点击效果 */
-.login-btn:active:not(:disabled) {
+/* 注册按钮点击效果 */
+.register-btn:active:not(:disabled) {
   transform: translateY(0);
   box-shadow: 0 4px 15px rgba(0, 61, 134, 0.3);
 }
 
-/* 登录按钮禁用状态样式 */
-.login-btn:disabled {
+/* 注册按钮禁用状态样式 */
+.register-btn:disabled {
   cursor: not-allowed;
   opacity: 0.7;
 }
@@ -364,12 +417,12 @@ const handleRegister = () => {
 }
 
 /* 加载状态下隐藏按钮文字 */
-.login-btn.loading .btn-text {
+.register-btn.loading .btn-text {
   opacity: 0;
 }
 
 /* 加载状态下显示加载动画 */
-.login-btn.loading .btn-loading {
+.register-btn.loading .btn-loading {
   opacity: 1;
 }
 
@@ -407,11 +460,11 @@ const handleRegister = () => {
 
 /* 响应式设计 - 移动端适配 */
 @media (max-width: 768px) {
-  .login-container {
+  .register-container {
     max-width: 90%;
   }
 
-  .login-box {
+  .register-box {
     padding: 30px 25px;
   }
 
@@ -426,11 +479,11 @@ const handleRegister = () => {
     margin-bottom: 15px;
   }
 
-  .login-form {
+  .register-form {
     width: 90%;
   }
 
-  .login-tabs {
+  .register-tabs {
     width: 85%;
   }
 

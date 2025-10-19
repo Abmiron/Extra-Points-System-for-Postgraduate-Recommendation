@@ -117,12 +117,15 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import ReviewDetailModal from './ReviewDetailModal.vue'
+import { useApplicationsStore } from '../../stores/applications'
 
+const applicationsStore = useApplicationsStore()
 const selectedApplication = ref(null)
 
-const filters = reactive({
+// 筛选条件
+const filters = ref({
   department: 'all',
   major: 'all',
   type: 'all',
@@ -131,36 +134,69 @@ const filters = reactive({
   endDate: ''
 })
 
-const applications = ref([])
-const currentPage = ref(1)
-const pageSize = 10
-
-// 计算属性
-const filteredApplications = computed(() => {
-  let filtered = applications.value.filter(app => {
-    const departmentMatch = filters.department === 'all' || app.department === filters.department
-    const majorMatch = filters.major === 'all' || app.major === filters.major
-    const typeMatch = filters.type === 'all' || app.applicationType === filters.type
-    const statusMatch = filters.status === 'all' || app.status === filters.status
-    const dateMatch = !filters.startDate || !filters.endDate ||
-      (new Date(app.reviewedAt) >= new Date(filters.startDate) &&
-        new Date(app.reviewedAt) <= new Date(filters.endDate))
-
-    return departmentMatch && majorMatch && typeMatch && statusMatch && dateMatch
-  })
-
-  // 按审核时间倒序排列
-  return filtered.sort((a, b) => new Date(b.reviewedAt) - new Date(a.reviewedAt))
+// 分页
+const pagination = ref({
+  currentPage: 1,
+  pageSize: 10
 })
 
-const totalApplications = computed(() => filteredApplications.value.length)
-const totalPages = computed(() => Math.ceil(totalApplications.value / pageSize))
-const startIndex = computed(() => (currentPage.value - 1) * pageSize)
-const endIndex = computed(() => Math.min(startIndex.value + pageSize, totalApplications.value))
+// 加载状态
+const loading = computed(() => applicationsStore.loading)
 
+// 筛选和分页处理后的申请数据
 const paginatedApplications = computed(() => {
-  return filteredApplications.value.slice(startIndex.value, endIndex.value)
+  // 先筛选
+  let filtered = applicationsStore.filterApplications({
+    department: filters.value.department !== 'all' ? filters.value.department : undefined,
+    major: filters.value.major !== 'all' ? filters.value.major : undefined,
+    type: filters.value.type !== 'all' ? filters.value.type : undefined,
+    startDate: filters.value.startDate,
+    endDate: filters.value.endDate
+  })
+  
+  // 只保留已审核的
+  filtered = filtered.filter(app => app.status === 'approved' || app.status === 'rejected')
+  
+  // 如果有状态筛选
+  if (filters.value.status !== 'all') {
+    filtered = filtered.filter(app => app.status === filters.value.status)
+  }
+  
+  // 按审核时间倒序排序
+  filtered.sort((a, b) => {
+    const dateA = new Date(a.reviewedAt || 0)
+    const dateB = new Date(b.reviewedAt || 0)
+    return dateB - dateA
+  })
+  
+  // 再分页
+  const startIndex = (pagination.value.currentPage - 1) * pagination.value.pageSize
+  const endIndex = startIndex + pagination.value.pageSize
+  return filtered.slice(startIndex, endIndex)
 })
+
+// 总记录数
+const totalApplications = computed(() => {
+  let filtered = applicationsStore.filterApplications({
+    department: filters.value.department !== 'all' ? filters.value.department : undefined,
+    major: filters.value.major !== 'all' ? filters.value.major : undefined,
+    type: filters.value.type !== 'all' ? filters.value.type : undefined,
+    startDate: filters.value.startDate,
+    endDate: filters.value.endDate
+  })
+  
+  filtered = filtered.filter(app => app.status === 'approved' || app.status === 'rejected')
+  
+  if (filters.value.status !== 'all') {
+    filtered = filtered.filter(app => app.status === filters.value.status)
+  }
+  
+  return filtered.length
+})
+
+const totalPages = computed(() => Math.ceil(totalApplications.value / pagination.value.pageSize))
+const startIndex = computed(() => (pagination.value.currentPage - 1) * pagination.value.pageSize)
+const endIndex = computed(() => Math.min(startIndex.value + pagination.value.pageSize, totalApplications.value))
 
 // 方法
 const getDepartmentText = (department) => {
@@ -199,43 +235,53 @@ const formatDate = (dateString) => {
 }
 
 const filterApplications = () => {
-  currentPage.value = 1
+  pagination.value.currentPage = 1
 }
 
 const applyFilters = () => {
-  currentPage.value = 1
+  pagination.value.currentPage = 1
 }
 
 const prevPage = () => {
-  if (currentPage.value > 1) {
-    currentPage.value--
+  if (pagination.value.currentPage > 1) {
+    pagination.value.currentPage--
   }
 }
 
 const nextPage = () => {
-  if (currentPage.value < totalPages.value) {
-    currentPage.value++
+  if (pagination.value.currentPage < totalPages.value) {
+    pagination.value.currentPage++
   }
 }
 
 const viewApplication = (application) => {
-  selectedApplication.value = application
+  // 从store获取完整的申请详情
+  selectedApplication.value = applicationsStore.getApplicationById(application.id) || application
 }
 
 const closeDetailModal = () => {
   selectedApplication.value = null
 }
 
+// 重置筛选
+const resetFilters = () => {
+  filters.value = {
+    department: 'all',
+    major: 'all',
+    type: 'all',
+    status: 'all',
+    startDate: '',
+    endDate: ''
+  }
+  pagination.value.currentPage = 1
+}
+
 // 生命周期
 onMounted(() => {
-  // 从本地存储加载数据
-  const savedApplications = JSON.parse(localStorage.getItem('studentApplications') || '[]')
-  console.log('审核记录页面 - 所有申请:', savedApplications)
-
-  applications.value = savedApplications.filter(app =>
-    app.status === 'approved' || app.status === 'rejected'
-  )
-  console.log('已审核的申请:', applications.value)
+  // 确保数据已加载
+  if (applicationsStore.applications.length === 0) {
+    applicationsStore.loadApplications()
+  }
 })
 </script>
 

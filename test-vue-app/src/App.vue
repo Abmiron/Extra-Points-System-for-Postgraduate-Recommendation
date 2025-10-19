@@ -7,11 +7,16 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useAuthStore } from './stores/auth'
+import { useApplicationsStore } from './stores/applications'
 
 const authStore = useAuthStore()
+const applicationsStore = useApplicationsStore()
 
 onMounted(() => {
+  // 初始化认证状态
   authStore.initialize()
+  // 初始化并加载申请数据
+  applicationsStore.initializeMockData()
 })
 </script>
 

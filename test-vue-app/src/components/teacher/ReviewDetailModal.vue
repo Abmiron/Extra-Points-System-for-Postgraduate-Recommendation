@@ -97,19 +97,19 @@
             <div class="compact-row">
               <div class="compact-group">
                 <label>姓名</label>
-                <span>{{ application.studentName }}</span>
+                <span>{{ application.studentName || 'N/A' }}</span>
               </div>
               <div class="compact-group">
                 <label>学号</label>
-                <span>{{ application.studentId }}</span>
+                <span>{{ application.studentId || 'N/A' }}</span>
               </div>
               <div class="compact-group">
                 <label>所在系</label>
-                <span>{{ getDepartmentText(application.department) }}</span>
+                <span>{{ application.department ? getDepartmentText(application.department) : 'N/A' }}</span>
               </div>
               <div class="compact-group">
                 <label>专业</label>
-                <span>{{ getMajorText(application.major) }}</span>
+                <span>{{ application.major ? getMajorText(application.major) : 'N/A' }}</span>
               </div>
             </div>
           </div>
@@ -253,6 +253,9 @@ const isImage = (file) => {
 }
 
 const getFileIcon = (fileName) => {
+  if (!fileName) {
+    return ['fas', 'file'] // 当fileName为undefined或null时返回默认图标
+  }
   const ext = fileName.split('.').pop().toLowerCase()
   if (isImage({ name: fileName })) {
     return ['fas', 'file-image']

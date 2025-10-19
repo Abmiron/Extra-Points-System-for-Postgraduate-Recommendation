@@ -13,22 +13,26 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useApplicationsStore } from '../stores/applications'
 import Header from '../components/common/Header.vue'
 import Sidebar from '../components/common/Sidebar.vue'
 import ApplicationForm from '../components/student/ApplicationForm.vue'
-import ApplicationRecord from '../components/student/ApplicationRecord.vue'
+import ApplicationHistory from '../components/student/ApplicationHistory.vue'
 import Statistics from '../components/student/Statistics.vue'
 import Profile from '../components/student/Profile.vue'
 
+const router = useRouter()
 const authStore = useAuthStore()
+const applicationsStore = useApplicationsStore()
 
 const currentPage = ref('application-form')
 
 const pageComponents = {
   'application-form': ApplicationForm,
-  'application-record': ApplicationRecord,
+  'application-record': ApplicationHistory,
   'statistics': Statistics,
   'profile': Profile
 }
@@ -38,12 +42,31 @@ const currentPageComponent = computed(() => pageComponents[currentPage.value])
 const userInfo = computed(() => ({
   name: authStore.userName,
   faculty: authStore.user?.faculty || '信息学院',
-  major: authStore.user?.major || '计算机科学与技术'
+  major: authStore.user?.major || '计算机科学与技术',
+  studentId: authStore.user?.studentId || ''
 }))
 
 const switchPage = (page) => {
   currentPage.value = page
 }
+
+// 切换到申请表单页面
+const switchToApplicationForm = () => {
+  currentPage.value = 'application-form'
+}
+
+// 权限验证和数据加载
+onMounted(() => {
+  if (authStore.role !== 'student') {
+    alert('您没有权限访问学生端')
+    router.push('/login')
+  } else {
+    // 确保数据已加载
+    if (applicationsStore.applications.length === 0) {
+      applicationsStore.loadApplications()
+    }
+  }
+})
 </script>
 
 <style scoped>

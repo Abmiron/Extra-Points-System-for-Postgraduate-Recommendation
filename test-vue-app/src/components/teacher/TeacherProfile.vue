@@ -137,11 +137,13 @@
           </form>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-outline" @click="closePasswordModal">取消</button>
-          <button class="btn" @click="changePassword"
-            :disabled="passwordForm.newPassword !== passwordForm.confirmPassword">
-            确认修改
-          </button>
+          <div class="modal-actions">
+            <button class="btn btn-outline" @click="closePasswordModal">取消</button>
+            <button class="btn" @click="changePassword"
+              :disabled="passwordForm.newPassword !== passwordForm.confirmPassword">
+              确认修改
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -150,6 +152,9 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
+import { useAuthStore } from '../../stores/auth'
+
+const authStore = useAuthStore()
 
 const isEditing = ref(false)
 const saving = ref(false)
@@ -157,14 +162,14 @@ const showChangePassword = ref(false)
 
 const originalProfile = ref({})
 const profile = reactive({
-  name: '张老师',
-  teacherId: '2000123456',
-  faculty: '信息学院',
-  title: '副教授',
-  email: 'zhang@xmu.edu.cn',
-  phone: '13800138000',
-  office: '信息学院大楼A301',
-  officePhone: '0592-2180000'
+  name: '',
+  teacherId: '',
+  faculty: '',
+  title: '',
+  email: '',
+  phone: '',
+  office: '',
+  officePhone: ''
 })
 
 const passwordForm = reactive({
@@ -215,8 +220,27 @@ const saveProfile = async () => {
     // 模拟API调用
     await new Promise(resolve => setTimeout(resolve, 1000))
 
-    // 保存到本地存储
-    localStorage.setItem('teacherProfile', JSON.stringify(profile))
+    // 保存到本地存储中的用户数据
+    const users = JSON.parse(localStorage.getItem('users') || '{}')
+    const currentUser = users[authStore.user.username]
+    
+    if (currentUser) {
+      // 更新用户信息
+      currentUser.name = profile.name
+      currentUser.teacherId = profile.teacherId
+      currentUser.faculty = profile.faculty
+      currentUser.title = profile.title
+      currentUser.email = profile.email
+      currentUser.phone = profile.phone
+      currentUser.office = profile.office
+      currentUser.officePhone = profile.officePhone
+      
+      // 保存更新后的用户数据
+      localStorage.setItem('users', JSON.stringify(users))
+      
+      // 更新auth store中的用户信息
+      authStore.login({ ...currentUser })
+    }
 
     alert('个人信息已更新')
     isEditing.value = false
@@ -242,8 +266,20 @@ const changePassword = async () => {
   try {
     // 模拟API调用
     await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    // 更新密码到localStorage
+    const users = JSON.parse(localStorage.getItem('users') || '{}')
+    const currentUser = users[authStore.user.username]
+    
+    if (currentUser && currentUser.password === passwordForm.currentPassword) {
+      currentUser.password = passwordForm.newPassword
+      localStorage.setItem('users', JSON.stringify(users))
+      alert('密码修改成功')
+    } else {
+      alert('当前密码错误')
+      return
+    }
 
-    alert('密码修改成功')
     closePasswordModal()
 
     // 清空表单
@@ -283,10 +319,18 @@ const calculateStats = () => {
 
 // 生命周期
 onMounted(() => {
-  // 从本地存储加载个人信息
-  const savedProfile = localStorage.getItem('teacherProfile')
-  if (savedProfile) {
-    Object.assign(profile, JSON.parse(savedProfile))
+  // 从auth store获取当前用户信息
+  if (authStore.user) {
+    Object.assign(profile, {
+      name: authStore.user.name || '',
+      teacherId: authStore.user.username || '',
+      faculty: authStore.user.faculty || '',
+      title: authStore.user.title || '',
+      email: authStore.user.email || '',
+      phone: authStore.user.phone || '',
+      office: authStore.user.office || '',
+      officePhone: authStore.user.officePhone || ''
+    })
   }
   originalProfile.value = { ...profile }
 
@@ -297,6 +341,18 @@ onMounted(() => {
 
 <style scoped>
 /* 组件特有样式 */
+/* 模态框底部按钮居中 */
+.modal-footer {
+  display: flex;
+  justify-content: center;
+  padding: 15px;
+  border-top: 1px solid #e8e8e8;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 15px;
+}
 .form-row {
   display: flex;
   gap: 20px;

@@ -97,11 +97,13 @@
           </form>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-outline" @click="closePasswordModal">取消</button>
-          <button class="btn" @click="changePassword"
-            :disabled="passwordForm.newPassword !== passwordForm.confirmPassword">
-            确认修改
-          </button>
+          <div class="modal-actions">
+            <button class="btn btn-outline" @click="closePasswordModal">取消</button>
+            <button class="btn" @click="changePassword"
+              :disabled="passwordForm.newPassword !== passwordForm.confirmPassword">
+              确认修改
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -110,6 +112,9 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useAuthStore } from '../../stores/auth'
+
+const authStore = useAuthStore()
 
 const isEditing = ref(false)
 const saving = ref(false)
@@ -117,12 +122,12 @@ const showChangePassword = ref(false)
 
 const originalProfile = ref({})
 const profile = reactive({
-  name: '张同学',
-  studentId: '12320253211234',
-  faculty: '信息学院',
-  major: '计算机科学与技术',
-  email: 'zhang@xmu.edu.cn',
-  phone: '13800138000'
+  name: '',
+  studentId: '',
+  faculty: '',
+  major: '',
+  email: '',
+  phone: ''
 })
 
 const passwordForm = reactive({
@@ -150,14 +155,29 @@ const cancelEdit = () => {
 
 const saveProfile = async () => {
   saving.value = true
-
   try {
     // 模拟API调用
     await new Promise(resolve => setTimeout(resolve, 1000))
-
+    
     // 保存到本地存储
-    localStorage.setItem('studentProfile', JSON.stringify(profile))
-
+    const users = JSON.parse(localStorage.getItem('users') || '{}')
+    const currentUser = users[authStore.user.studentId || authStore.user.username]
+    
+    if (currentUser) {
+      // 更新用户信息
+      currentUser.name = profile.name
+      currentUser.faculty = profile.faculty
+      currentUser.major = profile.major
+      currentUser.email = profile.email
+      currentUser.phone = profile.phone
+      
+      // 保存更新后的用户数据
+      localStorage.setItem('users', JSON.stringify(users))
+      
+      // 更新auth store中的用户信息
+      authStore.login({ ...currentUser })
+    }
+    
     alert('个人信息已更新')
     isEditing.value = false
   } catch (error) {
@@ -182,8 +202,20 @@ const changePassword = async () => {
   try {
     // 模拟API调用
     await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    // 更新密码到localStorage
+    const users = JSON.parse(localStorage.getItem('users') || '{}')
+    const currentUser = users[authStore.user.studentId || authStore.user.username]
+    
+    if (currentUser && currentUser.password === passwordForm.currentPassword) {
+      currentUser.password = passwordForm.newPassword
+      localStorage.setItem('users', JSON.stringify(users))
+      alert('密码修改成功')
+    } else {
+      alert('当前密码错误')
+      return
+    }
 
-    alert('密码修改成功')
     closePasswordModal()
 
     // 清空表单
@@ -210,10 +242,16 @@ const closePasswordModal = () => {
 
 // 生命周期
 onMounted(() => {
-  // 从本地存储加载个人信息
-  const savedProfile = localStorage.getItem('studentProfile')
-  if (savedProfile) {
-    Object.assign(profile, JSON.parse(savedProfile))
+  // 从auth store获取当前用户信息
+  if (authStore.user) {
+    Object.assign(profile, {
+      name: authStore.user.name || authStore.user.studentName || '',
+      studentId: authStore.user.studentId || authStore.user.username || '',
+      faculty: authStore.user.faculty || '',
+      major: authStore.user.major || '',
+      email: authStore.user.email || '',
+      phone: authStore.user.phone || ''
+    })
   }
   originalProfile.value = { ...profile }
 })
@@ -224,6 +262,18 @@ onMounted(() => {
 @import '../common/shared-styles.css';
 
 /* 组件特有样式 */
+/* 模态框底部按钮居中 */
+.modal-footer {
+  display: flex;
+  justify-content: center;
+  padding: 15px;
+  border-top: 1px solid #e8e8e8;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 15px;
+}
 .form-control:disabled {
   background-color: #f5f5f5;
   color: #666;

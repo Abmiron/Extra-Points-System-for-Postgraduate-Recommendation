@@ -68,7 +68,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="stat in statistics" :key="stat.major">
+            <tr v-for="stat in filteredStatistics" :key="stat.major">
               <td>{{ getMajorText(stat.major) }}</td>
               <td>{{ stat.applicationCount }}</td>
               <td>{{ stat.avgAcademicScore }}</td>
@@ -76,7 +76,7 @@
               <td>{{ stat.avgComprehensiveScore }}</td>
               <td>{{ stat.avgTotalScore }}</td>
             </tr>
-            <tr v-if="statistics.length === 0">
+            <tr v-if="filteredStatistics.length === 0">
               <td colspan="6" class="no-data">暂无统计数据</td>
             </tr>
           </tbody>
@@ -115,40 +115,52 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useApplicationsStore } from '../../stores/applications'
 
+const applicationsStore = useApplicationsStore()
 const filters = reactive({
   department: 'all',
   major: 'all',
   academicYear: '2023'
 })
 
-// 模拟统计数据
-const statistics = ref([
-  {
-    major: 'cs',
-    applicationCount: 45,
-    avgAcademicScore: 89.2,
-    avgSpecialtyScore: 8.5,
-    avgComprehensiveScore: 3.2,
-    avgTotalScore: 82.3
-  },
-  {
-    major: 'se',
-    applicationCount: 38,
-    avgAcademicScore: 88.7,
-    avgSpecialtyScore: 7.8,
-    avgComprehensiveScore: 3.5,
-    avgTotalScore: 81.6
-  },
-  {
-    major: 'ai',
-    applicationCount: 32,
-    avgAcademicScore: 90.5,
-    avgSpecialtyScore: 9.2,
-    avgComprehensiveScore: 3.0,
-    avgTotalScore: 84.2
-  }
-])
+// 计算属性 - 使用store数据进行统计
+const statistics = computed(() => {
+  const allApplications = applicationsStore.applications
+  
+  // 根据专业分组统计
+  const majorStats = {}
+  
+  allApplications.forEach(app => {
+    const major = app.major || 'other'
+    if (!majorStats[major]) {
+      majorStats[major] = {
+        major,
+        applicationCount: 0,
+        totalAcademicScore: 0,
+        totalSpecialtyScore: 0,
+        totalComprehensiveScore: 0,
+        totalScore: 0
+      }
+    }
+    
+    majorStats[major].applicationCount++
+    majorStats[major].totalAcademicScore += parseFloat(app.academicScore || 0)
+    majorStats[major].totalSpecialtyScore += parseFloat(app.specialtyScore || 0)
+    majorStats[major].totalComprehensiveScore += parseFloat(app.comprehensiveScore || 0)
+    majorStats[major].totalScore += parseFloat(app.finalScore || 0)
+  })
+  
+  // 计算平均值并格式化为数组
+  return Object.values(majorStats).map(stat => ({
+    major: stat.major,
+    applicationCount: stat.applicationCount,
+    avgAcademicScore: (stat.totalAcademicScore / stat.applicationCount).toFixed(1),
+    avgSpecialtyScore: (stat.totalSpecialtyScore / stat.applicationCount).toFixed(1),
+    avgComprehensiveScore: (stat.totalComprehensiveScore / stat.applicationCount).toFixed(1),
+    avgTotalScore: (stat.totalScore / stat.applicationCount).toFixed(1)
+  }))
+})
 
 // 计算属性
 const filteredStatistics = computed(() => {
@@ -160,15 +172,33 @@ const filteredStatistics = computed(() => {
 
 const totalStats = computed(() => {
   const totalApplications = filteredStatistics.value.reduce((sum, stat) => sum + stat.applicationCount, 0)
-  const totalAvgScore = filteredStatistics.value.reduce((sum, stat) => sum + stat.avgTotalScore, 0)
-  const avgTotalScore = totalAvgScore / filteredStatistics.value.length
-
+  const approvedApps = applicationsStore.applications.filter(app => app.status === 'approved')
+  const approvalRate = totalApplications > 0 ? 
+    (approvedApps.length / totalApplications * 100).toFixed(1) : 0
+  
+  // 计算平均加分
+  const bonusScores = applicationsStore.applications.map(app => {
+    const specialty = parseFloat(app.specialtyScore || 0)
+    const comprehensive = parseFloat(app.comprehensiveScore || 0)
+    return specialty + comprehensive
+  }).filter(score => !isNaN(score))
+  const avgBonusScore = bonusScores.length > 0 ? 
+    (bonusScores.reduce((sum, score) => sum + score, 0) / bonusScores.length).toFixed(1) : 0
+  
+  // 计算最高分数
+  const scores = applicationsStore.applications.map(app => parseFloat(app.finalScore || 0)).filter(score => !isNaN(score))
+  const maxScore = scores.length > 0 ? Math.max(...scores) : 0
+  
+  // 计算平均总分
+  const avgTotalScore = filteredStatistics.value.length > 0 ? 
+    (filteredStatistics.value.reduce((sum, stat) => sum + parseFloat(stat.avgTotalScore), 0) / filteredStatistics.value.length).toFixed(1) : 0
+  
   return {
     totalApplications,
-    approvalRate: 75.6, // 模拟数据
-    avgBonusScore: 8.2, // 模拟数据
-    maxScore: 92.5, // 模拟数据
-    avgTotalScore: avgTotalScore.toFixed(1)
+    approvalRate: parseFloat(approvalRate),
+    avgBonusScore: parseFloat(avgBonusScore),
+    maxScore,
+    avgTotalScore: parseFloat(avgTotalScore)
   }
 })
 
@@ -187,12 +217,34 @@ const generateReport = () => {
 }
 
 const exportExcel = () => {
-  alert('导出Excel功能开发中...')
+  const reportData = {
+    generatedAt: new Date().toISOString(),
+    filters: { ...filters },
+    statistics: statistics.value,
+    totalStats: totalStats.value
+  }
+  
+  const dataStr = JSON.stringify(reportData, null, 2)
+  const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
+  
+  const exportFileDefaultName = `statistics-report-${new Date().toISOString().split('T')[0]}.json`
+  
+  const linkElement = document.createElement('a')
+  linkElement.setAttribute('href', dataUri)
+  linkElement.setAttribute('download', exportFileDefaultName)
+  linkElement.click()
+}
+
+// 重新加载数据
+const refreshData = () => {
+  applicationsStore.loadApplications()
 }
 
 // 生命周期
 onMounted(() => {
-  // 可以从API加载统计数据
+  if (applicationsStore.applications.length === 0) {
+    applicationsStore.loadApplications()
+  }
 })
 </script>
 
