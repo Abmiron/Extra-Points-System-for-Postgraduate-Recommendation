@@ -62,7 +62,7 @@ func LoadConfig() *Config {
 			MaxIdleConns    int           `yaml:"max_idle_conns"`
 			MaxOpenConns    int           `yaml:"max_open_conns"`
 			ConnMaxLifetime time.Duration `yaml:"conn_max_lifetime"`
-		}{"postgres", "localhost", "5432", "postgres", "admin", "postgres", "disable", 5, 100, 30 * time.Minute},
+		}{"postgres", "localhost", "5432", "postgres", "123456", "hd_golang", "disable", 5, 100, 30 * time.Minute},
 		JWT: struct {
 			SecretKey      string        `yaml:"secret_key"`
 			ExpirationTime time.Duration `yaml:"expiration_time"`

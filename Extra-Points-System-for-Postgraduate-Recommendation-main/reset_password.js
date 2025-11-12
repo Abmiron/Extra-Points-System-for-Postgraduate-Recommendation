@@ -1,6 +1,26 @@
 require('dotenv').config();
 const { Pool } = require('pg');
 
+// 尝试使用bcrypt库，如果不存在则提供模拟实现
+let bcrypt;
+try {
+  // 首先尝试加载bcrypt库
+  bcrypt = require('bcrypt');
+  console.log('使用真实的bcrypt库进行密码哈希');
+} catch (err) {
+  console.log('bcrypt库未安装，使用模拟实现并提供安装提示');
+  // 如果bcrypt未安装，提供一个简单的模拟实现并提示安装
+  bcrypt = {
+    hash: async (password, saltRounds) => {
+      console.log('警告: 请安装bcrypt库以使用真实的密码哈希');
+      console.log('安装命令: npm install bcrypt');
+      // 继续使用模拟实现以保持功能可用
+      return `$2a$10$simulatedhash${password}`;
+    },
+    genSalt: async () => '$2a$10$simulatedsalt123456789'
+  };
+}
+
 // 创建数据库连接池
 const pool = new Pool({
   host: process.env.DB_HOST,
@@ -10,12 +30,18 @@ const pool = new Pool({
   database: process.env.DB_NAME,
 });
 
-// 简单的密码哈希生成函数（模拟Go的bcrypt）
-// 注意：这只是为了演示，实际应该使用与Go后端相同的哈希算法
-function generatePasswordHash(password) {
-  // 这里我们使用一个简单的方法来模拟bcrypt哈希
-  // 实际项目中，应该使用相同的加密算法
-  return `$2a$10$simulatedhash${password}`;
+// 生成密码哈希（使用bcrypt库）
+async function generatePasswordHash(password) {
+  try {
+    // 使用bcrypt进行真实的密码哈希
+    const saltRounds = 10;
+    const hash = await bcrypt.hash(password, saltRounds);
+    return hash;
+  } catch (error) {
+    console.error('密码哈希生成失败:', error);
+    // 如果bcrypt失败，回退到简单实现
+    return `$2a$10$simulatedhash${password}`;
+  }
 }
 
 // 重置用户密码
@@ -24,7 +50,7 @@ async function resetUserPassword() {
     console.log('连接到数据库:', process.env.DB_NAME);
     
     // 重置admin用户密码为'admin123'
-    const adminHash = generatePasswordHash('admin123');
+    const adminHash = await generatePasswordHash('admin123');
     const adminResult = await pool.query(
       'UPDATE users SET password_hash = $1 WHERE username = $2',
       [adminHash, 'admin']
@@ -32,7 +58,7 @@ async function resetUserPassword() {
     console.log(`已重置 ${adminResult.rowCount} 个admin用户的密码为 'admin123'`);
     
     // 重置testuser123用户密码为'123456'
-    const testuserHash = generatePasswordHash('123456');
+    const testuserHash = await generatePasswordHash('123456');
     const testuserResult = await pool.query(
       'UPDATE users SET password_hash = $1 WHERE username = $2',
       [testuserHash, 'testuser123']
@@ -40,7 +66,7 @@ async function resetUserPassword() {
     console.log(`已重置 ${testuserResult.rowCount} 个testuser123用户的密码为 '123456'`);
     
     // 重置123456用户密码为'123456'
-    const user123456Hash = generatePasswordHash('123456');
+    const user123456Hash = await generatePasswordHash('123456');
     const user123456Result = await pool.query(
       'UPDATE users SET password_hash = $1 WHERE username = $2',
       [user123456Hash, '123456']
