@@ -1,81 +1,80 @@
 #include <stdio.h>
+#include <stdlib.h>
 
-int get_h(int m)
-{
-    if (m == 0)
+#define MAX_VERTICES 10
+
+int visited[MAX_VERTICES];
+int graph[MAX_VERTICES][MAX_VERTICES];
+
+// DFS遍历检查路径是否存在
+int DFS(int n, int current, int target) {
+    if (current == target) {
+        return 1; // 找到目标顶点
+    }
+    
+    visited[current] = 1;
+    
+    for (int i = 0; i < n; i++) {
+        if (graph[current][i] == 1 && !visited[i]) {
+            if (DFS(n, i, target)) {
+                return 1;
+            }
+        }
+    }
+    
+    return 0; // 没有找到路径
+}
+
+int main() {
+    int N, E;
+    
+    // 读取顶点数和边数
+    scanf("%d %d", &N, &E);
+    
+    // 初始化邻接矩阵和visited数组
+    for (int i = 0; i < MAX_VERTICES; i++) {
+        visited[i] = 0;
+        for (int j = 0; j < MAX_VERTICES; j++) {
+            graph[i][j] = 0;
+        }
+    }
+    
+    // 读取边
+    for (int i = 0; i < E; i++) {
+        int u, v;
+        scanf("%d %d", &u, &v);
+        
+        // 只添加在有效范围内的边
+        if (u >= 0 && u < N && v >= 0 && v < N) {
+            graph[u][v] = 1;
+            graph[v][u] = 1;
+        }
+    }
+    
+    // 读取要检查的顶点
+    int i, j;
+    scanf("%d %d", &i, &j);
+    
+    // 特殊情况：如果i和j是同一个顶点
+    if (i == j) {
+        printf("There is a path between %d and %d.\n", i, j);
         return 0;
-    int h = 0;
-    int total = 0;
-    while (total < m)
-    {
-        h++;
-        total += (1 << (h - 1)); // 累加第h层节点数（2^(h-1)）
     }
-    return h;
-}
-
-// 计算节点数为m的完全二叉树中左子树的节点数
-int get_left_count(int m)
-{
-    if (m <= 1)
+    
+    // 检查顶点编号是否有效
+    if (i < 0 || i >= N || j < 0 || j >= N) {
+        printf("There is no path between %d and %d.\n", i, j);
         return 0;
-    int h = get_h(m);
-    int s = (1 << (h - 1)) - 1;       // 前h-1层的总节点数（完美二叉树）
-    int t = m - s;                    // 最后一层的节点数
-    int max_left_last = 1 << (h - 2); // 最后一层左子树最多节点数（2^(h-2)）
-
-    if (t <= max_left_last)
-    {
-        // 最后一层节点均在左子树
-        return ((1 << (h - 2)) - 1) + t;
     }
-    else
-    {
-        // 左子树为完美二叉树（h-1层）
-        return (1 << (h - 1)) - 1;
+    
+    // 检查路径是否存在
+    int hasPath = DFS(N, i, j);
+    
+    if (hasPath) {
+        printf("There is a path between %d and %d.\n", i, j);
+    } else {
+        printf("There is no path between %d and %d.\n", i, j);
     }
-}
-
-// 递归构建层序序列
-// post后序，res层序，start后序索引，index当前层序位置
-void build_level(int post[], int res[], int start, int end, int index)
-{
-    if (start > end)
-        return; //递归终止
-
-    // 根节点是后序序列的最后一个元素，放入层序对应位置
-    res[index] = post[end];
-    int m = end - start + 1; // 当前子树的节点数
-    if (m == 1)
-        return; //递归终止
-
-    int k = get_left_count(m); // 左子树节点数
-    // 递归处理左子树：后序[start, start+k-1]，层序位置2*index+1
-    build_level(post, res, start, start + k - 1, 2 * index + 1);
-    // 递归处理右子树：后序[start+k, end-1]，层序位置2*index+2
-    build_level(post, res, start + k, end - 1, 2 * index + 2);
-}
-
-int main()
-{
-    int N;
-    scanf("%d", &N);
-    int post[30];
-    for (int i = 0; i < N; i++)
-    {
-        scanf("%d", &post[i]);
-    }
-
-    int res[30];
-    build_level(post, res, 0, N - 1, 0);
-
-    for (int i = 0; i < N; i++)
-    {
-        if (i != 0)
-            printf(" ");
-        printf("%d", res[i]);
-    }
-    printf("\n");
-
+    
     return 0;
 }
