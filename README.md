@@ -1,1 +1,1 @@
-交互设计项目请查看test-vue-app文件，因为我没设置好git库位置，以及配置vue项目时失败过qwq
+交互设计项目请查看Extra-Points-System-for-Postgraduate-Recommendation
