@@ -7,11 +7,11 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = ref(false)
 
   const userName = computed(() => {
-    // 多重检查，确保能正确获取学生姓名
-    // 1. 检查user.value?.studentName
+    // 多重检查，确保能正确获取用户姓名
+    // 1. 检查user.value?.name（标准字段）
     // 2. 检查user对象中的其他可能包含姓名的字段
     // 3. 提供默认值作为最后的保障
-    return user.value?.studentName || (typeof user.value === 'object' ? Object.values(user.value).find(val => typeof val === 'string' && val.length > 0) : '') || '张三'
+    return user.value?.name || (typeof user.value === 'object' ? Object.values(user.value).find(val => typeof val === 'string' && val.length > 0) : '') || '张三'
   })
   const userAvatar = computed(() => user.value?.avatar || '/images/default-avatar.jpg')
 

@@ -1,0 +1,16 @@
+2025/11/13 17:46:54 simple_main.go:26: === 简单服务器启动 ===
+2025/11/13 17:46:54 simple_main.go:32: 注册路由: GET /api/health
+2025/11/13 17:46:54 simple_main.go:41: 注册路由: GET /api/debug/routes
+2025/11/13 17:46:54 simple_main.go:66: 注册路由: POST /api/auth/forgot-password
+2025/11/13 17:46:54 simple_main.go:105: 注册路由: 404 处理
+2025/11/13 17:46:54 simple_main.go:129: Server starting on :9001
+2025/11/13 17:47:14 simple_main.go:68: 忘记密码路由被调用: POST /api/auth/forgot-password
+2025/11/13 17:48:07 simple_main.go:142: Shutting down server...
+2025/11/13 17:48:07 simple_main.go:152: Server exiting
+2025/11/13 18:01:33 simple_main.go:26: === 简单服务器启动 ===
+2025/11/13 18:01:33 simple_main.go:32: 注册路由: GET /api/health
+2025/11/13 18:01:33 simple_main.go:41: 注册路由: GET /api/debug/routes
+2025/11/13 18:01:33 simple_main.go:66: 注册路由: POST /api/auth/forgot-password
+2025/11/13 18:01:33 simple_main.go:105: 注册路由: 404 处理
+2025/11/13 18:01:33 simple_main.go:129: Server starting on :9001
+2025/11/13 18:01:33 simple_main.go:132: Failed to start server: listen tcp :9001: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.

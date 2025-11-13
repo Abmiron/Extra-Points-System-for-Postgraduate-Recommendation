@@ -79,7 +79,7 @@
           <tbody>
             <tr v-for="user in paginatedUsers" :key="user.id">
               <td><input type="checkbox" v-model="selectedUsers" :value="user.id"></td>
-              <td>{{ user.account }}</td>
+              <td>{{ user.username }}</td>
               <td>{{ user.name }}</td>
               <td>{{ getFacultyText(user.faculty) }}</td>
               <td>{{ user.role === 'student' ? user.major : (user.role === 'teacher' ? user.roleName : user.roleName || '管理员') }}</td>
@@ -154,7 +154,7 @@
               </div>
               <div class="form-group">
                 <label class="form-label">{{ userForm.role === 'student' ? '学号' : (userForm.role === 'teacher' ? '工号' : '管理员账号') }}</label>
-                <input type="text" class="form-control" v-model="userForm.account" required>
+                <input type="text" class="form-control" v-model="userForm.username" required>
               </div>
             </div>
             <div class="form-row">
@@ -239,7 +239,7 @@ const filters = reactive({
 
 const userForm = reactive({
   role: 'student',
-  account: '',
+  username: '',
   name: '',
   faculty: 'cs',
   major: 'cs',
@@ -258,7 +258,7 @@ const loadUsersFromStorage = () => {
     // 转换为数组并添加必要的字段
     const usersArray = Object.values(storedUsers).map((user, index) => ({
       id: index + 1,
-      account: user.username || user.studentId || user.account,
+      username: user.username || user.studentId || user.account,
       name: user.name || user.studentName || '未知用户',
       role: user.role || 'student',
       faculty: user.faculty || 'cs',
@@ -275,7 +275,7 @@ const loadUsersFromStorage = () => {
       {
         id: 1,
         role: 'admin',
-        account: 'admin',
+        username: 'admin',
         name: '系统管理员',
         faculty: 'cs',
         roleName: '系统管理员',
@@ -292,7 +292,7 @@ const filteredUsers = computed(() => {
     const tabMatch = activeTab.value === user.role
     const keywordMatch = !filters.keyword ||
       user.name.includes(filters.keyword) ||
-      user.account.includes(filters.keyword)
+      user.username.includes(filters.keyword)
     // 管理员账户不过滤学院
     const facultyMatch = user.role === 'admin' || filters.faculty === 'all' || user.faculty === filters.faculty
     const statusMatch = filters.status === 'all' || user.status === filters.status
@@ -353,7 +353,7 @@ const saveUser = () => {
   try {
     // 从localStorage获取当前用户数据
     let storedUsers = JSON.parse(localStorage.getItem('users') || '{}')
-    const username = userForm.account
+    const username = userForm.username
     
     // 检查账号是否已存在（添加用户时）
     if (!editingUser.value && storedUsers[username]) {
@@ -362,7 +362,7 @@ const saveUser = () => {
     }
     
     // 检查账号是否已被其他用户使用（编辑用户且修改了账号时）
-    if (editingUser.value && username !== editingUser.value.account && storedUsers[username]) {
+    if (editingUser.value && username !== editingUser.value.username && storedUsers[username]) {
       alert('新账号已存在，请使用其他账号')
       return
     }
@@ -372,7 +372,7 @@ const saveUser = () => {
       const index = users.value.findIndex(u => u.id === editingUser.value.id)
       if (index !== -1) {
         // 检查是否修改了账号
-        const oldUsername = editingUser.value.account
+        const oldUsername = editingUser.value.username
         const isUsernameChanged = oldUsername !== username
         
         // 更新本地用户列表
@@ -474,7 +474,7 @@ const resetPassword = (userId) => {
       if (user) {
         // 更新localStorage中的用户密码
         let storedUsers = JSON.parse(localStorage.getItem('users') || '{}')
-        const username = user.account
+        const username = user.username
         if (storedUsers[username]) {
           storedUsers[username].password = '123456' // 默认密码
           localStorage.setItem('users', JSON.stringify(storedUsers))
@@ -502,7 +502,7 @@ const batchDisable = () => {
         if (user) {
           user.status = 'disabled'
           // 更新localStorage中的用户状态
-          const username = user.account
+          const username = user.username
           if (storedUsers[username]) {
             storedUsers[username].status = 'disabled'
           }
@@ -532,7 +532,7 @@ const batchEnable = () => {
         if (user) {
           user.status = 'active'
           // 更新localStorage中的用户状态
-          const username = user.account
+          const username = user.username
           if (storedUsers[username]) {
             storedUsers[username].status = 'active'
           }
@@ -590,7 +590,7 @@ const batchDelete = () => {
       selectedUsers.value.forEach(userId => {
         const user = users.value.find(u => u.id === userId)
         if (user) {
-          delete storedUsers[user.account]
+          delete storedUsers[user.username]
         }
       })
       
@@ -615,7 +615,7 @@ const closeModal = () => {
   editingUser.value = null
   Object.assign(userForm, {
     role: 'student',
-    account: '',
+    username: '',
     name: '',
     faculty: 'cs',
     major: 'cs',

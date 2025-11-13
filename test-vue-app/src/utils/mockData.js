@@ -121,7 +121,6 @@ export const initializeMockUsers = () => {
         username: 'student',
         password: '123456',
         name: '张同学',
-        studentName: '张同学',
         studentId: '2020318001',
         role: 'student',
         avatar: '/images/头像1.jpg',
@@ -212,7 +211,6 @@ export const registerUser = (userData) => {
     
     // 根据角色添加额外信息
     if (userData.role === 'student') {
-      newUser.studentName = userData.name
       newUser.studentId = userData.username
       newUser.department = '计算机科学与技术系'
       newUser.major = '计算机科学与技术'

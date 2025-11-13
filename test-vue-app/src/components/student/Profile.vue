@@ -244,15 +244,15 @@ const closePasswordModal = () => {
 onMounted(() => {
   // 从auth store获取当前用户信息
   if (authStore.user) {
-    Object.assign(profile, {
-      name: authStore.user.name || authStore.user.studentName || '',
-      studentId: authStore.user.studentId || authStore.user.username || '',
-      faculty: authStore.user.faculty || '',
-      major: authStore.user.major || '',
-      email: authStore.user.email || '',
-      phone: authStore.user.phone || ''
-    })
-  }
+      Object.assign(profile, {
+        name: authStore.user.name || '',
+        studentId: authStore.user.studentId || authStore.user.username || '',
+        faculty: authStore.user.faculty || '',
+        major: authStore.user.major || '',
+        email: authStore.user.email || '',
+        phone: authStore.user.phone || ''
+      })
+    }
   originalProfile.value = { ...profile }
 })
 </script>

@@ -702,7 +702,7 @@ const submitForm = () => {
   }
 
   // 从authStore获取实际的学生信息
-  const studentName = authStore.user?.studentName || authStore.userName || '未知学生'
+  const studentName = authStore.user?.name || authStore.userName || '未知学生'
   const studentId = authStore.user?.studentId || '未知学号'
   const department = authStore.user?.department || '未知系别'
   const major = authStore.user?.major || '未知专业'
