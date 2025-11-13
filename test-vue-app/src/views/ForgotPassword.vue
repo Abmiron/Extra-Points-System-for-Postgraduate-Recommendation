@@ -61,9 +61,10 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { resetPassword } from '../utils/mockData'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const loading = ref(false)
 
 const resetForm = reactive({
@@ -101,14 +102,10 @@ const handleResetPassword = async () => {
 
   try {
     // 调用密码重置函数
-    const success = await resetPassword(resetForm.username, resetForm.newPassword)
+    const message = await authStore.resetPassword(resetForm.username, resetForm.newPassword)
     
-    if (success) {
-      alert('密码重置成功！请使用新密码登录')
-      router.push('/login')
-    } else {
-      alert('密码重置失败，请检查学号/工号是否正确')
-    }
+    alert('密码重置成功！请使用新密码登录')
+    router.push('/login')
   } catch (error) {
     console.error('密码重置错误:', error)
     alert(`密码重置失败: ${error.message || '请稍后重试'}`)

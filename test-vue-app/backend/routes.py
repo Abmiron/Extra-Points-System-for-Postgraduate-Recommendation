@@ -1,3 +1,16 @@
+# -*- coding: utf-8 -*-
+"""
+API路由定义文件
+
+该文件负责定义应用的所有API端点，处理客户端请求，实现业务逻辑。
+
+主要功能模块：
+- 用户认证：登录、注册、密码重置
+- 用户管理：获取用户信息
+- 申请管理：创建、查询、更新、删除、审核申请
+- 系统监控：健康检查
+"""
+
 from flask import request, jsonify
 from app import app, db
 from models import User, Application
@@ -22,8 +35,8 @@ def login():
     if user.status == 'disabled':
         return jsonify({'message': '账户已被禁用'}), 401
     
-    # 验证密码（实际应用中应该使用bcrypt加密）
-    if user.password != password:
+    # 验证密码
+    if not user.check_password(password):
         return jsonify({'message': '密码错误'}), 401
     
     # 更新最后登录时间
@@ -62,7 +75,6 @@ def register():
     # 创建新用户
     new_user = User(
         username=data['username'],
-        password=data['password'],  # 实际应用中应该使用bcrypt加密
         name=data['name'],
         role=data['role'],
         avatar='/images/头像1.jpg' if data['role'] == 'student' else '/images/头像2.jpg',
@@ -70,6 +82,9 @@ def register():
         email='',  # 默认值
         phone=''   # 默认值
     )
+    
+    # 设置密码（哈希）
+    new_user.set_password(data['password'])
     
     # 根据角色添加额外信息
     if data['role'] == 'student':
@@ -96,8 +111,8 @@ def reset_password():
     if not user:
         return jsonify({'message': '用户不存在'}), 404
     
-    # 更新密码
-    user.password = new_password  # 实际应用中应该使用bcrypt加密
+    # 更新密码（使用哈希）
+    user.set_password(new_password)
     db.session.commit()
     
     return jsonify({'message': '密码重置成功'}), 200

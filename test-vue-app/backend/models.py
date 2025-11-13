@@ -1,5 +1,18 @@
+# -*- coding: utf-8 -*-
+"""
+数据模型文件
+
+该文件定义了应用的数据库模型，包括用户模型(User)和申请模型(Application)，
+负责数据库表结构的设计和数据关系的定义，提供数据操作的基础。
+
+主要模型：
+- User: 用户信息模型，存储用户账号、密码、角色等信息
+- Application: 申请信息模型，存储推免加分申请的相关数据
+"""
+
 from extensions import db
 from datetime import datetime
+import bcrypt
 
 # 用户模型
 class User(db.Model):
@@ -23,6 +36,14 @@ class User(db.Model):
     
     def __repr__(self):
         return f'<User {self.username}>'
+    
+    # 设置密码（哈希）
+    def set_password(self, password):
+        self.password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    
+    # 验证密码
+    def check_password(self, password):
+        return bcrypt.checkpw(password.encode('utf-8'), self.password.encode('utf-8'))
 
 # 申请模型
 class Application(db.Model):

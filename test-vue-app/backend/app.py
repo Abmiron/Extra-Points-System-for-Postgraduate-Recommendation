@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+"""
+Flask应用主入口文件
+
+该文件负责初始化Flask应用，配置扩展，注册路由和模型，
+是整个后端应用的启动点和核心配置文件。
+"""
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_migrate import Migrate

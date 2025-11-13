@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+"""
+测试用户创建脚本
+
+该脚本用于创建测试用的用户数据，包括学生、教师和管理员角色，
+方便开发和测试阶段快速生成测试账号。
+"""
+
 from app import app, db
 from models import User
 
@@ -5,7 +13,6 @@ with app.app_context():
     # 创建测试学生用户
     user = User(
         username='test_student',
-        password='123456',
         name='测试学生',
         role='student',
         student_id='20210001',
@@ -16,12 +23,12 @@ with app.app_context():
         phone='13800138000',
         role_name='学生'
     )
+    user.set_password('123456')
     db.session.add(user)
     
     # 创建测试教师用户
     teacher = User(
         username='test_teacher',
-        password='123456',
         name='测试教师',
         role='teacher',
         faculty='计算机学院',
@@ -30,18 +37,19 @@ with app.app_context():
         phone='13900139000',
         role_name='教师'
     )
+    teacher.set_password('123456')
     db.session.add(teacher)
     
     # 创建测试管理员用户
     admin = User(
         username='test_admin',
-        password='123456',
         name='测试管理员',
         role='admin',
         email='admin@example.com',
         phone='13700137000',
         role_name='管理员'
     )
+    admin.set_password('123456')
     db.session.add(admin)
     
     db.session.commit()

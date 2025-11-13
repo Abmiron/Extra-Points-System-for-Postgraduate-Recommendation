@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+# 项目依赖声明文件
+# 该文件列出了应用所需的所有Python包及其版本，用于确保
+# 应用在不同环境下的一致性，便于依赖安装和项目部署
+
 flask
 flask-sqlalchemy
 flask-migrate
