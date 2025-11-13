@@ -2,13 +2,16 @@
   <div class="page-content">
     <div class="page-title">
       <span>用户管理</span>
-      <div class="page-title-actions">
+      <div class="page-title-actions" v-if="!isLoading">
         <button class="btn btn-outline" @click="importUsers">
           <font-awesome-icon :icon="['fas', 'download']" /> 导入用户
         </button>
         <button class="btn btn-outline" @click="showAddUserModal = true">
           <font-awesome-icon :icon="['fas', 'plus']" /> 添加用户
         </button>
+      </div>
+      <div v-else class="loading-indicator">
+        <p>加载中...</p>
       </div>
     </div>
 
@@ -22,7 +25,7 @@
     <!-- 筛选区域 -->
     <div class="filters">
       <div class="filter-group">
-        <input type="text" class="form-control" v-model="filters.keyword" placeholder="搜索姓名或学号/工号">
+        <input type="text" class="form-control" v-model="filters.keyword" placeholder="搜索姓名或学号/工号" @keyup.enter="searchUsers">
       </div>
       <div class="filter-group">
         <span class="filter-label">学院:</span>
@@ -62,7 +65,7 @@
 
     <!-- 用户表格 -->
     <div class="card">
-      <div class="table-container">
+      <div class="table-container" v-if="!isLoading">
         <table class="application-table">
           <thead>
             <tr>
@@ -221,7 +224,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watchEffect } from 'vue'
+import { useAuthStore } from '../../stores/auth'
 
 const activeTab = ref('student')
 const showAddUserModal = ref(false)
@@ -230,6 +234,8 @@ const selectAll = ref(false)
 const selectedUsers = ref([])
 const currentPage = ref(1)
 const pageSize = 10
+const isLoading = ref(false)
+const authStore = useAuthStore()
 
 const filters = reactive({
   keyword: '',
@@ -248,75 +254,63 @@ const userForm = reactive({
   status: 'active'
 })
 
-// 从localStorage获取实际用户数据
+// 从后端API获取用户数据
 const users = ref([])
+const totalUsers = ref(0)
+const totalPages = ref(0)
 
-// 从localStorage加载用户数据的函数
-const loadUsersFromStorage = () => {
+// 从后端API加载用户数据的函数
+const loadUsersFromAPI = async () => {
   try {
-    const storedUsers = JSON.parse(localStorage.getItem('users') || '{}')
-    // 转换为数组并添加必要的字段
-    const usersArray = Object.values(storedUsers).map((user, index) => ({
-      id: index + 1,
-      username: user.username || user.studentId || user.account,
-      name: user.name || user.studentName || '未知用户',
-      role: user.role || 'student',
-      faculty: user.faculty || 'cs',
-      major: user.major || '',
-      roleName: user.roleName || '',
-      status: user.status || 'active',
-      lastLogin: user.lastLogin || new Date().toISOString()
-    }))
-    users.value = usersArray
+    isLoading.value = true
+    const role = activeTab.value
+    const status = filters.status === 'all' ? '' : filters.status
+    const search = filters.keyword || ''
+    
+    // 构建API请求URL
+    const params = new URLSearchParams({
+      currentUserId: authStore.user.id,
+      page: currentPage.value,
+      per_page: pageSize,
+      role: role,
+      status: status,
+      search: search
+    })
+    
+    const response = await fetch(`http://localhost:5000/api/admin/users?${params}`)
+    
+    if (!response.ok) {
+      throw new Error('获取用户数据失败')
+    }
+    
+    const data = await response.json()
+    users.value = data.users
+    totalUsers.value = data.total
+    totalPages.value = data.pages
   } catch (error) {
     console.error('加载用户数据失败:', error)
-    // 如果加载失败，提供一些默认用户数据
-    users.value = [
-      {
-        id: 1,
-        role: 'admin',
-        username: 'admin',
-        name: '系统管理员',
-        faculty: 'cs',
-        roleName: '系统管理员',
-        status: 'active',
-        lastLogin: new Date().toISOString()
-      }
-    ]
+    alert('加载用户数据失败，请稍后重试')
+  } finally {
+    isLoading.value = false
   }
 }
 
 // 计算属性
-const filteredUsers = computed(() => {
-  return users.value.filter(user => {
-    const tabMatch = activeTab.value === user.role
-    const keywordMatch = !filters.keyword ||
-      user.name.includes(filters.keyword) ||
-      user.username.includes(filters.keyword)
-    // 管理员账户不过滤学院
-    const facultyMatch = user.role === 'admin' || filters.faculty === 'all' || user.faculty === filters.faculty
-    const statusMatch = filters.status === 'all' || user.status === filters.status
-
-    return tabMatch && keywordMatch && facultyMatch && statusMatch
-  })
-})
-
-// 分页相关计算属性
-const totalUsers = computed(() => filteredUsers.value.length)
-const totalPages = computed(() => Math.ceil(totalUsers.value / pageSize))
 const startIndex = computed(() => (currentPage.value - 1) * pageSize)
 const endIndex = computed(() => Math.min(startIndex.value + pageSize, totalUsers.value))
 
 const paginatedUsers = computed(() => {
-  return filteredUsers.value.slice(startIndex.value, endIndex.value)
+  return users.value
 })
 
 // 方法
 const getFacultyText = (faculty) => {
+  if (!faculty) return ''
   const faculties = {
-    cs: '计算机科学系',
-    se: '软件工程系',
-    ai: '人工智能系'
+    '信息学院': '信息学院',
+    '计算机科学系': '计算机科学系',
+    '软件工程系': '软件工程系',
+    '人工智能系': '人工智能系'
   }
   return faculties[faculty] || faculty
 }
@@ -328,6 +322,7 @@ const formatDate = (dateString) => {
 
 const searchUsers = () => {
   currentPage.value = 1
+  loadUsersFromAPI()
 }
 
 const toggleSelectAll = () => {
@@ -344,146 +339,133 @@ const importUsers = () => {
 
 const editUser = (user) => {
   editingUser.value = user
-  Object.assign(userForm, user)
-  userForm.password = '' // 重置密码字段
+  Object.assign(userForm, {
+    id: user.id,
+    role: user.role,
+    username: user.username,
+    name: user.name,
+    faculty: user.faculty,
+    major: user.major,
+    roleName: user.roleName,
+    status: user.status,
+    password: '' // 重置密码字段
+  })
   showAddUserModal.value = true
 }
 
-const saveUser = () => {
+const saveUser = async () => {
   try {
-    // 从localStorage获取当前用户数据
-    let storedUsers = JSON.parse(localStorage.getItem('users') || '{}')
+    isLoading.value = true
     const username = userForm.username
     
-    // 检查账号是否已存在（添加用户时）
-    if (!editingUser.value && storedUsers[username]) {
-      alert('账号已存在，请使用其他账号')
-      return
+    // 准备请求数据
+    const userData = {
+      role: userForm.role,
+      username: username,
+      name: userForm.name,
+      faculty: userForm.faculty,
+      status: userForm.status,
+      ...(userForm.role === 'student' ? {
+        major: userForm.major
+      } : {
+        roleName: userForm.roleName
+      })
     }
     
-    // 检查账号是否已被其他用户使用（编辑用户且修改了账号时）
-    if (editingUser.value && username !== editingUser.value.username && storedUsers[username]) {
-      alert('新账号已存在，请使用其他账号')
-      return
+    // 如果提供了密码，则包含密码字段
+    if (userForm.password) {
+      userData.password = userForm.password
     }
     
+    let response
     if (editingUser.value) {
-      // 更新用户
-      const index = users.value.findIndex(u => u.id === editingUser.value.id)
-      if (index !== -1) {
-        // 检查是否修改了账号
-        const oldUsername = editingUser.value.username
-        const isUsernameChanged = oldUsername !== username
-        
-        // 更新本地用户列表
-        users.value[index] = { ...userForm, id: editingUser.value.id }
-        
-        // 如果修改了账号，需要删除旧账号数据
-        if (isUsernameChanged && storedUsers[oldUsername]) {
-          // 创建新账号数据
-          storedUsers[username] = { ...storedUsers[oldUsername] }
-          // 删除旧账号数据
-          delete storedUsers[oldUsername]
-        }
-        
-        // 更新用户数据
-        storedUsers[username] = {
-          // 确保包含所有必要的登录字段
-          username: username,
-          password: userForm.password || storedUsers[username].password || '123456',
-          name: userForm.name,
-          role: userForm.role,
-          faculty: userForm.faculty,
-          status: userForm.status,
-          avatar: storedUsers[username].avatar || (userForm.role === 'student' ? '/images/头像1.jpg' : '/images/头像2.jpg'),
-          // 根据角色设置特定字段
-          ...(userForm.role === 'student' ? {
-            major: userForm.major,
-            studentName: userForm.name,
-            studentId: username
-          } : {
-            roleName: userForm.roleName
-          })
-        }
-      }
+      // 更新用户 - 调用PUT API
+      response = await fetch(`http://localhost:5000/api/admin/users/${editingUser.value.id}?currentUserId=${authStore.user.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(userData)
+      })
     } else {
-      // 添加新用户
-      const newUser = {
-        id: users.value.length > 0 ? Math.max(...users.value.map(u => u.id)) + 1 : 1,
-        ...userForm
-      }
-      users.value.push(newUser)
-      
-      // 添加到localStorage，确保包含所有必要的登录字段
-      storedUsers[username] = {
-        username: username,
-        password: userForm.password || '123456', // 默认密码
-        name: userForm.name,
-        role: userForm.role,
-        faculty: userForm.faculty,
-        status: userForm.status,
-        avatar: userForm.role === 'student' ? '/images/头像1.jpg' : '/images/头像2.jpg',
-        // 根据角色添加额外信息
-        ...(userForm.role === 'student' ? {
-          major: userForm.major,
-          studentName: userForm.name,
-          studentId: username
-        } : {
-          roleName: userForm.roleName
-        })
-      }
+      // 添加新用户 - 调用POST API
+      response = await fetch(`http://localhost:5000/api/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(userData)
+      })
     }
     
-    // 保存回localStorage
-    localStorage.setItem('users', JSON.stringify(storedUsers))
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.message || '操作失败')
+    }
     
     closeModal()
-    alert('用户保存成功')
+    alert(editingUser.value ? '用户信息更新成功' : '用户添加成功')
+    loadUsersFromAPI() // 重新加载用户列表
   } catch (error) {
     console.error('保存用户失败:', error)
-    alert('保存失败，请稍后重试')
+    alert(error.message || '保存失败，请稍后重试')
+  } finally {
+    isLoading.value = false
   }
 }
 
-const toggleUserStatus = (userId, status) => {
+const toggleUserStatus = async (userId, status) => {
   try {
-    const user = users.value.find(u => u.id === userId)
-    if (user) {
-      user.status = status
-      
-      // 更新localStorage中的用户状态
-      let storedUsers = JSON.parse(localStorage.getItem('users') || '{}')
-      const username = user.account
-      if (storedUsers[username]) {
-        storedUsers[username].status = status
-        localStorage.setItem('users', JSON.stringify(storedUsers))
-      }
-      
-      alert(`用户已${status === 'active' ? '启用' : '禁用'}`)
+    isLoading.value = true
+    
+    const response = await fetch(`http://localhost:5000/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status: status })
+    })
+    
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.message || '操作失败')
     }
+    
+    alert(`用户已${status === 'active' ? '启用' : '禁用'}`)
+    loadUsersFromAPI() // 重新加载用户列表
   } catch (error) {
     console.error('更新用户状态失败:', error)
-    alert('操作失败，请稍后重试')
+    alert(error.message || '操作失败，请稍后重试')
+  } finally {
+    isLoading.value = false
   }
 }
 
-const resetPassword = (userId) => {
+const resetPassword = async (userId) => {
   if (confirm('确定要重置该用户的密码吗？')) {
     try {
-      const user = users.value.find(u => u.id === userId)
-      if (user) {
-        // 更新localStorage中的用户密码
-        let storedUsers = JSON.parse(localStorage.getItem('users') || '{}')
-        const username = user.username
-        if (storedUsers[username]) {
-          storedUsers[username].password = '123456' // 默认密码
-          localStorage.setItem('users', JSON.stringify(storedUsers))
-        }
-        alert('密码已重置为默认密码（123456）')
+      isLoading.value = true
+      const newPassword = prompt('请输入新密码（留空则使用默认密码123456）:', '') || '123456'
+      
+      const response = await fetch(`http://localhost:5000/api/admin/users/${userId}/reset-password?currentUserId=${authStore.user.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ newPassword: newPassword })
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || '操作失败')
       }
+      
+      alert('密码重置成功')
     } catch (error) {
       console.error('重置密码失败:', error)
-      alert('重置密码失败，请稍后重试')
+      alert(error.message || '重置密码失败，请稍后重试')
+    } finally {
+      isLoading.value = false
     }
   }
 }
@@ -492,120 +474,150 @@ const viewUserHistory = (userId) => {
   alert(`查看用户 ${userId} 的操作历史`)
 }
 
-const batchDisable = () => {
+const batchDisable = async () => {
   if (confirm(`确定要禁用选中的 ${selectedUsers.value.length} 个用户吗？`)) {
     try {
-      let storedUsers = JSON.parse(localStorage.getItem('users') || '{}')
+      isLoading.value = true
       
-      selectedUsers.value.forEach(userId => {
-        const user = users.value.find(u => u.id === userId)
-        if (user) {
-          user.status = 'disabled'
-          // 更新localStorage中的用户状态
-          const username = user.username
-          if (storedUsers[username]) {
-            storedUsers[username].status = 'disabled'
-          }
+      // 批量禁用用户（逐个调用API）
+      const promises = selectedUsers.value.map(userId => 
+        fetch(`http://localhost:5000/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ status: 'disabled' })
+        })
+      )
+      
+      const responses = await Promise.all(promises)
+      
+      // 检查是否所有请求都成功
+      for (const response of responses) {
+        if (!response.ok) {
+          throw new Error('批量禁用失败')
         }
-      })
-      
-      // 保存回localStorage
-      localStorage.setItem('users', JSON.stringify(storedUsers))
+      }
       
       selectedUsers.value = []
       selectAll.value = false
       alert('选中用户已禁用')
+      loadUsersFromAPI() // 重新加载用户列表
     } catch (error) {
       console.error('批量禁用失败:', error)
       alert('操作失败，请稍后重试')
+    } finally {
+      isLoading.value = false
     }
   }
 }
 
-const batchEnable = () => {
+const batchEnable = async () => {
   if (confirm(`确定要启用选中的 ${selectedUsers.value.length} 个用户吗？`)) {
     try {
-      let storedUsers = JSON.parse(localStorage.getItem('users') || '{}')
+      isLoading.value = true
       
-      selectedUsers.value.forEach(userId => {
-        const user = users.value.find(u => u.id === userId)
-        if (user) {
-          user.status = 'active'
-          // 更新localStorage中的用户状态
-          const username = user.username
-          if (storedUsers[username]) {
-            storedUsers[username].status = 'active'
-          }
+      // 批量启用用户（逐个调用API）
+      const promises = selectedUsers.value.map(userId => 
+        fetch(`http://localhost:5000/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ status: 'active' })
+        })
+      )
+      
+      const responses = await Promise.all(promises)
+      
+      // 检查是否所有请求都成功
+      for (const response of responses) {
+        if (!response.ok) {
+          throw new Error('批量启用失败')
         }
-      })
-      
-      // 保存回localStorage
-      localStorage.setItem('users', JSON.stringify(storedUsers))
+      }
       
       selectedUsers.value = []
       selectAll.value = false
       alert('选中用户已启用')
+      loadUsersFromAPI() // 重新加载用户列表
     } catch (error) {
       console.error('批量启用失败:', error)
       alert('操作失败，请稍后重试')
+    } finally {
+      isLoading.value = false
     }
   }
 }
 
-const batchResetPassword = () => {
+const batchResetPassword = async () => {
   if (confirm(`确定要重置选中 ${selectedUsers.value.length} 个用户的密码吗？`)) {
     try {
-      let storedUsers = JSON.parse(localStorage.getItem('users') || '{}')
+      isLoading.value = true
+      const newPassword = prompt('请输入新密码（留空则使用默认密码123456）:', '') || '123456'
       
-      selectedUsers.value.forEach(userId => {
-        const user = users.value.find(u => u.id === userId)
-        if (user) {
-          // 更新localStorage中的用户密码
-          const username = user.account
-          if (storedUsers[username]) {
-            storedUsers[username].password = '123456'
-          }
+      // 批量重置密码（逐个调用API）
+      const promises = selectedUsers.value.map(userId => 
+        fetch(`http://localhost:5000/api/admin/users/${userId}/reset-password?currentUserId=${authStore.user.id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ newPassword: newPassword })
+        })
+      )
+      
+      const responses = await Promise.all(promises)
+      
+      // 检查是否所有请求都成功
+      for (const response of responses) {
+        if (!response.ok) {
+          throw new Error('批量重置密码失败')
         }
-      })
-      
-      // 保存回localStorage
-      localStorage.setItem('users', JSON.stringify(storedUsers))
+      }
       
       selectedUsers.value = []
       selectAll.value = false
-      alert('选中用户的密码已重置为默认密码（123456）')
+      alert('选中用户的密码已重置')
     } catch (error) {
       console.error('批量重置密码失败:', error)
       alert('操作失败，请稍后重试')
+    } finally {
+      isLoading.value = false
     }
   }
 }
 
-const batchDelete = () => {
+const batchDelete = async () => {
   if (confirm(`确定要删除选中的 ${selectedUsers.value.length} 个用户吗？此操作不可恢复！`)) {
     try {
-      let storedUsers = JSON.parse(localStorage.getItem('users') || '{}')
+      isLoading.value = true
       
-      // 删除localStorage中的用户数据
-      selectedUsers.value.forEach(userId => {
-        const user = users.value.find(u => u.id === userId)
-        if (user) {
-          delete storedUsers[user.username]
+      // 批量删除用户（逐个调用API）
+      const promises = selectedUsers.value.map(userId => 
+        fetch(`http://localhost:5000/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
+          method: 'DELETE'
+        })
+      )
+      
+      const responses = await Promise.all(promises)
+      
+      // 检查是否所有请求都成功
+      for (const response of responses) {
+        if (!response.ok) {
+          throw new Error('批量删除失败')
         }
-      })
-      
-      // 保存回localStorage
-      localStorage.setItem('users', JSON.stringify(storedUsers))
-      
-      // 更新本地用户列表
-      users.value = users.value.filter(user => !selectedUsers.value.includes(user.id))
+      }
       
       selectedUsers.value = []
       selectAll.value = false
       alert('选中用户已删除')
+      loadUsersFromAPI() // 重新加载用户列表
     } catch (error) {
       console.error('批量删除失败:', error)
       alert('操作失败，请稍后重试')
+    } finally {
+      isLoading.value = false
     }
   }
 }
@@ -629,19 +641,32 @@ const closeModal = () => {
 const prevPage = () => {
   if (currentPage.value > 1) {
     currentPage.value--
+    loadUsersFromAPI()
   }
 }
 
 const nextPage = () => {
   if (currentPage.value < totalPages.value) {
     currentPage.value++
+    loadUsersFromAPI()
   }
+}
+
+// 监听选项卡变化
+const activeTabChanged = () => {
+  currentPage.value = 1
+  loadUsersFromAPI()
 }
 
 // 生命周期
 onMounted(() => {
-  // 从localStorage加载用户数据
-  loadUsersFromStorage()
+  // 从后端API加载用户数据
+  loadUsersFromAPI()
+})
+
+// 监听activeTab变化
+watchEffect(() => {
+  activeTabChanged()
 })
 </script>
 

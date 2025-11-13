@@ -110,20 +110,23 @@ const handleRegister = () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  height: 100vh;
   position: relative;
   overflow: hidden;
 }
 
 /* 背景模糊效果样式 */
 .background-blur {
-  position: fixed;
-  width: 100vw;
-  height: 100vh;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: url('../images/loginBackground.jpg') no-repeat center center;
   background-size: cover;
   filter: blur(8px) brightness(0.80);
   transform: scale(1.05);
+  z-index: 0;
 }
 
 /* 登录表单容器样式 */
@@ -132,6 +135,7 @@ const handleRegister = () => {
   max-width: 480px;
   padding: 20px;
   position: relative;
+  z-index: 1;
 }
 
 /* 登录框主体样式 */

@@ -17,6 +17,11 @@ from models import User, Application
 from datetime import datetime
 import bcrypt
 
+# 根路径健康检查
+@app.route('/', methods=['GET'])
+def index():
+    return jsonify({'status': 'ok', 'message': 'Server is running'}), 200
+
 # 用户认证相关路由
 
 # 登录接口
@@ -141,6 +146,175 @@ def get_user(username):
     }
     
     return jsonify(user_data), 200
+
+# 管理员用户管理相关路由
+
+# 检查是否为管理员的辅助函数
+def is_admin(user):
+    return user and user.role == 'admin'
+
+# 获取所有用户列表（管理员专用）
+@app.route('/api/admin/users', methods=['GET'])
+def get_all_users():
+    # 获取当前登录用户信息
+    current_user_id = request.args.get('currentUserId')
+    if not current_user_id:
+        return jsonify({'message': '未提供当前用户ID'}), 400
+    
+    current_user = User.query.get(current_user_id)
+    if not current_user or not is_admin(current_user):
+        return jsonify({'message': '权限不足'}), 403
+    
+    # 获取查询参数
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    role = request.args.get('role')
+    status = request.args.get('status')
+    search = request.args.get('search')
+    
+    # 构建查询
+    query = User.query
+    
+    if role:
+        query = query.filter_by(role=role)
+    
+    if status:
+        query = query.filter_by(status=status)
+    
+    if search:
+        query = query.filter(
+            (User.username.like(f'%{search}%')) | 
+            (User.name.like(f'%{search}%')) |
+            (User.email.like(f'%{search}%'))
+        )
+    
+    # 分页查询
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    users = []
+    for user in pagination.items:
+        users.append({
+            'id': user.id,
+            'username': user.username,
+            'name': user.name,
+            'role': user.role,
+            'faculty': user.faculty,
+            'department': user.department,
+            'major': user.major,
+            'studentId': user.student_id,
+            'email': user.email,
+            'phone': user.phone,
+            'status': user.status,
+            'createdAt': user.created_at.isoformat(),
+            'updatedAt': user.updated_at.isoformat()
+        })
+    
+    return jsonify({
+        'users': users,
+        'total': pagination.total,
+        'pages': pagination.pages,
+        'current_page': page
+    }), 200
+
+# 删除用户（管理员专用）
+@app.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    # 获取当前登录用户信息
+    current_user_id = request.args.get('currentUserId')
+    if not current_user_id:
+        return jsonify({'message': '未提供当前用户ID'}), 400
+    
+    current_user = User.query.get(current_user_id)
+    if not current_user or not is_admin(current_user):
+        return jsonify({'message': '权限不足'}), 403
+    
+    # 不能删除自己
+    if current_user.id == user_id:
+        return jsonify({'message': '不能删除自己'}), 400
+    
+    # 查找要删除的用户
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'message': '用户不存在'}), 404
+    
+    # 删除用户
+    db.session.delete(user)
+    db.session.commit()
+    
+    return jsonify({'message': '用户删除成功'}), 200
+
+# 更新用户信息（管理员专用）
+@app.route('/api/admin/users/<int:user_id>', methods=['PUT'])
+def update_user(user_id):
+    # 获取当前登录用户信息
+    current_user_id = request.args.get('currentUserId')
+    if not current_user_id:
+        return jsonify({'message': '未提供当前用户ID'}), 400
+    
+    current_user = User.query.get(current_user_id)
+    if not current_user or not is_admin(current_user):
+        return jsonify({'message': '权限不足'}), 403
+    
+    data = request.get_json()
+    user = User.query.get(user_id)
+    
+    if not user:
+        return jsonify({'message': '用户不存在'}), 404
+    
+    # 更新用户信息
+    if 'name' in data:
+        user.name = data['name']
+    if 'role' in data and data['role'] in ['student', 'teacher', 'admin']:
+        user.role = data['role']
+    if 'faculty' in data:
+        user.faculty = data['faculty']
+    if 'department' in data:
+        user.department = data['department']
+    if 'major' in data:
+        user.major = data['major']
+    if 'studentId' in data:
+        user.student_id = data['studentId']
+    if 'email' in data:
+        user.email = data['email']
+    if 'phone' in data:
+        user.phone = data['phone']
+    if 'status' in data and data['status'] in ['active', 'disabled']:
+        user.status = data['status']
+    if 'roleName' in data:
+        user.role_name = data['roleName']
+    
+    # 保存更改
+    db.session.commit()
+    
+    return jsonify({'message': '用户信息更新成功'}), 200
+
+# 重置用户密码（管理员专用）
+@app.route('/api/admin/users/<int:user_id>/reset-password', methods=['POST'])
+def admin_reset_password(user_id):
+    # 获取当前登录用户信息
+    current_user_id = request.args.get('currentUserId')
+    if not current_user_id:
+        return jsonify({'message': '未提供当前用户ID'}), 400
+    
+    current_user = User.query.get(current_user_id)
+    if not current_user or not is_admin(current_user):
+        return jsonify({'message': '权限不足'}), 403
+    
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'message': '用户不存在'}), 404
+    
+    data = request.get_json()
+    new_password = data.get('newPassword')
+    
+    if not new_password:
+        return jsonify({'message': '请提供新密码'}), 400
+    
+    # 更新密码
+    user.set_password(new_password)
+    db.session.commit()
+    
+    return jsonify({'message': '密码重置成功'}), 200
 
 # 申请相关路由
 
