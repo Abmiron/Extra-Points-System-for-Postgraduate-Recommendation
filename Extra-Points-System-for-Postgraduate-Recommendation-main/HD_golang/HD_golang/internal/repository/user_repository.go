@@ -107,7 +107,7 @@ func (r *userRepository) GetStudentByID(id int) (*model.Student, error) {
 func (r *userRepository) GetTeacherByID(id int) (*model.Teacher, error) {
 	teacher := &model.Teacher{}
 	query := `SELECT u.id, u.username, u.role, u.status, u.created_at, u.updated_at, u.last_login,
-		t.department, t.name FROM users u JOIN teachers t ON u.id = t.user_id WHERE u.id = $1`
+		t.teacher_id, t.department, t.name FROM users u JOIN teachers t ON u.id = t.user_id WHERE u.id = $1`
 	var lastLogin sql.NullTime // 使用sql.NullTime处理可能为NULL的时间字段
 	err := r.db.QueryRow(query, id).Scan(
 		&teacher.ID,
@@ -117,6 +117,7 @@ func (r *userRepository) GetTeacherByID(id int) (*model.Teacher, error) {
 		&teacher.CreatedAt,
 		&teacher.UpdatedAt,
 		&lastLogin,
+		&teacher.TeacherID,
 		&teacher.Department,
 		&teacher.Name,
 	)
@@ -192,10 +193,27 @@ func (r *userRepository) CreateStudent(student *model.Student) error {
 
 // CreateTeacher 创建教师信息
 func (r *userRepository) CreateTeacher(teacher *model.Teacher) error {
-	query := `INSERT INTO teachers (user_id, name, department)
-		VALUES ($1, $2, $3)`
-	_, err := r.db.Exec(query, teacher.ID, teacher.Name, teacher.Department)
-	return err
+	// 输出完整的教师对象信息
+	log.Printf("CreateTeacher: 原始教师对象信息 - UserID: %d, Username: %s, TeacherID: %s, Name: %s, Department: %s", 
+		teacher.ID, teacher.Username, teacher.TeacherID, teacher.Name, teacher.Department)
+	
+	// 直接使用username作为teacher_id值，确保字段被正确设置
+	query := `INSERT INTO teachers (teacher_id, user_id, name, department) VALUES ($1, $2, $3, $4)`
+	log.Printf("CreateTeacher: 执行SQL: %s, 参数: [%s, %d, %s, %s]", 
+		query, teacher.Username, teacher.ID, teacher.Name, teacher.Department)
+	
+	result, err := r.db.Exec(query, teacher.Username, teacher.ID, teacher.Name, teacher.Department)
+	if err != nil {
+		log.Printf("CreateTeacher: 插入教师信息失败: %v", err)
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("CreateTeacher: 获取影响行数失败: %v", err)
+		return err
+	}
+	log.Printf("CreateTeacher: 插入教师信息成功，影响行数=%d", rowsAffected)
+	return nil
 }
 
 // DeleteUser 删除用户

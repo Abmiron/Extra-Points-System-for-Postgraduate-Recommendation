@@ -50,6 +50,7 @@ type Student struct {
 // Teacher 教师信息扩展模型
 type Teacher struct {
 	User
+	TeacherID  string `json:"teacher_id" db:"teacher_id"`
 	Department string `json:"department" db:"department"`
 	Name       string `json:"name" db:"name"`
 }

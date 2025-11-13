@@ -167,6 +167,7 @@ func (h *UserHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			User: model.User{
 				Username: registerRequest.Username,
 			},
+			TeacherID:  registerRequest.Username, // 明确设置teacher_id为username
 			Name:       registerRequest.Name,
 			Department: "计算机科学与技术系",
 		}
