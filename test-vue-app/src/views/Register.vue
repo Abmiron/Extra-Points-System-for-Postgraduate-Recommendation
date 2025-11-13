@@ -76,7 +76,6 @@
 import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { registerUser } from '../utils/mockData'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -149,8 +148,8 @@ const handleRegister = async () => {
   loading.value = true
 
   try {
-    // 调用注册函数
-    await registerUser({
+    // 使用auth store的注册方法
+    await authStore.register({
       username: registerForm.username,
       name: registerForm.name,
       password: registerForm.password,

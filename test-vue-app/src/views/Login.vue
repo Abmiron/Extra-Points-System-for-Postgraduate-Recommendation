@@ -59,7 +59,6 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { validateLogin } from '../utils/mockData'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -75,34 +74,20 @@ const handleLogin = async () => {
   loading.value = true
 
   try {
-    // 使用validateLogin函数验证用户登录
-    const userData = validateLogin(loginForm.username, loginForm.password)
-    
-    if (userData) {
-      authStore.login(userData)
+    // 使用auth store的登录方法
+    await authStore.login(loginForm.username, loginForm.password)
 
-      // 根据角色跳转
-      const routeMap = {
-        student: '/student',
-        teacher: '/teacher',
-        admin: '/admin'
-      }
-
-      router.push(routeMap[userData.role])
-    } else {
-      // 检查用户是否存在以及状态
-      const users = JSON.parse(localStorage.getItem('users') || '{}')
-      const user = users[loginForm.username]
-      
-      if (user && user.status === 'disabled') {
-        alert('登录失败：您的账户已被禁用，请联系管理员')
-      } else {
-        alert('登录失败，请检查用户名和密码')
-      }
+    // 登录成功，根据角色跳转
+    const routeMap = {
+      student: '/student',
+      teacher: '/teacher',
+      admin: '/admin'
     }
+
+    router.push(routeMap[authStore.role])
   } catch (error) {
     console.error('登录错误:', error)
-    alert('登录失败，请稍后重试')
+    alert(error.message || '登录失败，请稍后重试')
   } finally {
     loading.value = false
   }
