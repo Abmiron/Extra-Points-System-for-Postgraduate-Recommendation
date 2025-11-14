@@ -50,9 +50,33 @@ def is_admin(user):
 # 管理员获取所有用户接口
 @user_bp.route('/admin/users', methods=['GET'])
 def get_all_users():
-    users = User.query.all()
-    user_list = []
+    # 获取请求参数
+    role = request.args.get('role')
+    status = request.args.get('status')
+    search = request.args.get('search')
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
     
+    # 构建查询
+    query = User.query
+    
+    # 根据role筛选
+    if role:
+        query = query.filter_by(role=role)
+    
+    # 根据status筛选
+    if status:
+        query = query.filter_by(status=status)
+    
+    # 根据search关键词搜索
+    if search:
+        query = query.filter((User.name.like(f'%{search}%')) | (User.username.like(f'%{search}%')))
+    
+    # 分页查询
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    users = pagination.items
+    
+    user_list = []
     for user in users:
         user_data = {
             'id': user.id,
@@ -72,7 +96,13 @@ def get_all_users():
         }
         user_list.append(user_data)
     
-    return jsonify({'users': user_list}), 200
+    # 返回分页数据
+    return jsonify({
+        'users': user_list,
+        'total': pagination.total,
+        'pages': pagination.pages,
+        'current_page': pagination.page
+    }), 200
 
 # 管理员删除用户接口
 @user_bp.route('/admin/users/<int:user_id>', methods=['DELETE'])
