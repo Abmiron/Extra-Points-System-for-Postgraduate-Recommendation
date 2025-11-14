@@ -1,1 +1,1 @@
-交互设计项目请查看Extra-Points-System-for-Postgraduate-Recommendation
+交互设计项目请查看test-vue-app
