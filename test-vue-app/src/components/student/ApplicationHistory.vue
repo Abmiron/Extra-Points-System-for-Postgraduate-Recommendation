@@ -479,14 +479,15 @@ const editApplication = (application) => {
 }
 
 // 删除申请
-const deleteApplication = (application) => {
+const deleteApplication = async (application) => {
   if (confirm(`确定要删除申请「${application.projectName || application.eventName || '未命名'}」吗？`)) {
-    // 这里应该调用API删除申请
     // 调用store中的删除方法
-    applicationsStore.deleteApplication(application.id)
-    // 重置到第一页
-    if (paginatedApplications.value.length === 0 && currentPage.value > 1) {
-      currentPage.value--
+    const success = await applicationsStore.deleteApplication(application.id)
+    if (success) {
+      // 重置到第一页
+      if (paginatedApplications.value.length === 0 && currentPage.value > 1) {
+        currentPage.value--
+      }
     }
   }
 }
@@ -507,10 +508,15 @@ const clearFilters = () => {
 }
 
 // 重新加载数据
-const refreshData = () => {
-  applicationsStore.loadApplications()
-  // 重置到第一页
-  currentPage.value = 1
+const refreshData = async () => {
+  try {
+    await applicationsStore.fetchApplications()
+    // 重置到第一页
+    currentPage.value = 1
+  } catch (error) {
+    console.error('刷新数据失败:', error)
+    // 可以在这里添加错误提示
+  }
 }
 
 // 监听筛选条件变化，重置到第一页
@@ -525,10 +531,10 @@ watch(totalPages, (newTotal) => {
   }
 })
 
-onMounted(() => {
+onMounted(async () => {
   // 确保数据已加载
   if (applicationsStore.applications.length === 0) {
-    applicationsStore.loadApplications()
+    await applicationsStore.fetchApplications()
   }
 })
 </script>

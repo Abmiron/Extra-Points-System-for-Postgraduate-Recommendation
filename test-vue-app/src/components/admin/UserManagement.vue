@@ -277,7 +277,7 @@ const loadUsersFromAPI = async () => {
       search: search
     })
     
-    const response = await fetch(`http://localhost:5000/api/admin/users?${params}`)
+    const response = await fetch(`http://localhost:5001/api/admin/users?${params}`)
     
     if (!response.ok) {
       throw new Error('获取用户数据失败')
@@ -380,7 +380,7 @@ const saveUser = async () => {
     let response
     if (editingUser.value) {
       // 更新用户 - 调用PUT API
-      response = await fetch(`http://localhost:5000/api/admin/users/${editingUser.value.id}?currentUserId=${authStore.user.id}`, {
+      response = await fetch(`http://localhost:5001/api/admin/users/${editingUser.value.id}?currentUserId=${authStore.user.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -389,7 +389,7 @@ const saveUser = async () => {
       })
     } else {
       // 添加新用户 - 调用POST API
-      response = await fetch(`http://localhost:5000/api/register`, {
+      response = await fetch(`http://localhost:5001/api/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -418,7 +418,7 @@ const toggleUserStatus = async (userId, status) => {
   try {
     isLoading.value = true
     
-    const response = await fetch(`http://localhost:5000/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
+    const response = await fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
@@ -447,7 +447,7 @@ const resetPassword = async (userId) => {
       isLoading.value = true
       const newPassword = prompt('请输入新密码（留空则使用默认密码123456）:', '') || '123456'
       
-      const response = await fetch(`http://localhost:5000/api/admin/users/${userId}/reset-password?currentUserId=${authStore.user.id}`, {
+      const response = await fetch(`http://localhost:5001/api/admin/users/${userId}/reset-password?currentUserId=${authStore.user.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -481,7 +481,7 @@ const batchDisable = async () => {
       
       // 批量禁用用户（逐个调用API）
       const promises = selectedUsers.value.map(userId => 
-        fetch(`http://localhost:5000/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
+        fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -518,8 +518,8 @@ const batchEnable = async () => {
       isLoading.value = true
       
       // 批量启用用户（逐个调用API）
-      const promises = selectedUsers.value.map(userId => 
-        fetch(`http://localhost:5000/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
+        const promises = selectedUsers.value.map(userId => 
+          fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -557,8 +557,8 @@ const batchResetPassword = async () => {
       const newPassword = prompt('请输入新密码（留空则使用默认密码123456）:', '') || '123456'
       
       // 批量重置密码（逐个调用API）
-      const promises = selectedUsers.value.map(userId => 
-        fetch(`http://localhost:5000/api/admin/users/${userId}/reset-password?currentUserId=${authStore.user.id}`, {
+        const promises = selectedUsers.value.map(userId => 
+          fetch(`http://localhost:5001/api/admin/users/${userId}/reset-password?currentUserId=${authStore.user.id}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -594,8 +594,8 @@ const batchDelete = async () => {
       isLoading.value = true
       
       // 批量删除用户（逐个调用API）
-      const promises = selectedUsers.value.map(userId => 
-        fetch(`http://localhost:5000/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
+        const promises = selectedUsers.value.map(userId => 
+          fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
           method: 'DELETE'
         })
       )

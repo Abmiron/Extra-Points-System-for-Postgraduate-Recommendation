@@ -237,13 +237,13 @@ const exportExcel = () => {
 
 // 重新加载数据
 const refreshData = () => {
-  applicationsStore.loadApplications()
+  applicationsStore.fetchApplications()
 }
 
 // 生命周期
 onMounted(() => {
   if (applicationsStore.applications.length === 0) {
-    applicationsStore.loadApplications()
+    applicationsStore.fetchApplications()
   }
 })
 </script>

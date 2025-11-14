@@ -15,3 +15,7 @@ class Config:
     
     # 密钥配置
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key'
+    
+    # 文件上传配置
+    UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
+    MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # 10MB

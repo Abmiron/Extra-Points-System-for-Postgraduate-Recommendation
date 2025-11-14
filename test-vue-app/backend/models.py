@@ -55,13 +55,32 @@ class Application(db.Model):
     application_type = db.Column(db.String(50), nullable=False)  # academic, comprehensive
     applied_at = db.Column(db.DateTime, default=datetime.utcnow)
     self_score = db.Column(db.Float, nullable=False)
-    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected, draft
     project_name = db.Column(db.String(200), nullable=False)
     award_date = db.Column(db.Date, nullable=False)
-    award_level = db.Column(db.String(50), nullable=False)  # national, provincial, municipal, school
-    award_type = db.Column(db.String(50), nullable=False)  # individual, team
+    award_level = db.Column(db.String(50), nullable=True)  # national, provincial, municipal, school
+    award_type = db.Column(db.String(50), nullable=True)  # individual, team
     description = db.Column(db.Text, nullable=False)
     files = db.Column(db.JSON, nullable=True)  # 存储文件信息的JSON数组
+    
+    # 学术专长相关字段
+    academic_type = db.Column(db.String(50), nullable=True)  # research, competition, innovation
+    # 科研成果特有字段
+    research_type = db.Column(db.String(50), nullable=True)  # thesis, patent
+    # 创新创业特有字段
+    innovation_level = db.Column(db.String(50), nullable=True)  # national, provincial, school
+    innovation_role = db.Column(db.String(50), nullable=True)  # leader, member
+    # 学业竞赛特有字段
+    award_grade = db.Column(db.String(50), nullable=True)  # firstOrHigher, second, third
+    award_category = db.Column(db.String(50), nullable=True)  # A+类, A类, A-类
+    author_rank_type = db.Column(db.String(50), nullable=True)  # ranked, unranked
+    author_order = db.Column(db.Integer, nullable=True)  # 作者排序
+    
+    # 综合表现相关字段
+    performance_type = db.Column(db.String(100), nullable=True)  # international_internship, military_service, volunteer, social_work, sports, honor_title
+    performance_level = db.Column(db.String(50), nullable=True)  # provincial, school, college
+    performance_participation = db.Column(db.String(50), nullable=True)  # individual, team
+    team_role = db.Column(db.String(50), nullable=True)  # leader, member
     
     # 审核信息
     final_score = db.Column(db.Float, nullable=True)

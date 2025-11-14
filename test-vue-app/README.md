@@ -1,3 +1,6 @@
+启动后端：使用PowerShell的语法设置环境变量并启动Flask服务
+启动前端：在项目根目录下启动Vue前端服务，使用npm run dev命令
+
 # 推免加分系统
 
 一个基于Vue 3和Python Flask的推免加分管理系统。

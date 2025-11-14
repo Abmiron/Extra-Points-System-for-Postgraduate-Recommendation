@@ -15,8 +15,6 @@ const applicationsStore = useApplicationsStore()
 onMounted(() => {
   // 初始化认证状态
   authStore.initialize()
-  // 初始化并加载申请数据
-  applicationsStore.initializeMockData()
 })
 </script>
 

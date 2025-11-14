@@ -63,7 +63,7 @@ onMounted(() => {
   } else {
     // 确保数据已加载
     if (applicationsStore.applications.length === 0) {
-      applicationsStore.loadApplications()
+      applicationsStore.fetchApplications()
     }
   }
 })

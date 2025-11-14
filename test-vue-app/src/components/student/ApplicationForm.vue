@@ -14,14 +14,14 @@
           </div>
           <div class="radio-cards compact">
             <div class="radio-card" :class="{ active: formData.applicationType === 'academic' }"
-              @click="formData.applicationType = 'academic'">
+              @click.stop="formData.applicationType = 'academic'">
               <div class="radio-icon">
                 <font-awesome-icon :icon="['fas', 'book']" />
               </div>
               <span>学术专长</span>
             </div>
             <div class="radio-card" :class="{ active: formData.applicationType === 'comprehensive' }"
-              @click="formData.applicationType = 'comprehensive'">
+              @click.stop="formData.applicationType = 'comprehensive'">
               <div class="radio-icon">
                 <font-awesome-icon :icon="['fas', 'trophy']" />
               </div>
@@ -68,21 +68,21 @@
               <label class="form-label">学术类型 <span class="required">*</span></label>
               <div class="radio-cards">
                 <div class="radio-card" :class="{ active: formData.academicType === 'research' }"
-                  @click="formData.academicType = 'research'">
+                  @click.stop="formData.academicType = 'research'">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'flask']" />
                   </div>
                   <span>科研成果</span>
                 </div>
                 <div class="radio-card" :class="{ active: formData.academicType === 'competition' }"
-                  @click="formData.academicType = 'competition'">
+                  @click.stop="formData.academicType = 'competition'">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'trophy']" />
                   </div>
                   <span>学业竞赛</span>
                 </div>
                 <div class="radio-card" :class="{ active: formData.academicType === 'innovation' }"
-                  @click="formData.academicType = 'innovation'">
+                  @click.stop="formData.academicType = 'innovation'">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'lightbulb']" />
                   </div>
@@ -385,7 +385,7 @@
             <div class="file-list-header">
               <span>已上传文件 ({{ formData.files.length }})</span>
             </div>
-            <div v-for="(file, index) in formData.files" :key="index" class="file-item">
+            <div v-for="(file, index) in formData.files" :key="file.name + index" class="file-item">
               <div class="file-icon">
                 <font-awesome-icon :icon="getFileIcon(file.name)" />
               </div>
@@ -544,7 +544,8 @@ const handleFileSelect = (event) => {
       alert(`文件 ${file.name} 大小超过10MB限制`)
       return
     }
-    formData.files.push(file)
+    // 使用展开运算符创建新数组，确保响应式更新
+    formData.files = [...formData.files, file]
   })
   event.target.value = ''
 }
@@ -557,12 +558,14 @@ const handleDrop = (event) => {
       alert(`文件 ${file.name} 大小超过10MB限制`)
       return
     }
-    formData.files.push(file)
+    // 使用展开运算符创建新数组，确保响应式更新
+    formData.files = [...formData.files, file]
   })
 }
 
 const removeFile = (index) => {
-  formData.files.splice(index, 1)
+  // 使用展开运算符创建新数组，确保响应式更新
+  formData.files = formData.files.filter((_, i) => i !== index)
 }
 
 const previewFile = (file) => {
@@ -600,168 +603,215 @@ const downloadFile = (fileData) => {
 }
 
 // 修改保存草稿和提交表单的验证逻辑
-const saveDraft = () => {
-  const drafts = JSON.parse(localStorage.getItem('applicationDrafts') || '[]')
-  const draft = {
-    id: Date.now(),
-    ...formData,
-    createdAt: new Date().toISOString()
-  }
-  drafts.push(draft)
-  localStorage.setItem('applicationDrafts', JSON.stringify(drafts))
-  alert('草稿已保存')
-}
-
-const submitForm = () => {
-  // 通用验证
-  if (!formData.projectName) {
-    alert('请输入项目全称')
-    return
-  }
-
-  if (!formData.awardDate) {
-    alert('请输入获得时间')
-    return
-  }
-
-  // 学术专长特有验证增强
-  if (formData.applicationType === 'academic') {
-    // 新增：验证学术类型已选择
-    if (!formData.academicType) {
-      alert('请选择学术类型（科研成果/学业竞赛/创新创业训练）')
-      return
-    }
-
-    // 学业竞赛特有验证
-    if (formData.academicType === 'competition') {
-      if (!formData.awardLevel) {
-        alert('请选择奖项级别')
-        return
-      }
-      if (!formData.awardGrade) { // 新增：验证奖项等级
-        alert('请选择奖项等级')
-        return
-      }
-      if (!formData.awardCategory) {
-        alert('请选择奖项类别')
-        return
-      }
-      // 新增：团队奖项的排序验证
-      if (formData.awardType === 'team') {
-        // 当选择"有排名"时必须填写作者排序
-        if (formData.authorRankType === 'ranked' && !formData.authorOrder) {
-          alert('请输入作者排序')
-          return
-        }
-      }
-    }
-
-    // 新增：科研成果验证
-    if (formData.academicType === 'research') {
-      if (!formData.researchType) {
-        alert('请选择成果类型')
-        return
-      }
-    }
-
-    // 新增：创新创业验证
-    if (formData.academicType === 'innovation') {
-      if (!formData.innovationLevel) {
-        alert('请选择项目级别')
-        return
-      }
-
-      if (!formData.innovationRole) {
-        alert('请选择您的角色（组长/组员）')
-        return
-      }
-    }
-  }
-
-  // 综合表现特有验证
-  if (formData.applicationType === 'comprehensive') {
-    if (!formData.performanceType) {
-      alert('请选择表现类型')
-      return
-    }
-    if (!formData.performanceLevel) {
-      alert('请选择奖项级别')
-      return
-    }
-  }
-
-  // 通用字段验证
-  if (!formData.selfScore) {
-    alert('请输入自评加分')
-    return
-  }
-
-  if (formData.files.length === 0) {
-    alert('请上传证明文件')
-    return
-  }
-
-  // 从authStore获取实际的学生信息
-  const studentName = authStore.user?.name || authStore.userName || '未知学生'
-  const studentId = authStore.user?.studentId || '未知学号'
-  const department = authStore.user?.department || '未知系别'
-  const major = authStore.user?.major || '未知专业'
-  
-  console.log('提交申请时的学生信息:', { studentName, studentId, department, major })
-
-    // 准备申请数据
-    const applicationData = {
-      id: 'APP' + Date.now(),
+const saveDraft = async () => {
+  try {
+    // 从authStore获取实际的学生信息
+    const studentName = authStore.user?.name || authStore.userName || '未知学生'
+    const studentId = authStore.user?.studentId || '未知学号'
+    const department = authStore.user?.department || '未知系别'
+    const major = authStore.user?.major || '未知专业'
+    
+    // 准备草稿数据
+    const draftData = {
       ...formData,
       // 确保使用正确的字段名，与显示组件保持一致
       studentName,
       studentId,
       department,
       major,
-    status: 'pending',
-    appliedAt: new Date().toISOString(),
-    finalScore: null,
-    reviewedAt: null
-  }
-
-  const success = applicationsStore.addApplication(applicationData)
-
-  if (success) {
-    alert('申请已提交，等待审核中...')
-
-    // 重置表单
-    Object.assign(formData, {
-      studentId: authStore.user?.studentId || '',
-      name: authStore.userName,
-      department: authStore.user?.department || '',
-      major: authStore.user?.major || '',
-      applicationType: 'academic',
-      projectName: '',
-      awardDate: '',
-      academicType: '',
-      researchType: '',
-      innovationLevel: '',
-      innovationRole: '',
-      awardLevel: '',
-      awardGrade: '',
-      awardCategory: '',
-      awardType: 'individual',
-      authorRankType: 'ranked',
-      authorOrder: '',
-      performanceType: '',
-      performanceLevel: '',
-      performanceParticipation: 'individual',
-      teamRole: '',
-      selfScore: '',
-      description: '',
-      files: []
-    })
+      status: 'draft',
+      appliedAt: new Date().toISOString()
+    }
     
-    // 通知父组件切换到申请历史页面
-    emit('switch-page', 'application-history')
-  } else {
-    alert('提交失败，请稍后重试')
+    const success = await applicationsStore.addApplication(draftData)
+    
+    if (success) {
+      alert('草稿已保存')
+      // 通知父组件切换到申请历史页面
+      emit('switch-page', 'application-history')
+    } else {
+      alert('保存草稿失败，请稍后重试')
+    }
+  } catch (error) {
+    console.error('保存草稿失败:', error)
+    alert('保存草稿失败，请稍后重试')
   }
+}
+
+const submitForm = async () => {
+    // 通用验证
+    if (!formData.projectName) {
+      alert('请输入项目全称')
+      return
+    }
+
+    if (!formData.awardDate) {
+      alert('请输入获得时间')
+      return
+    }
+
+    if (!formData.description) {
+      alert('请输入项目描述')
+      return
+    }
+
+    // 学术专长特有验证增强
+    if (formData.applicationType === 'academic') {
+      // 新增：验证学术类型已选择
+      if (!formData.academicType) {
+        alert('请选择学术类型（科研成果/学业竞赛/创新创业训练）')
+        return
+      }
+
+      // 学业竞赛特有验证
+      if (formData.academicType === 'competition') {
+        if (!formData.awardLevel) {
+          alert('请选择奖项级别')
+          return
+        }
+        if (!formData.awardGrade) { // 新增：验证奖项等级
+          alert('请选择奖项等级')
+          return
+        }
+        if (!formData.awardCategory) {
+          alert('请选择奖项类别')
+          return
+        }
+        // 新增：团队奖项的排序验证
+        if (formData.awardType === 'team') {
+          // 当选择"有排名"时必须填写作者排序
+          if (formData.authorRankType === 'ranked' && !formData.authorOrder) {
+            alert('请输入作者排序')
+            return
+          }
+        }
+      }
+
+      // 新增：科研成果验证
+      if (formData.academicType === 'research') {
+        if (!formData.researchType) {
+          alert('请选择成果类型')
+          return
+        }
+      }
+
+      // 新增：创新创业验证
+      if (formData.academicType === 'innovation') {
+        if (!formData.innovationLevel) {
+          alert('请选择项目级别')
+          return
+        }
+
+        if (!formData.innovationRole) {
+          alert('请选择您的角色（组长/组员）')
+          return
+        }
+      }
+    }
+
+    // 综合表现特有验证
+    if (formData.applicationType === 'comprehensive') {
+      if (!formData.performanceType) {
+        alert('请选择表现类型')
+        return
+      }
+      if (!formData.performanceLevel) {
+        alert('请选择奖项级别')
+        return
+      }
+    }
+
+    // 通用字段验证
+    if (!formData.selfScore) {
+      alert('请输入自评加分')
+      return
+    }
+
+    if (formData.files.length === 0) {
+      alert('请上传证明文件')
+      return
+    }
+
+    // 从authStore获取实际的学生信息
+    const studentName = authStore.user?.name || authStore.userName || '未知学生'
+    const studentId = authStore.user?.studentId || '未知学号'
+    const department = authStore.user?.department || '未知系别'
+    const major = authStore.user?.major || '未知专业'
+    
+    console.log('=== 提交申请时的学生信息 ===')
+    console.log('studentName:', studentName)
+    console.log('studentId:', studentId)
+    console.log('department:', department)
+    console.log('major:', major)
+    
+    console.log('=== formData中的字段 ===')
+    console.log('formData.department:', formData.department)
+    console.log('formData.major:', formData.major)
+
+    // 确保studentName字段存在（兼容后端期望）
+    formData.studentName = formData.name || authStore.userName
+
+    // 准备申请数据
+    const applicationData = {
+      ...formData,
+      // 确保使用正确的字段名，与显示组件保持一致
+      studentName,
+      studentId,
+      department,
+      major,
+      status: 'pending',
+      appliedAt: new Date().toISOString()
+    }
+  
+    console.log('=== 最终发送的申请数据 ===')
+    console.log('包含department字段:', 'department' in applicationData)
+    console.log('包含major字段:', 'major' in applicationData)
+    console.log('department值:', applicationData.department)
+    console.log('major值:', applicationData.major)
+
+    try {
+      const success = await applicationsStore.addApplication(applicationData)
+
+      if (success) {
+        alert('申请已提交，等待审核中...')
+
+        // 重置表单
+        Object.assign(formData, {
+          studentId: authStore.user?.studentId || '',
+          name: authStore.userName,
+          department: authStore.user?.department || '',
+          major: authStore.user?.major || '',
+          applicationType: 'academic',
+          projectName: '',
+          awardDate: '',
+          academicType: '',
+          researchType: '',
+          innovationLevel: '',
+          innovationRole: '',
+          awardLevel: '',
+          awardGrade: '',
+          awardCategory: '',
+          awardType: 'individual',
+          authorRankType: 'ranked',
+          authorOrder: '',
+          performanceType: '',
+          performanceLevel: '',
+          performanceParticipation: 'individual',
+          teamRole: '',
+          selfScore: '',
+          description: '',
+          files: []
+        })
+        
+        // 通知父组件切换到申请历史页面
+        emit('switch-page', 'application-history')
+      } else {
+        alert('提交失败，请稍后重试')
+      }
+    } catch (error) {
+      console.error('提交申请失败:', error)
+      alert('提交失败，请稍后重试')
+    }
 }
 </script>
 

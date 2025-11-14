@@ -277,10 +277,10 @@ const resetFilters = () => {
 }
 
 // 生命周期
-onMounted(() => {
+onMounted(async () => {
   // 确保数据已加载
   if (applicationsStore.applications.length === 0) {
-    applicationsStore.loadApplications()
+    await applicationsStore.fetchApplications()
   }
 })
 </script>

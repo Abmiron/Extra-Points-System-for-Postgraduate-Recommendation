@@ -1,6 +1,38 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { generateMockApplications, getPendingApplications, getReviewedApplications } from '../utils/mockData'
+
+// API基础URL
+const API_BASE_URL = 'http://localhost:5001/api'
+
+// 封装fetch请求
+async function apiRequest(endpoint, options = {}) {
+  const url = `${API_BASE_URL}${endpoint}`
+  
+  // 检查是否是FormData请求
+  const isFormData = options.body && options.body instanceof FormData
+  
+  // 如果是FormData请求，不需要设置Content-Type
+  const defaultOptions = {
+    headers: isFormData ? {} : {
+      'Content-Type': 'application/json',
+    },
+  }
+
+  const config = { ...defaultOptions, ...options }
+
+  try {
+    const response = await fetch(url, config)
+    
+    if (!response.ok) {
+      throw new Error(`API请求失败: ${response.statusText}`)
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error('API请求错误:', error)
+    throw error
+  }
+}
 
 export const useApplicationsStore = defineStore('applications', () => {
   // 状态定义
@@ -19,99 +51,235 @@ export const useApplicationsStore = defineStore('applications', () => {
 
   const totalApplications = computed(() => applications.value.length)
 
-  // 初始化模拟数据
-  const initializeMockData = () => {
-    try {
-      // 为每个mock申请添加学生信息（与显示组件保持一致）
-      const storedApplications = localStorage.getItem('studentApplications')
-      if (!storedApplications) {
-        const mockApplications = generateMockApplications()
-        // 为每个mock申请添加学生信息
-        const enhancedApps = mockApplications.map(app => ({
-          ...app,
-          studentName: app.studentName || app.name || '模拟学生',
-          studentId: app.studentId || '2020318000',
-          department: app.department || 'cs',
-          major: app.major || 'cs'
-        }))
-        localStorage.setItem('studentApplications', JSON.stringify(enhancedApps))
-        console.log('模拟数据已初始化到本地存储')
-      }
-    } catch (error) {
-      console.error('Error initializing mock data:', error)
-    }
-    loadApplications() // 初始化后立即加载数据
-  }
-  
-  // 从本地存储加载申请数据
-  const loadApplications = () => {
+  // 从API获取所有申请
+  const fetchApplications = async (filters = {}) => {
     loading.value = true
     error.value = null
     
     try {
-      const storedApplications = localStorage.getItem('studentApplications')
-      applications.value = storedApplications ? JSON.parse(storedApplications) : []
+      const queryParams = new URLSearchParams()
+      if (filters.studentId) queryParams.append('studentId', filters.studentId)
+      if (filters.status) queryParams.append('status', filters.status)
+      if (filters.applicationType) queryParams.append('applicationType', filters.applicationType)
+      
+      const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ''
+      const data = await apiRequest(`/applications${queryString}`)
+      applications.value = data
+      return data
     } catch (err) {
       console.error('加载申请数据失败:', err)
       error.value = '加载数据失败，请刷新页面重试'
       applications.value = []
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  // 从API获取单个申请详情
+  const fetchApplicationById = async (applicationId) => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const data = await apiRequest(`/applications/${applicationId}`)
+      return data
+    } catch (err) {
+      console.error('加载申请详情失败:', err)
+      error.value = '加载申请详情失败'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  // 从API获取待审核申请
+  const fetchPendingApplications = async (filters = {}) => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const queryParams = new URLSearchParams()
+      if (filters.department) queryParams.append('department', filters.department)
+      if (filters.major) queryParams.append('major', filters.major)
+      if (filters.applicationType) queryParams.append('applicationType', filters.applicationType)
+      
+      const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ''
+      const data = await apiRequest(`/applications/pending${queryString}`)
+      return data
+    } catch (err) {
+      console.error('加载待审核申请失败:', err)
+      error.value = '加载待审核申请失败'
+      throw err
     } finally {
       loading.value = false
     }
   }
 
-  // 保存申请数据到本地存储
-  const saveApplications = () => {
+  // 添加新申请
+  const addApplication = async (application) => {
+    loading.value = true
+    error.value = null
+    
     try {
-      localStorage.setItem('studentApplications', JSON.stringify(applications.value))
+      // 创建FormData对象来处理文件上传
+      const formData = new FormData()
+      
+      // 将非文件字段添加到FormData
+      const applicationData = { ...application }
+      // 移除files字段，单独处理
+      const files = applicationData.files || []
+      delete applicationData.files
+      
+      // 字段名转换：将前端的驼峰式命名转换为后端的下划线命名
+      const fieldMapping = {
+        'studentId': 'student_id',
+        'studentName': 'student_name',
+        'name': 'student_name', // 兼容前端使用name字段的情况
+        'department': 'department',
+        'major': 'major',
+        'applicationType': 'application_type',
+        'selfScore': 'self_score',
+        'projectName': 'project_name',
+        'awardDate': 'award_date',
+        'awardLevel': 'award_level',
+        'awardType': 'award_type',
+        'academicType': 'academic_type',
+        'researchType': 'research_type',
+        'innovationLevel': 'innovation_level',
+        'innovationRole': 'innovation_role',
+        'awardGrade': 'award_grade',
+        'awardCategory': 'award_category',
+        'authorRankType': 'author_rank_type',
+        'authorOrder': 'author_order',
+        'performanceType': 'performance_type',
+        'performanceLevel': 'performance_level',
+        'performanceParticipation': 'performance_participation',
+        'teamRole': 'team_role',
+        'finalScore': 'final_score',
+        'reviewComment': 'review_comment',
+        'reviewedAt': 'reviewed_at',
+        'reviewedBy': 'reviewed_by',
+        'appliedAt': 'applied_at',
+        'createdAt': 'created_at',
+        'updatedAt': 'updated_at'
+      }
+      
+      // 转换数据字段
+      const transformedData = {};
+      for (const [key, value] of Object.entries(applicationData)) {
+        const newKey = fieldMapping[key] || key;
+        transformedData[newKey] = value;
+      }
+      
+      // 将转换后的application数据作为JSON字符串添加到FormData
+      formData.append('application', JSON.stringify(transformedData))
+      
+      // 添加文件到FormData
+      files.forEach((file, index) => {
+        formData.append(`files[${index}]`, file)
+      })
+      
+      // 发送请求
+      const data = await apiRequest('/applications', {
+        method: 'POST',
+        body: formData
+      })
+      
+      // 获取完整的申请数据
+      const newApplication = await fetchApplicationById(data.id)
+      applications.value.unshift(newApplication)
       return true
     } catch (err) {
-      console.error('保存申请数据失败:', err)
-      error.value = '保存数据失败'
+      console.error('创建申请失败:', err)
+      error.value = '创建申请失败'
       return false
+    } finally {
+      loading.value = false
     }
-  }
-
-  // 添加新申请
-  const addApplication = (application) => {
-    const newApplication = {
-      ...application,
-      id: `app${Date.now()}`,
-      appliedAt: new Date().toISOString(),
-      status: 'pending'
-    }
-    
-    applications.value.unshift(newApplication)
-    return saveApplications()
   }
 
   // 更新申请状态（审核）
-  const updateApplicationStatus = (applicationId, status, reviewComment, finalScore, reviewedBy) => {
-    const application = applications.value.find(app => app.id === applicationId)
-    if (application) {
-      application.status = status
-      application.reviewComment = reviewComment
-      application.finalScore = finalScore
-      application.reviewedAt = new Date().toISOString()
-      application.reviewedBy = reviewedBy
-      return saveApplications()
+  const updateApplicationStatus = async (applicationId, status, reviewComment, finalScore, reviewedBy) => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const updatedData = {
+        status,
+        reviewComment,
+        finalScore,
+        reviewedAt: new Date().toISOString(),
+        reviewedBy
+      }
+      
+      await apiRequest(`/applications/${applicationId}`, {
+        method: 'PUT',
+        body: JSON.stringify(updatedData)
+      })
+      
+      // 更新本地状态
+      const application = applications.value.find(app => app.id === applicationId)
+      if (application) {
+        Object.assign(application, updatedData)
+      }
+      
+      return true
+    } catch (err) {
+      console.error('更新申请状态失败:', err)
+      error.value = '更新申请状态失败'
+      return false
+    } finally {
+      loading.value = false
     }
-    return false
+  }
+
+  // 批准申请
+  const approveApplication = async (applicationId, finalScore, comment, reviewedBy) => {
+    return await updateApplicationStatus(applicationId, 'approved', comment, finalScore, reviewedBy)
+  }
+
+  // 驳回申请
+  const rejectApplication = async (applicationId, comment, reviewedBy) => {
+    return await updateApplicationStatus(applicationId, 'rejected', comment, 0, reviewedBy)
   }
 
   // 删除申请
-  const deleteApplication = (applicationId) => {
-    const index = applications.value.findIndex(app => app.id === applicationId)
-    if (index !== -1) {
-      applications.value.splice(index, 1)
-      return saveApplications()
+  const deleteApplication = async (applicationId) => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      await apiRequest(`/applications/${applicationId}`, {
+        method: 'DELETE'
+      })
+      
+      // 更新本地状态
+      const index = applications.value.findIndex(app => app.id === applicationId)
+      if (index !== -1) {
+        applications.value.splice(index, 1)
+      }
+      
+      return true
+    } catch (err) {
+      console.error('删除申请失败:', err)
+      error.value = '删除申请失败'
+      return false
+    } finally {
+      loading.value = false
     }
-    return false
   }
 
-  // 获取单个申请详情
-  const getApplicationById = (applicationId) => {
-    return applications.value.find(app => app.id === applicationId)
+  // 获取单个申请详情（从本地状态或API）
+  const getApplicationById = async (applicationId) => {
+    // 先从本地状态查找
+    const localApp = applications.value.find(app => app.id === applicationId)
+    if (localApp) {
+      return localApp
+    }
+    
+    // 如果本地没有，从API获取
+    return await fetchApplicationById(applicationId)
   }
 
   // 过滤申请（按多种条件）
@@ -166,12 +334,15 @@ export const useApplicationsStore = defineStore('applications', () => {
     totalApplications,
     
     // 方法
-    initializeMockData,
-    loadApplications,
+    fetchApplications,
+    fetchApplicationById,
+    fetchPendingApplications,
     addApplication,
     updateApplicationStatus,
     deleteApplication,
     getApplicationById,
-    filterApplications
+    filterApplications,
+    approveApplication,
+    rejectApplication
   }
 })

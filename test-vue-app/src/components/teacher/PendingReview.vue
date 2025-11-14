@@ -226,39 +226,40 @@ const reviewApplication = (application) => {
   console.log('selectedApplication 已设置:', selectedApplication.value)
 }
 
-const handleApprove = (applicationId, finalScore, comment) => {
-  // 使用store更新申请状态
-  const success = applicationsStore.updateApplicationStatus(
-    applicationId,
-    'approved',
-    comment,
-    finalScore,
-    authStore.userName || '当前教师'
-  )
-
-  closeReviewModal()
-  if (success) {
+const handleApprove = async (applicationId, finalScore, comment) => {
+  try {
+    // 调用API批准申请
+    await applicationsStore.approveApplication(
+      applicationId,
+      finalScore,
+      comment,
+      authStore.userName || '当前教师'
+    )
+    // 重新加载数据
+    await applicationsStore.fetchApplications()
+    closeReviewModal()
     alert('申请已通过审核')
-  } else {
-    alert('审核操作失败，请稍后重试')
+  } catch (error) {
+    console.error('批准申请失败:', error)
+    alert('批准申请失败，请稍后重试')
   }
 }
 
-const handleReject = (applicationId, comment) => {
-  // 使用store更新申请状态
-  const success = applicationsStore.updateApplicationStatus(
-    applicationId,
-    'rejected',
-    comment,
-    0,
-    authStore.userName || '当前教师'
-  )
-
-  closeReviewModal()
-  if (success) {
+const handleReject = async (applicationId, comment) => {
+  try {
+    // 调用API拒绝申请
+    await applicationsStore.rejectApplication(
+      applicationId,
+      comment,
+      authStore.userName || '当前教师'
+    )
+    // 重新加载数据
+    await applicationsStore.fetchApplications()
+    closeReviewModal()
     alert('申请已驳回')
-  } else {
-    alert('审核操作失败，请稍后重试')
+  } catch (error) {
+    console.error('拒绝申请失败:', error)
+    alert('拒绝申请失败，请稍后重试')
   }
 }
 
@@ -279,15 +280,15 @@ const resetFilters = () => {
 }
 
 // 重新加载数据
-const refreshData = () => {
-  applicationsStore.loadApplications()
+const refreshData = async () => {
+  await applicationsStore.fetchApplications()
 }
 
 // 生命周期
-onMounted(() => {
+onMounted(async () => {
   // 确保数据已加载
   if (applicationsStore.applications.length === 0) {
-    applicationsStore.loadApplications()
+    await applicationsStore.fetchApplications()
   }
 })
 </script>
