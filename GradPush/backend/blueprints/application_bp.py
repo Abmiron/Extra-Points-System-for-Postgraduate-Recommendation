@@ -18,6 +18,7 @@ from datetime import datetime
 import json
 import os
 import traceback
+import uuid
 from werkzeug.utils import secure_filename
 
 # 创建蓝图实例
@@ -47,6 +48,19 @@ def get_applications():
     app_list = []
     
     for app in applications:
+        # 转换文件路径格式
+        processed_files = []
+        if app.files:
+            for file in app.files:
+                processed_file = file.copy() if isinstance(file, dict) else file
+                if isinstance(processed_file, dict) and 'path' in processed_file:
+                    # 如果是本地绝对路径，转换为相对URL
+                    if os.path.isabs(processed_file['path']):
+                        # 从绝对路径中提取文件名
+                        filename = os.path.basename(processed_file['path'])
+                        processed_file['path'] = f'/uploads/{filename}'
+                processed_files.append(processed_file)
+        
         app_data = {
             'id': app.id,
             'studentId': app.student_id,
@@ -62,7 +76,7 @@ def get_applications():
             'awardLevel': app.award_level,
             'awardType': app.award_type,
             'description': app.description,
-            'files': app.files,
+            'files': processed_files,
             'finalScore': app.final_score,
             'reviewComment': app.review_comment,
             'reviewedAt': app.reviewed_at.isoformat() if app.reviewed_at else None,
@@ -91,6 +105,19 @@ def get_applications():
 def get_application(id):
     app = Application.query.get_or_404(id)
     
+    # 转换文件路径格式
+    processed_files = []
+    if app.files:
+        for file in app.files:
+            processed_file = file.copy() if isinstance(file, dict) else file
+            if isinstance(processed_file, dict) and 'path' in processed_file:
+                # 如果是本地绝对路径，转换为相对URL
+                if os.path.isabs(processed_file['path']):
+                    # 从绝对路径中提取文件名
+                    filename = os.path.basename(processed_file['path'])
+                    processed_file['path'] = f'/uploads/{filename}'
+            processed_files.append(processed_file)
+    
     app_data = {
         'id': app.id,
         'studentId': app.student_id,
@@ -106,7 +133,7 @@ def get_application(id):
         'awardLevel': app.award_level,
         'awardType': app.award_type,
         'description': app.description,
-        'files': app.files,
+        'files': processed_files,
         'finalScore': app.final_score,
         'reviewComment': app.review_comment,
         'reviewedAt': app.reviewed_at.isoformat() if app.reviewed_at else None,
@@ -199,15 +226,31 @@ def create_application():
             # 保存文件并记录信息
             for key, file in request.files.items():
                 if file and file.filename:
-                    # 安全地保存文件
-                    filename = secure_filename(file.filename)
+                    # 生成安全且保留中文的文件名
+                    def generate_safe_filename(original_filename):
+                        """
+                        生成安全的文件名，保留中文等非ASCII字符，确保唯一性
+                        """
+                        # 分离文件名和扩展名
+                        name, ext = os.path.splitext(original_filename)
+                        # 生成唯一标识符
+                        unique_id = uuid.uuid4().hex[:8]
+                        # 使用时间戳和唯一ID确保文件名唯一性
+                        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+                        # 保留原始文件名，仅移除路径分隔符防止目录遍历
+                        safe_name = name.replace('/', '').replace('\\', '')
+                        # 构建最终文件名
+                        return f"{safe_name}_{timestamp}_{unique_id}{ext}"
+                    
+                    # 使用自定义函数生成文件名
+                    filename = generate_safe_filename(file.filename)
                     filepath = os.path.join(upload_dir, filename)
                     file.save(filepath)
                     
-                    # 记录文件信息
+                    # 记录文件信息（存储相对URL而不是本地路径）
                     files.append({
                         'name': filename,
-                        'path': filepath,
+                        'path': f'/uploads/{filename}',
                         'size': file.content_length,
                         'type': file.content_type
                     })
@@ -247,7 +290,27 @@ def create_application():
         db.session.add(new_application)
         db.session.commit()
         
-        return jsonify({'message': '申请创建成功', 'id': new_application.id}), 201
+        # 构建完整的响应数据
+        app_data = {
+            'id': new_application.id,
+            'studentId': new_application.student_id,
+            'studentName': new_application.student_name,
+            'department': new_application.department,
+            'major': new_application.major,
+            'applicationType': new_application.application_type,
+            'appliedAt': new_application.applied_at.isoformat() if new_application.applied_at else None,
+            'selfScore': new_application.self_score,
+            'status': new_application.status,
+            'projectName': new_application.project_name,
+            'awardDate': new_application.award_date.isoformat() if new_application.award_date else None,
+            'awardLevel': new_application.award_level,
+            'awardType': new_application.award_type,
+            'description': new_application.description,
+            'files': new_application.files,
+            'message': '申请创建成功'
+        }
+        
+        return jsonify(app_data), 201
     except json.JSONDecodeError as e:
         return jsonify({'error': '无效的JSON格式', 'details': str(e)}), 400
     except KeyError as e:
@@ -353,6 +416,19 @@ def get_pending_applications():
     app_list = []
     
     for app in applications:
+        # 转换文件路径格式
+        processed_files = []
+        if app.files:
+            for file in app.files:
+                processed_file = file.copy() if isinstance(file, dict) else file
+                if isinstance(processed_file, dict) and 'path' in processed_file:
+                    # 如果是本地绝对路径，转换为相对URL
+                    if os.path.isabs(processed_file['path']):
+                        # 从绝对路径中提取文件名
+                        filename = os.path.basename(processed_file['path'])
+                        processed_file['path'] = f'/uploads/{filename}'
+                processed_files.append(processed_file)
+        
         app_data = {
             'id': app.id,
             'studentId': app.student_id,
@@ -368,7 +444,7 @@ def get_pending_applications():
             'awardLevel': app.award_level,
             'awardType': app.award_type,
             'description': app.description,
-            'files': app.files,
+            'files': processed_files,
             # 学术专长相关字段
             'academicType': app.academic_type,
             'researchType': app.research_type,

@@ -267,6 +267,7 @@ const getFileIcon = (fileName) => {
 }
 
 const getFileUrl = (file) => {
+  if (file.path) return `http://localhost:5001${file.path}`
   if (file.url) return file.url
   if (file instanceof File) return URL.createObjectURL(file)
   if (file.data) return file.data
@@ -365,7 +366,10 @@ const onPreviewWheel = (event) => {
 // 下载文件
 const downloadFile = (file) => {
   let url = ''
-  if (file.url) {
+  if (file.path) {
+    // 使用完整的URL路径
+    url = `http://localhost:5001${file.path}`
+  } else if (file.url) {
     url = file.url
   } else if (file instanceof File) {
     url = URL.createObjectURL(file)

@@ -6,7 +6,7 @@ Flask应用主入口文件
 是整个后端应用的启动点和核心配置文件。
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_migrate import Migrate
 import os
@@ -33,6 +33,11 @@ from blueprints.auth_bp import auth_bp
 from blueprints.user_bp import user_bp
 from blueprints.application_bp import application_bp
 from routes import main_bp
+
+# 配置静态文件服务
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 # 注册蓝图
 app.register_blueprint(auth_bp)
