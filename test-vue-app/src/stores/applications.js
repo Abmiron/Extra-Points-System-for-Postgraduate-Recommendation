@@ -24,7 +24,15 @@ async function apiRequest(endpoint, options = {}) {
     const response = await fetch(url, config)
     
     if (!response.ok) {
-      throw new Error(`API请求失败: ${response.statusText}`)
+      // 尝试获取响应的详细内容
+      let errorDetails = ''
+      try {
+        const errorData = await response.json()
+        errorDetails = JSON.stringify(errorData, null, 2)
+      } catch {
+        errorDetails = await response.text()
+      }
+      throw new Error(`API请求失败: ${response.statusText}\n详细信息: ${errorDetails}`)
     }
 
     return await response.json()

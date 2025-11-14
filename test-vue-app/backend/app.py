@@ -30,4 +30,4 @@ from models import User, Application
 from routes import *
 
 if __name__ == '__main__':
-    app.run(debug=False, port=5001, use_reloader=False)
+    app.run(debug=True, port=5001, use_reloader=False)

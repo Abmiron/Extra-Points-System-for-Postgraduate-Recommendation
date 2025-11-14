@@ -478,7 +478,12 @@ def create_application():
         for key, value in data.items():
             # 使用映射的字段名，如果没有映射则使用原字段名
             new_key = field_mapping.get(key, key)
-            transformed_data[new_key] = value
+            # 处理数值类型字段：将空字符串转换为None
+            numeric_fields = ['author_order', 'self_score', 'final_score']
+            if new_key in numeric_fields and value == '':
+                transformed_data[new_key] = None
+            else:
+                transformed_data[new_key] = value
         
         # 使用转换后的数据
         data = transformed_data

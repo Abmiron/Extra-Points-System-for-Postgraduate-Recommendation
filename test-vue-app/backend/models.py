@@ -60,7 +60,7 @@ class Application(db.Model):
     award_date = db.Column(db.Date, nullable=False)
     award_level = db.Column(db.String(50), nullable=True)  # national, provincial, municipal, school
     award_type = db.Column(db.String(50), nullable=True)  # individual, team
-    description = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=True)
     files = db.Column(db.JSON, nullable=True)  # 存储文件信息的JSON数组
     
     # 学术专长相关字段
