@@ -25,9 +25,20 @@ app.config.from_object('config.Config')
 db.init_app(app)
 migrate = Migrate(app, db)
 
-# 先创建数据库对象，再导入模型和路由
+# 先创建数据库对象，再导入模型
 from models import User, Application
-from routes import *
+
+# 导入并注册蓝图
+from blueprints.auth_bp import auth_bp
+from blueprints.user_bp import user_bp
+from blueprints.application_bp import application_bp
+from routes import main_bp
+
+# 注册蓝图
+app.register_blueprint(auth_bp)
+app.register_blueprint(user_bp)
+app.register_blueprint(application_bp)
+app.register_blueprint(main_bp)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001, use_reloader=False)
