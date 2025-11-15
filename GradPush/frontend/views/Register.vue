@@ -192,7 +192,7 @@ const goToLogin = () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: url('../images/loginBackground.jpg') no-repeat center center;
+  background: url('/images/loginBackground.jpg') no-repeat center center;
   background-size: cover;
   filter: blur(8px) brightness(0.80);
   transform: scale(1.05);

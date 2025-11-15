@@ -153,7 +153,7 @@ const profile = reactive({
 
 // 计算头像URL，确保包含完整的服务器地址前缀
 const getAvatarUrl = computed(() => {
-  if (!profile.avatar) return '/images/default-avatar.jpg'
+  if (!profile.avatar || profile.avatar === '') return '/images/default-avatar.jpg'
   // 检查头像URL是否已经包含完整路径
   if (profile.avatar.startsWith('http://') || profile.avatar.startsWith('https://')) {
     return profile.avatar

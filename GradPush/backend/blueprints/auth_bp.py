@@ -74,7 +74,7 @@ def register():
         username=data['username'],
         name=data['name'],
         role=data['role'],
-        avatar='/images/头像1.jpg' if data['role'] == 'student' else '/images/头像2.jpg',
+        avatar='/images/default-avatar.jpg',  # 统一使用默认头像
         faculty='信息学院',  # 默认值
         email='',  # 默认值
         phone=''   # 默认值

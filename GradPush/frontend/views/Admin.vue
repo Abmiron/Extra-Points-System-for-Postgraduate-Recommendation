@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <Header :user-name="authStore.userName" :user-avatar="authStore.userAvatar" title="推免加分系统-管理端" />
+    <Header :user-name="authStore.userName" :user-avatar="authStore.userAvatar" title="推免加分系统-管理端" @go-to-profile="goToProfile" />
 
     <div class="content-wrapper">
       <Sidebar :active-page="currentPage" @page-change="switchPage" :user-info="userInfo" user-type="admin" />
@@ -57,6 +57,11 @@ const userInfo = computed(() => ({
 // 切换页面
 const switchPage = (page) => {
   currentPage.value = page
+}
+
+// 切换到个人信息页面
+const goToProfile = () => {
+  currentPage.value = 'profile'
 }
 
 // 权限验证

@@ -12,9 +12,16 @@ export const useAuthStore = defineStore('auth', () => {
     return user.value?.name || '张三'
   })
   const userAvatar = computed(() => {
-    if (!user.value?.avatar) return '/images/default-avatar.jpg'
+    if (!user.value?.avatar || user.value.avatar === '') {
+      // 默认头像在前端public目录下，直接返回相对路径
+      return '/images/default-avatar.jpg'
+    }
     // 检查头像URL是否已经包含完整路径
     if (user.value.avatar.startsWith('http://') || user.value.avatar.startsWith('https://')) {
+      return user.value.avatar
+    }
+    // 检查是否是本地默认头像路径
+    if (user.value.avatar.startsWith('/images/')) {
       return user.value.avatar
     }
     // 添加服务器地址前缀

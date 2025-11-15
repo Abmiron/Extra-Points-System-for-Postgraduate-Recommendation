@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <Header :user-name="authStore.userName" :user-avatar="authStore.userAvatar" title="推免加分系统-审核端" />
+    <Header :user-name="authStore.userName" :user-avatar="authStore.userAvatar" title="推免加分系统-审核端" @go-to-profile="goToProfile" />
 
     <div class="content-wrapper">
       <Sidebar :active-page="currentPage" @page-change="switchPage" :user-info="userInfo" user-type="teacher" />
@@ -63,6 +63,11 @@ const switchPage = (page) => {
 // 切换到待审核页面（用于从其他页面跳转）
 const switchToPendingReview = () => {
   currentPage.value = 'pending-review'
+}
+
+// 切换到个人信息页面
+const goToProfile = () => {
+  currentPage.value = 'profile'
 }
 
 // 权限验证和数据加载

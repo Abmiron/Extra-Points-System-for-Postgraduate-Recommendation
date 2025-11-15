@@ -12,8 +12,10 @@
         </span>
       </div>
       <div class="user-menu">
-        <img :src="userAvatar" alt="用户头像" class="user-avatar">
-        <span>{{ userName }}</span>
+        <div class="user-info" @click="goToProfile">
+          <img :src="userAvatar" alt="用户头像" class="user-avatar">
+          <span>{{ userName }}</span>
+        </div>
         <button class="logout-btn" @click="handleLogout">
           <font-awesome-icon :icon="['fas', 'sign-out-alt']" />
         </button>
@@ -36,6 +38,8 @@ const props = defineProps({
   }
 })
 
+const emit = defineEmits(['go-to-profile'])
+
 const router = useRouter()
 const authStore = useAuthStore()
 
@@ -48,8 +52,14 @@ const notificationCount = computed(() => {
   return roleCounts[authStore.role] || 0
 })
 
+
+
 const showNotifications = () => {
   alert(`您有${notificationCount.value}条未读通知`)
+}
+
+const goToProfile = () => {
+  emit('go-to-profile')
 }
 
 const handleLogout = () => {
@@ -125,11 +135,19 @@ const handleLogout = () => {
 .user-menu {
   display: flex;
   align-items: center;
-  cursor: pointer;
   gap: 8px;
 }
 
-.user-avatar {
+.user-info {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 0px;
+  padding: 0px;
+  border-bottom: 0px solid transparent;
+}
+
+.user-info .user-avatar {
   width: 36px;
   height: 36px;
   border-radius: 50%;

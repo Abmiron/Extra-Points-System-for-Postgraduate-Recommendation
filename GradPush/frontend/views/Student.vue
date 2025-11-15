@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <Header :user-name="authStore.userName" :user-avatar="authStore.userAvatar" title="推免加分系统" />
+    <Header :user-name="authStore.userName" :user-avatar="authStore.userAvatar" title="推免加分系统" @go-to-profile="goToProfile" />
 
     <div class="content-wrapper">
       <Sidebar :active-page="currentPage" @page-change="switchPage" :user-info="userInfo" user-type="student" />
@@ -53,6 +53,11 @@ const switchPage = (page) => {
 // 切换到申请表单页面
 const switchToApplicationForm = () => {
   currentPage.value = 'application-form'
+}
+
+// 切换到个人信息页面
+const goToProfile = () => {
+  currentPage.value = 'profile'
 }
 
 // 权限验证和数据加载
