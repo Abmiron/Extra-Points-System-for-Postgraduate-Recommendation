@@ -70,7 +70,11 @@ def get_applications():
             'applicationType': app.application_type,
             'appliedAt': app.applied_at.isoformat() if app.applied_at else None,
             'selfScore': app.self_score,
+            'finalScore': app.final_score,
             'status': app.status,
+            'reviewComment': app.review_comment,
+            'reviewedAt': app.reviewed_at.isoformat() if app.reviewed_at else None,
+            'reviewedBy': app.reviewed_by,
             'projectName': app.project_name,
             'awardDate': app.award_date.isoformat() if app.award_date else None,
             'awardLevel': app.award_level,
@@ -336,6 +340,10 @@ def update_application(id):
     # 更新基本信息
     app.self_score = data.get('selfScore', app.self_score)
     app.status = data.get('status', app.status)
+    app.final_score = data.get('finalScore', app.final_score)
+    app.review_comment = data.get('reviewComment', app.review_comment)
+    app.reviewed_at = datetime.fromisoformat(data['reviewedAt']) if 'reviewedAt' in data else app.reviewed_at
+    app.reviewed_by = data.get('reviewedBy', app.reviewed_by)
     app.project_name = data.get('projectName', app.project_name)
     app.award_date = datetime.fromisoformat(data['awardDate']).date() if 'awardDate' in data else app.award_date
     app.award_level = data.get('awardLevel', app.award_level)

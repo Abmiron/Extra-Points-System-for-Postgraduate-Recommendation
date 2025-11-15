@@ -114,6 +114,8 @@ export const useApplicationsStore = defineStore('applications', () => {
       
       const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ''
       const data = await apiRequest(`/applications/pending${queryString}`)
+      // 将获取到的待审核申请保存到store中
+      applications.value = data
       return data
     } catch (err) {
       console.error('加载待审核申请失败:', err)
@@ -277,6 +279,55 @@ export const useApplicationsStore = defineStore('applications', () => {
       loading.value = false
     }
   }
+  
+  // 更新申请信息
+  const updateApplication = async (applicationId, applicationData) => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      // 字段名转换：将前端的驼峰式命名转换为后端的下划线命名
+      const fieldMapping = {
+        'studentId': 'student_id',
+        'studentName': 'student_name',
+        'gender': 'gender',
+        'grade': 'grade',
+        'department': 'department',
+        'major': 'major',
+        'applicationType': 'application_type',
+        'projectName': 'project_name',
+        'selfScore': 'self_score',
+        'finalScore': 'final_score',
+        'reviewComment': 'review_comment'
+      }
+      
+      // 转换数据字段
+      const transformedData = {};
+      for (const [key, value] of Object.entries(applicationData)) {
+        const newKey = fieldMapping[key] || key;
+        transformedData[newKey] = value;
+      }
+      
+      await apiRequest(`/applications/${applicationId}`, {
+        method: 'PUT',
+        body: JSON.stringify(transformedData)
+      })
+      
+      // 更新本地状态
+      const application = applications.value.find(app => app.id === applicationId)
+      if (application) {
+        Object.assign(application, applicationData)
+      }
+      
+      return true
+    } catch (err) {
+      console.error('更新申请失败:', err)
+      error.value = '更新申请失败'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
 
   // 获取单个申请详情（从本地状态或API）
   const getApplicationById = async (applicationId) => {
@@ -347,6 +398,7 @@ export const useApplicationsStore = defineStore('applications', () => {
     fetchPendingApplications,
     addApplication,
     updateApplicationStatus,
+    updateApplication,
     deleteApplication,
     getApplicationById,
     filterApplications,

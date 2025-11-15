@@ -84,9 +84,14 @@
                 </span>
               </td>
               <td>
-                <button class="btn-outline btn small-btn" @click="viewApplication(application)">
-                  <font-awesome-icon :icon="['fas', 'eye']" /> 查看
-                </button>
+                <div class="action-buttons">
+                  <button class="btn-outline btn small-btn" @click="viewApplication(application)" title="查看">
+                    <font-awesome-icon :icon="['fas', 'eye']" /> 
+                  </button>
+                  <button class="btn-outline btn small-btn" @click="editApplication(application)" title="编辑">
+                    <font-awesome-icon :icon="['fas', 'edit']" /> 
+                  </button>
+                </div>
               </td>
             </tr>
             <tr v-if="paginatedApplications.length === 0">
@@ -101,28 +106,38 @@
     <div class="pagination">
       <div>显示 {{ startIndex + 1 }}-{{ endIndex }} 条，共 {{ totalApplications }} 条记录</div>
       <div class="pagination-controls">
-        <button class="btn-outline btn" :disabled="currentPage === 1" @click="prevPage">
+        <button class="btn-outline btn" :disabled="pagination.currentPage === 1" @click="prevPage">
           <font-awesome-icon :icon="['fas', 'chevron-left']" /> 上一页
         </button>
-        <button class="btn-outline btn" :disabled="currentPage >= totalPages" @click="nextPage">
+        <button class="btn-outline btn" :disabled="pagination.currentPage >= totalPages" @click="nextPage">
           下一页 <font-awesome-icon :icon="['fas', 'chevron-right']" />
         </button>
       </div>
     </div>
 
-    <!-- 申请详情模态框 -->
-    <ReviewDetailModal v-if="selectedApplication" :application="selectedApplication" :readonly="true"
+    <!-- 查看申请详情模态框 -->
+    <TeacherViewDetailModal v-if="selectedApplication" :application="selectedApplication"
       @close="closeDetailModal" />
+
+    <!-- 编辑申请详情模态框 -->
+    <TeacherEditDetailModal v-if="editingApplication" :application="editingApplication"
+      @close="closeEditDialog" @approve="handleApproveApplication" @reject="handleRejectApplication" />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import ReviewDetailModal from './ReviewDetailModal.vue'
+import TeacherViewDetailModal from './TeacherViewDetailModal.vue'
+import TeacherEditDetailModal from './TeacherEditDetailModal.vue'
 import { useApplicationsStore } from '../../stores/applications'
+import { useAuthStore } from '../../stores/auth'
 
 const applicationsStore = useApplicationsStore()
+const authStore = useAuthStore()
 const selectedApplication = ref(null)
+
+// 编辑弹窗相关
+const editingApplication = ref(null)
 
 // 筛选条件
 const filters = ref({
@@ -254,13 +269,54 @@ const nextPage = () => {
   }
 }
 
-const viewApplication = (application) => {
+const viewApplication = async (application) => {
   // 从store获取完整的申请详情
-  selectedApplication.value = applicationsStore.getApplicationById(application.id) || application
+  selectedApplication.value = await applicationsStore.getApplicationById(application.id) || application
 }
 
 const closeDetailModal = () => {
   selectedApplication.value = null
+}
+
+// 编辑功能方法
+const editApplication = async (application) => {
+  // 从store获取完整的申请详情
+  editingApplication.value = await applicationsStore.getApplicationById(application.id) || application
+}
+
+const closeEditDialog = () => {
+  editingApplication.value = null
+}
+
+// 审核操作处理
+const handleApproveApplication = async (applicationId, finalScore, comment) => {
+  try {
+    const success = await applicationsStore.approveApplication(applicationId, finalScore, comment, authStore.userName)
+    if (success) {
+      alert('审核通过成功')
+      closeEditDialog()
+    } else {
+      alert('审核通过失败')
+    }
+  } catch (error) {
+    console.error('审核通过失败:', error)
+    alert('审核通过失败，请重试')
+  }
+}
+
+const handleRejectApplication = async (applicationId, comment) => {
+  try {
+    const success = await applicationsStore.rejectApplication(applicationId, comment, authStore.userName)
+    if (success) {
+      alert('驳回成功')
+      closeEditDialog()
+    } else {
+      alert('驳回失败')
+    }
+  } catch (error) {
+    console.error('驳回失败:', error)
+    alert('驳回失败，请重试')
+  }
 }
 
 // 重置筛选
@@ -307,6 +363,152 @@ onMounted(async () => {
 
 .form-control.small {
   width: 120px;
+}
+
+/* 操作按钮样式 */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.small-btn {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+/* 操作列按钮悬停效果 */
+.action-buttons .small-btn:hover {
+  transform: none;
+}
+
+/* 编辑弹窗样式 */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.dialog-content {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.dialog-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.close-btn:hover {
+  color: #333;
+}
+
+.dialog-body {
+  padding: 20px;
+}
+
+.form-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.form-group {
+  flex: 1;
+}
+
+.form-group.full-width {
+  flex: 1 1 100%;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #555;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #80bdff;
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.detail-value {
+  display: block;
+  margin-top: 5px;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+  color: #495057;
+}
+
+.detail-value.comment {
+  white-space: pre-wrap;
+  min-height: 80px;
+  font-style: italic;
 }
 </style>
 

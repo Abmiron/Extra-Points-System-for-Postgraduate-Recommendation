@@ -2,16 +2,13 @@
   <div class="page-content">
     <div class="page-title">
       <span>用户管理</span>
-      <div class="page-title-actions" v-if="!isLoading">
+      <div class="page-title-actions">
         <button class="btn btn-outline" @click="importUsers">
           <font-awesome-icon :icon="['fas', 'download']" /> 导入用户
         </button>
         <button class="btn btn-outline" @click="showAddUserModal = true">
           <font-awesome-icon :icon="['fas', 'plus']" /> 添加用户
         </button>
-      </div>
-      <div v-else class="loading-indicator">
-        <p>加载中...</p>
       </div>
     </div>
 
@@ -65,7 +62,12 @@
 
     <!-- 用户表格 -->
     <div class="card">
-      <div class="table-container" v-if="!isLoading">
+      <!-- 加载状态指示器 -->
+      <div v-if="isLoading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">加载中...</div>
+      </div>
+      <div class="table-container">
         <table class="application-table">
           <thead>
             <tr>
@@ -222,6 +224,48 @@
     </div>
   </div>
 </template>
+
+<style scoped>
+/* 卡片相对定位，确保加载状态只在卡片内显示 */
+.card {
+  position: relative;
+}
+
+/* 加载状态样式 */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.loading-spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-top: 10px;
+  color: #666;
+  font-size: 14px;
+}
+</style>
 
 <script setup>
 import { ref, reactive, computed, onMounted, watchEffect } from 'vue'

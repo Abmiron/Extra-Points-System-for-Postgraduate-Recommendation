@@ -82,11 +82,11 @@ class Application(db.Model):
     performance_participation = db.Column(db.String(50), nullable=True)  # individual, team
     team_role = db.Column(db.String(50), nullable=True)  # leader, member
     
-    # 审核信息
-    final_score = db.Column(db.Float, nullable=True)
-    review_comment = db.Column(db.Text, nullable=True)
-    reviewed_at = db.Column(db.DateTime, nullable=True)
-    reviewed_by = db.Column(db.String(100), nullable=True)
+    # 审核相关字段
+    final_score = db.Column(db.Float, nullable=True)  # 最终核定分数
+    review_comment = db.Column(db.Text, nullable=True)  # 审核意见
+    reviewed_at = db.Column(db.DateTime, nullable=True)  # 审核时间
+    reviewed_by = db.Column(db.String(100), nullable=True)  # 审核人
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

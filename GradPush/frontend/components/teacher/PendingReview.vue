@@ -83,17 +83,17 @@
     <div class="pagination">
       <div>显示 {{ startIndex + 1 }}-{{ endIndex }} 条，共 {{ totalApplications }} 条记录</div>
       <div class="pagination-controls">
-        <button class="btn-outline btn" :disabled="currentPage === 1" @click="prevPage">
+        <button class="btn-outline btn" :disabled="pagination.currentPage === 1" @click="prevPage">
           <font-awesome-icon :icon="['fas', 'chevron-left']" /> 上一页
         </button>
-        <button class="btn-outline btn" :disabled="currentPage >= totalPages" @click="nextPage">
+        <button class="btn-outline btn" :disabled="pagination.currentPage >= totalPages" @click="nextPage">
           下一页 <font-awesome-icon :icon="['fas', 'chevron-right']" />
         </button>
       </div>
     </div>
 
     <!-- 审核详情模态框 -->
-    <ReviewDetailModal v-if="selectedApplication" :application="selectedApplication" @approve="handleApprove"
+    <TeacherEditDetailModal v-if="selectedApplication" :application="selectedApplication" @approve="handleApprove"
       @reject="handleReject" @close="closeReviewModal" />
   </div>
 </template>
@@ -102,7 +102,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useApplicationsStore } from '../../stores/applications'
-import ReviewDetailModal from './ReviewDetailModal.vue'
+import TeacherEditDetailModal from './TeacherEditDetailModal.vue'
 
 const authStore = useAuthStore()
 const applicationsStore = useApplicationsStore()
@@ -224,6 +224,8 @@ const reviewApplication = (application) => {
   console.log('点击审核按钮，申请信息:', application)
   selectedApplication.value = { ...application }
   console.log('selectedApplication 已设置:', selectedApplication.value)
+  // 确保对象结构正确
+  console.log('selectedApplication 属性:', Object.keys(selectedApplication.value || {}))
 }
 
 const handleApprove = async (applicationId, finalScore, comment) => {
@@ -281,14 +283,18 @@ const resetFilters = () => {
 
 // 重新加载数据
 const refreshData = async () => {
-  await applicationsStore.fetchApplications()
+  // 老师页面只需要获取待审核申请
+  await applicationsStore.fetchPendingApplications()
 }
 
 // 生命周期
 onMounted(async () => {
-  // 确保数据已加载
+  // 确保数据已加载，老师页面只需要获取待审核申请
   if (applicationsStore.applications.length === 0) {
-    await applicationsStore.fetchApplications()
+    console.log('获取待审核申请数据...')
+    await applicationsStore.fetchPendingApplications()
+    console.log('获取到的申请数据:', applicationsStore.applications)
+    console.log('待审核申请数量:', applicationsStore.pendingApplications.length)
   }
 })
 </script>

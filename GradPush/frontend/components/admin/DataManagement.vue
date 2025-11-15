@@ -47,13 +47,18 @@
       <button class="btn btn-outline" @click="exportData">
         <font-awesome-icon :icon="['fas', 'download']" /> 导出数据
       </button>
-      <button class="btn btn-outline" @click="batchArchive" :disabled="selectedApplications.length === 0">
-        <font-awesome-icon :icon="['fas', 'archive']" /> 归档选中
+      <button class="btn btn-outline" @click="batchDelete" :disabled="selectedApplications.length === 0">
+        <font-awesome-icon :icon="['fas', 'trash']" /> 删除选中
       </button>
     </div>
 
     <!-- 数据表格 -->
     <div class="card">
+      <!-- 加载状态指示器 -->
+      <div v-if="isLoading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">加载中...</div>
+      </div>
       <div class="table-container">
         <table class="application-table">
           <thead>
@@ -72,7 +77,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="application in paginatedApplications" :key="application.id">
+            <tr v-for="application in paginatedApplications" :key="application.id" class="table-row">
               <td><input type="checkbox" v-model="selectedApplications" :value="application.id"></td>
               <td>{{ application.id }}</td>
               <td>{{ application.studentName }}</td>
@@ -95,9 +100,10 @@
                   <button class="btn-outline btn small-btn" @click="editApplication(application)" title="编辑">
                     <font-awesome-icon :icon="['fas', 'edit']" />
                   </button>
-                  <button class="btn-outline btn small-btn" @click="viewHistory(application.id)" title="操作历史">
-                    <font-awesome-icon :icon="['fas', 'history']" />
+                  <button class="btn-outline btn small-btn" @click="deleteApplication(application.id)" title="删除">
+                    <font-awesome-icon :icon="['fas', 'trash']" />
                   </button>
+
                 </div>
               </td>
             </tr>
@@ -122,28 +128,143 @@
       </div>
     </div>
 
-    <!-- 申请详情模态框 -->
-    <!-- <ApplicationDetailModal 
-      v-if="selectedApplication"
+    <!-- 编辑弹窗 -->
+    <div v-if="editDialogVisible" class="dialog-overlay" @click="closeEditDialog">
+      <div class="dialog-content" @click.stop>
+        <div class="dialog-header">
+          <h3>编辑申请</h3>
+          <button class="close-btn" @click="closeEditDialog">
+            <font-awesome-icon :icon="['fas', 'times']" />
+          </button>
+        </div>
+        <div class="dialog-body">
+          <form @submit.prevent="saveApplication">
+            <div class="form-row">
+              <div class="form-group">
+                <label>学生姓名</label>
+                <input type="text" v-model="editForm.studentName" required>
+              </div>
+              <div class="form-group">
+                <label>学号</label>
+                <input type="text" v-model="editForm.studentId" required>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>性别</label>
+                <select v-model="editForm.gender" required>
+                  <option value="">请选择</option>
+                  <option value="男">男</option>
+                  <option value="女">女</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>年级</label>
+                <input type="text" v-model="editForm.grade" required>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>申请类型</label>
+                <select v-model="editForm.applicationType" required>
+                  <option value="">请选择</option>
+                  <option value="graduation">毕业申请</option>
+                  <option value="internship">实习申请</option>
+                  <option value="transfer">转学申请</option>
+                  <option value="other">其他申请</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>申请状态</label>
+                <select v-model="editForm.status" required>
+                  <option value="">请选择</option>
+                  <option value="pending">待审核</option>
+                  <option value="approved">已通过</option>
+                  <option value="rejected">已拒绝</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>申请日期</label>
+                <input type="date" v-model="editForm.applicationDate" required>
+              </div>
+              <div class="form-group">
+                <label>审核日期</label>
+                <input type="date" v-model="editForm.reviewDate">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group full-width">
+                <label>审核意见</label>
+                <textarea v-model="editForm.reviewerComments" rows="3"></textarea>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-outline" @click="closeEditDialog">取消</button>
+              <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- 查看详情模态框 -->
+    <AdminViewDetailModal
+      v-if="viewDetailModalVisible"
       :application="selectedApplication"
-      @close="closeDetailModal"
-    /> -->
+      @close="closeViewDetailModal"
+    />
+
+    <!-- 审核操作模态框 -->
+    <AdminReviewDetailModal
+      v-if="reviewDetailModalVisible"
+      :application="selectedApplication"
+      @approve="handleApproveApplication"
+      @reject="handleRejectApplication"
+      @close="closeReviewDetailModal"
+    />
 
 
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
-// import ApplicationDetailModal from './ApplicationDetailModal.vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import AdminViewDetailModal from './AdminViewDetailModal.vue'
+import AdminReviewDetailModal from './AdminReviewDetailModal.vue'
+import { useApplicationsStore } from '../../stores/applications'
+import { useAuthStore } from '../../stores/auth'
 
 
 
+const applicationsStore = useApplicationsStore()
+const authStore = useAuthStore()
 const selectedApplication = ref(null)
 const selectAll = ref(false)
 const selectedApplications = ref([])
 const currentPage = ref(1)
 const pageSize = 10
+const isLoading = ref(false)
+
+// 编辑弹窗相关
+const editDialogVisible = ref(false)
+const editingApplication = ref(null)
+const editForm = ref({
+  studentName: '',
+  studentId: '',
+  gender: '',
+  grade: '',
+  applicationType: '',
+  status: '',
+  applicationDate: '',
+  reviewDate: '',
+  reviewerComments: ''
+})
+
+// 模态框显示状态
+const viewDetailModalVisible = ref(false)
+const reviewDetailModalVisible = ref(false)
 
 const filters = reactive({
   studentName: '',
@@ -154,42 +275,8 @@ const filters = reactive({
   endDate: ''
 })
 
-// 模拟申请数据
-const applications = ref([
-  {
-    id: 'APP20230001',
-    studentName: '张同学',
-    studentId: '12320253211234',
-    applicationType: 'academic',
-    projectName: '全国大学生程序设计竞赛',
-    appliedAt: '2023-08-15T00:00:00Z',
-    status: 'approved',
-    selfScore: 5.0,
-    finalScore: 5.0
-  },
-  {
-    id: 'APP20230002',
-    studentName: '李同学',
-    studentId: '12320253215678',
-    applicationType: 'comprehensive',
-    projectName: '优秀志愿者',
-    appliedAt: '2023-09-02T00:00:00Z',
-    status: 'pending',
-    selfScore: 2.0,
-    finalScore: null
-  },
-  {
-    id: 'APP20230003',
-    studentName: '王同学',
-    studentId: '12320253218765',
-    applicationType: 'academic',
-    projectName: '学术论文发表',
-    appliedAt: '2023-07-20T00:00:00Z',
-    status: 'rejected',
-    selfScore: 3.0,
-    finalScore: 0.0
-  }
-])
+// 使用store中的applications数据
+const applications = computed(() => applicationsStore.applications)
 
 // 计算属性
 const filteredApplications = computed(() => {
@@ -207,6 +294,15 @@ const filteredApplications = computed(() => {
 
   return filtered
 })
+
+// 监听筛选结果变化，确保当前页码有效
+watch(filteredApplications, () => {
+  if (currentPage.value > totalPages.value && totalPages.value > 0) {
+    currentPage.value = totalPages.value
+  } else if (totalPages.value === 0) {
+    currentPage.value = 1
+  }
+}, { deep: true })
 
 const totalApplications = computed(() => filteredApplications.value.length)
 const totalPages = computed(() => Math.ceil(totalApplications.value / pageSize))
@@ -236,8 +332,21 @@ const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString('zh-CN')
 }
 
+const getApplicationTypeText = (type) => {
+  const typeMap = {
+    graduation: '毕业申请',
+    internship: '实习申请',
+    transfer: '转学申请',
+    other: '其他申请'
+  }
+  return typeMap[type] || '未知类型'
+}
+
+
+
 const searchApplications = () => {
   currentPage.value = 1
+  // 由于后端API不支持所有筛选条件，我们在前端进行筛选
 }
 
 const resetFilters = () => {
@@ -264,28 +373,115 @@ const exportData = () => {
   alert('数据导出功能开发中...')
 }
 
-const batchArchive = () => {
-  if (confirm(`确定要归档选中的 ${selectedApplications.value.length} 个申请吗？`)) {
-    applications.value = applications.value.filter(app => !selectedApplications.value.includes(app.id))
-    selectedApplications.value = []
-    selectAll.value = false
-    alert('选中申请已归档')
+const batchDelete = async () => {
+  if (confirm(`确定要删除选中的 ${selectedApplications.value.length} 个申请吗？`)) {
+    isLoading.value = true
+    let successCount = 0
+    let failCount = 0
+    
+    try {
+      // 循环删除每个选中的申请
+      for (const id of selectedApplications.value) {
+        const success = await applicationsStore.deleteApplication(id)
+        if (success) {
+          successCount++
+        } else {
+          failCount++
+        }
+      }
+      
+      // 清空选中列表
+      selectedApplications.value = []
+      selectAll.value = false
+      
+      // 显示结果
+      alert(`批量删除完成：成功 ${successCount} 条，失败 ${failCount} 条`)
+    } catch (error) {
+      console.error('批量删除失败:', error)
+      alert('批量删除过程中发生错误，请重试')
+    } finally {
+      isLoading.value = false
+    }
   }
 }
 
 const viewApplication = (application) => {
   selectedApplication.value = application
+  viewDetailModalVisible.value = true
+}
+
+const closeViewDetailModal = () => {
+  viewDetailModalVisible.value = false
+  selectedApplication.value = null
+}
+
+const handleApproveApplication = async (applicationId, finalScore, comment) => {
+  try {
+    isLoading.value = true
+    const success = await applicationsStore.updateApplicationStatus(applicationId, 'approved', comment, finalScore, authStore.userName)
+    if (success) {
+      alert('审核通过成功')
+      reviewDetailModalVisible.value = false
+      selectedApplication.value = null
+    } else {
+      alert('审核通过失败')
+    }
+  } catch (error) {
+    console.error('审核通过失败:', error)
+    alert('审核通过失败，请重试')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const handleRejectApplication = async (applicationId, comment) => {
+  try {
+    isLoading.value = true
+    const success = await applicationsStore.updateApplicationStatus(applicationId, 'rejected', comment, 0, authStore.userName)
+    if (success) {
+      alert('驳回成功')
+      reviewDetailModalVisible.value = false
+      selectedApplication.value = null
+    } else {
+      alert('驳回失败')
+    }
+  } catch (error) {
+    console.error('驳回失败:', error)
+    alert('驳回失败，请重试')
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const editApplication = (application) => {
-  alert(`编辑申请 ${application.id}`)
+  selectedApplication.value = application
+  reviewDetailModalVisible.value = true
 }
 
-const viewHistory = (applicationId) => {
-  alert(`查看申请 ${applicationId} 的历史记录`)
+const deleteApplication = async (applicationId) => {
+  if (confirm('确定要删除这条申请记录吗？')) {
+    try {
+      const success = await applicationsStore.deleteApplication(applicationId)
+      if (success) {
+        alert('删除成功')
+      } else {
+        alert('删除失败')
+      }
+    } catch (error) {
+      console.error('删除申请失败:', error)
+      alert('删除失败，请重试')
+    }
+  }
 }
+
+
 
 const closeDetailModal = () => {
+  selectedApplication.value = null
+}
+
+const closeReviewDetailModal = () => {
+  reviewDetailModalVisible.value = false
   selectedApplication.value = null
 }
 
@@ -301,9 +497,27 @@ const nextPage = () => {
   }
 }
 
+// 方法
+const loadApplications = async () => {
+  isLoading.value = true
+  try {
+    await applicationsStore.fetchApplications()
+    // 数据加载完成后，确保当前页码有效
+    if (currentPage.value > totalPages.value && totalPages.value > 0) {
+      currentPage.value = totalPages.value
+    } else if (totalPages.value === 0) {
+      currentPage.value = 1
+    }
+  } catch (error) {
+    console.error('加载申请数据失败:', error)
+  } finally {
+      isLoading.value = false
+  }
+}
+
 // 生命周期
 onMounted(() => {
-  // 可以从API加载申请数据
+  loadApplications()
 })
 </script>
 
@@ -341,6 +555,283 @@ onMounted(() => {
   min-width: 140px;
   text-align: center;
 }
+
+/* 编辑弹窗样式 */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.dialog-content {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.dialog-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.close-btn:hover {
+  color: #333;
+}
+
+.dialog-body {
+  padding: 20px;
+}
+
+.form-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.form-group {
+  flex: 1;
+}
+
+.form-group.full-width {
+  flex: 1 1 100%;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #555;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #80bdff;
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.application-details .form-group label {
+  font-weight: 600;
+  color: #333;
+}
+
+.detail-value {
+  display: block;
+  margin-top: 5px;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+  color: #495057;
+}
+
+.detail-value.comment {
+  white-space: pre-wrap;
+  min-height: 80px;
+  font-style: italic;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.status-pending {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.status-approved {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-rejected {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+  border-color: #dc3545;
+}
+
+/* 卡片相对定位，确保加载状态只在卡片内显示 */
+.card {
+  position: relative;
+}
+
+/* 加载状态样式 */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.loading-spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-top: 10px;
+  color: #666;
+  font-size: 14px;
+}
+
+/* 表格行悬停效果 */
+.table-row {
+  transition: background-color 0.2s;
+}
+
+.table-row:hover {
+  background-color: #f8f9fa;
+}
+
+/* 分页控件样式优化 */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  font-size: 14px;
+}
+
+.pagination-info {
+  color: #666;
+}
+
+.pagination-controls {
+  display: flex;
+  gap: 10px;
+}
+
+/* 按钮悬停效果 */
+.btn:hover,
+.btn-outline:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* 操作列按钮悬停效果 - 取消上移 */
+.action-buttons .small-btn:hover {
+  transform: none;
+}
+
+/* 小按钮样式优化 */
+.small-btn {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-group {
+    margin-bottom: 10px;
+  }
+  
+  .form-row {
+    flex-direction: column;
+  }
+  
+  .table-container {
+    overflow-x: auto;
+  }
+  
+  .pagination {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+
 </style>
 
 <style>
