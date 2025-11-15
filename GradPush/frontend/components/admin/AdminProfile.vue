@@ -2,7 +2,7 @@
   <div class="page-content">
     <div class="page-title">
       <span>个人信息</span>
-      <button class="btn btn-outline" @click="toggleEdit" :disabled="saving">
+      <button class="btn btn-outline" @click="toggleEdit" :disabled="saving || uploadingAvatar">
         <font-awesome-icon :icon="['fas', 'edit']" />
         {{ isEditing ? '取消编辑' : '编辑信息' }}
       </button>
@@ -11,6 +11,23 @@
     <div class="card">
       <div class="card-title">基本资料</div>
       <form @submit.prevent="saveProfile">
+        <!-- 头像显示与上传 -->
+        <div class="form-row avatar-row">
+          <div class="form-group avatar-group">
+            <div class="avatar-container">
+              <img :src="getAvatarUrl" alt="头像" class="avatar-img" />
+              <div class="avatar-overlay" @click="triggerAvatarUpload">
+                <font-awesome-icon :icon="['fas', 'camera']" class="avatar-icon" />
+                <span>更换头像</span>
+              </div>
+            </div>
+            <div class="avatar-tooltip">
+              上传图片限制：JPG、PNG格式，大小不超过2MB
+            </div>
+            <input type="file" ref="avatarInput" @change="handleAvatarChange" accept="image/*" style="display: none;">
+          </div>
+        </div>
+
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">姓名</label>
@@ -29,18 +46,18 @@
           </div>
           <div class="form-group">
             <label class="form-label">角色</label>
-            <input type="text" class="form-control" v-model="profile.roleName" :disabled="!isEditing" required>
+            <input type="text" class="form-control" v-model="profile.roleName" :disabled="!isEditing">
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">电子邮箱</label>
-            <input type="email" class="form-control" v-model="profile.email" :disabled="!isEditing" required>
+            <input type="email" class="form-control" v-model="profile.email" :disabled="!isEditing">
           </div>
           <div class="form-group">
             <label class="form-label">手机号码</label>
-            <input type="tel" class="form-control" v-model="profile.phone" :disabled="!isEditing" required>
+            <input type="tel" class="form-control" v-model="profile.phone" :disabled="!isEditing">
           </div>
         </div>
 
@@ -111,7 +128,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import api from '../../utils/api'
 
@@ -120,6 +137,8 @@ const authStore = useAuthStore()
 const isEditing = ref(false)
 const saving = ref(false)
 const showChangePassword = ref(false)
+const uploadingAvatar = ref(false)
+const avatarInput = ref(null)
 
 const originalProfile = ref({})
 const profile = reactive({
@@ -128,7 +147,23 @@ const profile = reactive({
   faculty: '',
   roleName: '',
   email: '',
-  phone: ''
+  phone: '',
+  avatar: ''
+})
+
+// 计算头像URL，确保包含完整的服务器地址前缀
+const getAvatarUrl = computed(() => {
+  if (!profile.avatar || profile.avatar === '') return '/images/default-avatar.jpg'
+  // 检查头像URL是否已经包含完整路径
+  if (profile.avatar.startsWith('http://') || profile.avatar.startsWith('https://')) {
+    return profile.avatar
+  }
+  // 检查是否是本地默认头像路径
+  if (profile.avatar.startsWith('/images/')) {
+    return profile.avatar
+  }
+  // 添加服务器地址前缀
+  return `http://localhost:5001${profile.avatar}`
 })
 
 const passwordForm = reactive({
@@ -154,11 +189,52 @@ const cancelEdit = () => {
   isEditing.value = false
 }
 
+const triggerAvatarUpload = () => {
+  if (avatarInput.value) {
+    avatarInput.value.click()
+  }
+}
+
+const handleAvatarChange = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  // 检查文件大小（限制为2MB）
+  if (file.size > 2 * 1024 * 1024) {
+    alert('头像文件大小不能超过2MB')
+    return
+  }
+
+  uploadingAvatar.value = true
+  try {
+    // 调用上传头像API
+    const response = await api.uploadAvatar(authStore.user.username, file)
+    
+    // 更新用户信息
+    authStore.updateUserInfo(response.user)
+    
+    // 更新本地profile中的头像
+    profile.avatar = response.user.avatar
+    
+    alert('头像上传成功')
+  } catch (error) {
+    console.error('头像上传失败:', error)
+    alert(`头像上传失败: ${error.message || '请稍后重试'}`)
+  } finally {
+    uploadingAvatar.value = false
+    // 清空文件输入
+    if (avatarInput.value) {
+      avatarInput.value.value = ''
+    }
+  }
+}
+
 const saveProfile = async () => {
   saving.value = true
   try {
     // 准备更新数据
     const updateData = {
+      username: authStore.user.username,
       name: profile.name,
       faculty: profile.faculty,
       roleName: profile.roleName,
@@ -239,7 +315,8 @@ onMounted(() => {
       faculty: authStore.user.faculty || '',
       roleName: authStore.user.roleName || '',
       email: authStore.user.email || '',
-      phone: authStore.user.phone || ''
+      phone: authStore.user.phone || '',
+      avatar: authStore.user.avatar || ''
     })
   }
   originalProfile.value = { ...profile }
@@ -247,6 +324,91 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 引入共享样式 */
+@import '../common/shared-styles.css';
+
+/* 头像样式 */
+.avatar-row {
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.avatar-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  position: relative;
+}
+
+.avatar-container {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #e8e8e8;
+  cursor: pointer;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* 添加抗锯齿效果 */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  /* 添加轻微阴影增强视觉效果 */
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.avatar-container:hover .avatar-overlay {
+  opacity: 1;
+}
+
+.avatar-icon {
+  font-size: 24px;
+  margin-bottom: 5px;
+}
+
+.avatar-tooltip {
+  position: absolute;
+  top: 160px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.3);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  z-index: 10;
+}
+
+.avatar-container:hover + .avatar-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
 /* 组件特有样式 */
 /* 模态框底部按钮居中 */
 .modal-footer {
@@ -264,6 +426,7 @@ onMounted(() => {
   display: flex;
   gap: 20px;
   margin-bottom: 20px;
+  align-items: center;
 }
 
 .form-row .form-group {
@@ -301,6 +464,7 @@ onMounted(() => {
   margin-top: 5px;
 }
 
+/* 响应式调整 */
 @media (max-width: 768px) {
   .form-row {
     flex-direction: column;

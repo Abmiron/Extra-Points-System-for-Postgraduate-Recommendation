@@ -36,6 +36,8 @@ def get_applications():
     reviewed_by = request.args.get('reviewedBy')
     reviewed_start_date = request.args.get('reviewedStartDate')
     reviewed_end_date = request.args.get('reviewedEndDate')
+    department = request.args.get('department')
+    major = request.args.get('major')
     
     # 构建查询
     query = Application.query
@@ -54,6 +56,12 @@ def get_applications():
     
     if reviewed_by:
         query = query.filter(Application.reviewed_by.like(f'%{reviewed_by}%'))
+    
+    if department:
+        query = query.filter_by(department=department)
+    
+    if major:
+        query = query.filter_by(major=major)
     
     # 审核时间筛选
     if reviewed_start_date:

@@ -8,38 +8,71 @@
     <!-- 搜索区域 - 修改为与用户管理组件相同样式 -->
     <div class="filters">
       <div class="filter-group">
-        <input type="text" class="form-control" v-model="filters.studentName" placeholder="学生姓名">
+        <span class="filter-label">学号:</span>
+        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="输入学生学号">
       </div>
       <div class="filter-group">
-        <input type="text" class="form-control" v-model="filters.studentId" placeholder="学号">
+        <span class="filter-label">姓名:</span>
+        <input type="text" class="form-control small" v-model="filters.studentName" placeholder="输入学生姓名">
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">所在系:</span>
+        <select v-model="filters.department" @change="searchApplications">
+          <option value="all">全部</option>
+          <option value="cs">计算机科学系</option>
+          <option value="se">软件工程系</option>
+          <option value="ai">人工智能系</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">专业:</span>
+        <select v-model="filters.major" @change="searchApplications">
+          <option value="all">全部</option>
+          <option value="cs">计算机科学与技术</option>
+          <option value="se">软件工程</option>
+          <option value="ai">人工智能</option>
+        </select>
       </div>
       <div class="filter-group">
         <span class="filter-label">申请类型:</span>
-        <select class="form-control" v-model="filters.applicationType">
+        <select v-model="filters.applicationType">
           <option value="all">全部类型</option>
           <option value="academic">学术专长</option>
           <option value="comprehensive">综合表现</option>
         </select>
       </div>
       <div class="filter-group">
-        <span class="filter-label">审核状态:</span>
-        <select class="form-control" v-model="filters.status">
-          <option value="all">全部状态</option>
-          <option value="pending">待审核</option>
-          <option value="approved">已通过</option>
-          <option value="rejected">未通过</option>
-        </select>
-      </div>
-      <div class="filter-group date-range-group">
-        <span class="filter-label">申请时间:</span>
-        <div class="date-range">
-          <input type="date" class="form-control" v-model="filters.startDate">
-          <span class="date-separator">至</span>
-          <input type="date" class="form-control" v-model="filters.endDate">
+          <span class="filter-label">审核状态:</span>
+          <select v-model="filters.status">
+            <option value="all">全部状态</option>
+            <option value="pending">待审核</option>
+            <option value="approved">已通过</option>
+            <option value="rejected">未通过</option>
+          </select>
         </div>
-      </div>
-      <button class="btn" @click="searchApplications">搜索</button>
-      <button class="btn btn-outline" @click="resetFilters">重置</button>
+        <div class="filter-group">
+          <span class="filter-label">审核人:</span>
+          <input type="text" class="form-control small" v-model="filters.reviewedBy" placeholder="审核人姓名">
+        </div>
+        <div class="filter-group checkbox-filter">
+          <label>
+            <input type="checkbox" v-model="filters.onlyMyReviews">
+            <span>只显示我审核的</span>
+          </label>
+        </div>
+        <div class="filter-group date-range-group">
+          <span class="filter-label">申请时间:</span>
+          <input type="date" class="form-control small" v-model="filters.startDate">
+          至 <input type="date" class="form-control small" v-model="filters.endDate">
+        </div>
+      <div class="filter-group date-range-group">
+          <span class="filter-label">审核时间:</span>
+          <input type="date" class="form-control small" v-model="filters.reviewedStartDate">
+          至 <input type="date" class="form-control small" v-model="filters.reviewedEndDate">
+        </div>
+        <div class="filter-group">
+          <button class="btn btn-outline" @click="resetFilters">清空筛选</button>
+        </div>
     </div>
 
     <!-- 批量操作工具栏 -->
@@ -64,34 +97,38 @@
           <thead>
             <tr>
               <th><input type="checkbox" v-model="selectAll" @change="toggleSelectAll"></th>
-              <th>申请ID</th>
               <th>学生姓名</th>
               <th>学号</th>
+              <th>所在系</th>
+              <th>专业</th>
               <th>申请类型</th>
-              <th>项目名称</th>
               <th>申请时间</th>
-              <th>状态</th>
+              <th>审核时间</th>
+              <th>审核人</th>
               <th>自评分数</th>
               <th>核定分数</th>
+              <th>状态</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="application in paginatedApplications" :key="application.id" class="table-row">
               <td><input type="checkbox" v-model="selectedApplications" :value="application.id"></td>
-              <td>{{ application.id }}</td>
               <td>{{ application.studentName }}</td>
               <td>{{ application.studentId }}</td>
+              <td>{{ getDepartmentText(application.department) }}</td>
+              <td>{{ getMajorText(application.major) }}</td>
               <td>{{ getTypeText(application.applicationType) }}</td>
-              <td>{{ application.projectName }}</td>
               <td>{{ formatDate(application.appliedAt) }}</td>
+              <td>{{ formatDate(application.reviewedAt) }}</td>
+              <td>{{ application.reviewedBy || '-' }}</td>
+              <td>{{ application.selfScore }}</td>
+              <td>{{ application.finalScore || '-' }}</td>
               <td>
                 <span :class="`status-badge status-${application.status}`">
                   {{ getStatusText(application.status) }}
                 </span>
               </td>
-              <td>{{ application.selfScore }}</td>
-              <td>{{ application.finalScore || '-' }}</td>
               <td>
                 <div class="action-buttons">
                   <button class="btn-outline btn small-btn" @click="viewApplication(application)" title="查看">
@@ -108,7 +145,7 @@
               </td>
             </tr>
             <tr v-if="paginatedApplications.length === 0">
-              <td colspan="11" class="no-data">暂无申请数据</td>
+              <td colspan="13" class="no-data">暂无申请数据</td>
             </tr>
           </tbody>
         </table>
@@ -236,8 +273,7 @@ import AdminReviewDetailModal from './AdminReviewDetailModal.vue'
 import { useApplicationsStore } from '../../stores/applications'
 import { useAuthStore } from '../../stores/auth'
 
-
-
+// 初始化store
 const applicationsStore = useApplicationsStore()
 const authStore = useAuthStore()
 const selectedApplication = ref(null)
@@ -269,10 +305,16 @@ const reviewDetailModalVisible = ref(false)
 const filters = reactive({
   studentName: '',
   studentId: '',
+  department: 'all',
+  major: 'all',
   applicationType: 'all',
   status: 'all',
+  reviewedBy: '',
+  onlyMyReviews: false,
   startDate: '',
-  endDate: ''
+  endDate: '',
+  reviewedStartDate: '',
+  reviewedEndDate: ''
 })
 
 // 使用store中的applications数据
@@ -283,13 +325,21 @@ const filteredApplications = computed(() => {
   let filtered = applications.value.filter(app => {
     const nameMatch = !filters.studentName || app.studentName.includes(filters.studentName)
     const idMatch = !filters.studentId || app.studentId.includes(filters.studentId)
+    const departmentMatch = filters.department === 'all' || app.department === filters.department
+    const majorMatch = filters.major === 'all' || app.major === filters.major
     const typeMatch = filters.applicationType === 'all' || app.applicationType === filters.applicationType
     const statusMatch = filters.status === 'all' || app.status === filters.status
+    const reviewedByMatch = !filters.reviewedBy || app.reviewedBy?.includes(filters.reviewedBy)
+      const onlyMyReviewsMatch = !filters.onlyMyReviews || (authStore.user?.name && app.reviewedBy === authStore.user.name)
     const dateMatch = !filters.startDate || !filters.endDate ||
       (new Date(app.appliedAt) >= new Date(filters.startDate) &&
         new Date(app.appliedAt) <= new Date(filters.endDate))
+    const reviewedDateMatch = (!filters.reviewedStartDate && !filters.reviewedEndDate) ||
+      (!app.reviewedAt ? false :
+        ((!filters.reviewedStartDate || new Date(app.reviewedAt) >= new Date(filters.reviewedStartDate)) &&
+         (!filters.reviewedEndDate || new Date(app.reviewedAt) <= new Date(filters.reviewedEndDate))))
 
-    return nameMatch && idMatch && typeMatch && statusMatch && dateMatch
+    return nameMatch && idMatch && departmentMatch && majorMatch && typeMatch && statusMatch && reviewedByMatch && onlyMyReviewsMatch && dateMatch && reviewedDateMatch
   })
 
   return filtered
@@ -318,6 +368,16 @@ const getTypeText = (type) => {
   return type === 'academic' ? '学术专长' : '综合表现'
 }
 
+const getDepartmentText = (department) => {
+  const departments = { cs: '计算机科学系', se: '软件工程系', ai: '人工智能系' }
+  return departments[department] || department
+}
+
+const getMajorText = (major) => {
+  const majors = { cs: '计算机科学与技术', se: '软件工程', ai: '人工智能' }
+  return majors[major] || major
+}
+
 const getStatusText = (status) => {
   const statusText = {
     pending: '待审核',
@@ -344,19 +404,42 @@ const getApplicationTypeText = (type) => {
 
 
 
-const searchApplications = () => {
-  currentPage.value = 1
-  // 由于后端API不支持所有筛选条件，我们在前端进行筛选
-}
+// 监听筛选条件变化，自动更新列表
+watch(
+  () => [
+    filters.studentName,
+    filters.studentId,
+    filters.department,
+    filters.major,
+    filters.applicationType,
+    filters.status,
+    filters.reviewedBy,
+    filters.onlyMyReviews,
+    filters.startDate,
+    filters.endDate,
+    filters.reviewedStartDate,
+    filters.reviewedEndDate
+  ],
+  () => {
+    currentPage.value = 1
+  },
+  { deep: true }
+)
 
 const resetFilters = () => {
   Object.assign(filters, {
     studentName: '',
     studentId: '',
+    department: 'all',
+    major: 'all',
     applicationType: 'all',
     status: 'all',
+    reviewedBy: '',
+    onlyMyReviews: false,
     startDate: '',
-    endDate: ''
+    endDate: '',
+    reviewedStartDate: '',
+    reviewedEndDate: ''
   })
   currentPage.value = 1
 }
@@ -815,6 +898,18 @@ onMounted(() => {
   
   .filter-group {
     margin-bottom: 10px;
+  }
+
+  /* 缩短学号和姓名输入框宽度 */
+  .form-control.small {
+    width: 120px;
+  }
+
+  /* 日期范围筛选样式 */
+  .date-range-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
   
   .form-row {

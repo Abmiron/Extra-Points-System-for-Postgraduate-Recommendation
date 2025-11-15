@@ -72,6 +72,8 @@ export const useApplicationsStore = defineStore('applications', () => {
       const queryParams = new URLSearchParams()
       if (filters.studentId) queryParams.append('studentId', filters.studentId)
       if (filters.studentName) queryParams.append('studentName', filters.studentName)
+      if (filters.department) queryParams.append('department', filters.department)
+      if (filters.major) queryParams.append('major', filters.major)
       if (filters.status) queryParams.append('status', filters.status)
       if (filters.applicationType) queryParams.append('applicationType', filters.applicationType)
       if (filters.reviewedBy) queryParams.append('reviewedBy', filters.reviewedBy)
