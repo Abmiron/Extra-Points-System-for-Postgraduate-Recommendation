@@ -13,6 +13,8 @@ dist
 dist-ssr
 coverage
 *.local
+venv
+# 忽略虚拟环境目录
 
 /cypress/videos/
 /cypress/screenshots/
