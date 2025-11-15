@@ -31,6 +31,10 @@ venv
 
 *.tsbuildinfo
 
-# 忽略上传文件目录
-backend/uploads/avatars/
-backend/uploads/files/
+# 忽略上传文件目录中的所有文件，但保留目录结构
+backend/uploads/avatars/*
+backend/uploads/files/*
+
+# 不忽略.gitkeep文件，这样目录会被Git跟踪
+!backend/uploads/avatars/.gitkeep
+!backend/uploads/files/.gitkeep
