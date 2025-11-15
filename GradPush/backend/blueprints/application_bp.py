@@ -29,20 +29,50 @@ application_bp = Blueprint('application', __name__, url_prefix='/api')
 def get_applications():
     # 获取查询参数
     student_id = request.args.get('studentId')
+    student_name = request.args.get('studentName')
     status = request.args.get('status')
     application_type = request.args.get('applicationType')
+    reviewed_by = request.args.get('reviewedBy')
+    reviewed_start_date = request.args.get('reviewedStartDate')
+    reviewed_end_date = request.args.get('reviewedEndDate')
     
     # 构建查询
     query = Application.query
     
     if student_id:
-        query = query.filter_by(student_id=student_id)
+        query = query.filter(Application.student_id.like(f'%{student_id}%'))
+    
+    if student_name:
+        query = query.filter(Application.student_name.like(f'%{student_name}%'))
     
     if status:
         query = query.filter_by(status=status)
     
     if application_type:
         query = query.filter_by(application_type=application_type)
+    
+    if reviewed_by:
+        query = query.filter(Application.reviewed_by.like(f'%{reviewed_by}%'))
+    
+    # 审核时间筛选
+    if reviewed_start_date:
+        try:
+            # 转换为datetime对象
+            start_date = datetime.fromisoformat(reviewed_start_date)
+            query = query.filter(Application.reviewed_at >= start_date)
+        except (ValueError, TypeError):
+            # 如果日期格式无效，忽略该筛选条件
+            pass
+    
+    if reviewed_end_date:
+        try:
+            # 转换为datetime对象，并设置为当天结束时间
+            end_date = datetime.fromisoformat(reviewed_end_date)
+            end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+            query = query.filter(Application.reviewed_at <= end_date)
+        except (ValueError, TypeError):
+            # 如果日期格式无效，忽略该筛选条件
+            pass
     
     applications = query.all()
     app_list = []
@@ -423,6 +453,8 @@ def get_pending_applications():
     department = request.args.get('department')
     major = request.args.get('major')
     application_type = request.args.get('applicationType')
+    student_id = request.args.get('studentId')
+    student_name = request.args.get('studentName')
     
     # 构建查询
     query = Application.query.filter_by(status='pending')
@@ -435,6 +467,12 @@ def get_pending_applications():
     
     if application_type:
         query = query.filter_by(application_type=application_type)
+    
+    if student_id:
+        query = query.filter(Application.student_id.like(f'%{student_id}%'))
+    
+    if student_name:
+        query = query.filter(Application.student_name.like(f'%{student_name}%'))
     
     applications = query.all()
     app_list = []
@@ -529,6 +567,49 @@ def get_application_statistics():
         'comprehensive_score': round(comprehensive_score, 2),
         'ranking': '-',  # 暂时硬编码，后续可从数据库获取
         'approved_count': len(applications)
+    }
+    
+    return jsonify(statistics_data), 200
+
+# 获取教师审核统计信息接口
+@application_bp.route('/applications/teacher-statistics', methods=['GET'])
+def get_teacher_statistics():
+    # 获取查询参数
+    teacher_id = request.args.get('teacherId')
+    if not teacher_id:
+        return jsonify({'error': '缺少教师ID参数'}), 400
+    
+    # 查询教师审核的所有申请
+    reviewed_applications = Application.query.filter_by(reviewed_by=teacher_id).all()
+    
+    # 查询教师待审核的所有申请
+    pending_applications = Application.query.filter_by(status='pending').all()
+    
+    # 计算本月审核数量
+    from datetime import datetime
+    current_month = datetime.utcnow().month
+    current_year = datetime.utcnow().year
+    reviewed_this_month = [
+        app for app in reviewed_applications 
+        if app.reviewed_at and app.reviewed_at.month == current_month and app.reviewed_at.year == current_year
+    ]
+    
+    # 计算平均审核时间（以天为单位）
+    total_review_time = 0
+    for app in reviewed_applications:
+        if app.reviewed_at:
+            review_time = (app.reviewed_at - app.created_at).total_seconds() / (24 * 3600)  # 转换为天
+            total_review_time += review_time
+    
+    avg_review_time = round(total_review_time / len(reviewed_applications), 1) if reviewed_applications else 0
+    
+    # 构建响应数据
+    statistics_data = {
+        'teacher_id': teacher_id,
+        'pending_count': len(pending_applications),
+        'reviewed_this_month': len(reviewed_this_month),
+        'total_reviewed': len(reviewed_applications),
+        'avg_review_time': avg_review_time
     }
     
     return jsonify(statistics_data), 200

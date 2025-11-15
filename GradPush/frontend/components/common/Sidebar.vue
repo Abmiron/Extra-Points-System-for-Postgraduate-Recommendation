@@ -53,8 +53,7 @@ const menuConfig = {
     { key: 'pending-review', icon: ['fas', 'file-upload'], title: '待审核申请' },
     { key: 'review-history', icon: ['fas', 'history'], title: '审核记录' },
     { key: 'statistics-report', icon: ['fas', 'chart-pie'], title: '统计报表' },
-    { key: 'profile', icon: ['fas', 'user'], title: '个人信息' },
-    { key: 'debug', icon: ['fas', 'bug'], title: '调试页面' } // 添加调试菜单
+    { key: 'profile', icon: ['fas', 'user'], title: '个人信息' }
   ],
   admin: [
     { key: 'user-management', icon: ['fas', 'users'], title: '用户管理' },

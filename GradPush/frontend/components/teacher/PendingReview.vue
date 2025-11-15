@@ -7,6 +7,14 @@
     <!-- 筛选区域 -->
     <div class="filters">
       <div class="filter-group">
+        <span class="filter-label">学号:</span>
+        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="请输入学号">
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">姓名:</span>
+        <input type="text" class="form-control small" v-model="filters.studentName" placeholder="请输入姓名">
+      </div>
+      <div class="filter-group">
         <span class="filter-label">所在系:</span>
         <select v-model="filters.department" @change="filterApplications">
           <option value="all">全部</option>
@@ -33,11 +41,11 @@
         </select>
       </div>
       <div class="filter-group">
-        <span class="filter-label">时间段:</span>
+        <span class="filter-label">申请时间:</span>
         <input type="date" class="form-control small" v-model="filters.startDate">
         至 <input type="date" class="form-control small" v-model="filters.endDate">
       </div>
-      <button class="btn" @click="applyFilters">应用筛选</button>
+      <button class="btn btn-outline" @click="clearFilters">清空筛选</button>
     </div>
 
     <!-- 待审核申请表格 -->
@@ -112,6 +120,8 @@ const filters = ref({
   department: 'all',
   major: 'all',
   type: 'all',
+  studentId: '',
+  studentName: '',
   startDate: '',
   endDate: ''
 })
@@ -135,6 +145,8 @@ const filteredAndPaginatedApplications = computed(() => {
     department: filters.value.department !== 'all' ? filters.value.department : undefined,
     major: filters.value.major !== 'all' ? filters.value.major : undefined,
     type: filters.value.type !== 'all' ? filters.value.type : undefined,
+    studentId: filters.value.studentId,
+    studentName: filters.value.studentName,
     startDate: filters.value.startDate,
     endDate: filters.value.endDate
   })
@@ -154,6 +166,8 @@ const totalApplications = computed(() => {
     department: filters.value.department !== 'all' ? filters.value.department : undefined,
     major: filters.value.major !== 'all' ? filters.value.major : undefined,
     type: filters.value.type !== 'all' ? filters.value.type : undefined,
+    studentId: filters.value.studentId,
+    studentName: filters.value.studentName,
     startDate: filters.value.startDate,
     endDate: filters.value.endDate
   })
@@ -196,8 +210,25 @@ const getTypeText = (type) => {
 }
 
 const formatDate = (dateString) => {
-  if (!dateString) return '-'
+  if (!dateString) return '-'  
   return new Date(dateString).toLocaleDateString('zh-CN')
+}
+
+// 清空筛选条件
+const clearFilters = async () => {
+  filters.value = {
+    department: 'all',
+    major: 'all',
+    type: 'all',
+    studentId: '',
+    studentName: '',
+    startDate: '',
+    endDate: ''
+  }
+  // 重置到第一页
+  pagination.value.currentPage = 1
+  // 重新加载数据
+  await applicationsStore.fetchApplications()
 }
 
 const filterApplications = () => {
@@ -275,6 +306,8 @@ const resetFilters = () => {
     department: 'all',
     major: 'all',
     type: 'all',
+    studentId: '',
+    studentName: '',
     startDate: '',
     endDate: ''
   }

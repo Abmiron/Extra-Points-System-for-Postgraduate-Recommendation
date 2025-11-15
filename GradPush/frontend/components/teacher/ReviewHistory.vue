@@ -7,6 +7,14 @@
     <!-- 筛选区域 -->
     <div class="filters">
       <div class="filter-group">
+        <span class="filter-label">学号:</span>
+        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="输入学生学号">
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">姓名:</span>
+        <input type="text" class="form-control small" v-model="filters.studentName" placeholder="输入学生姓名">
+      </div>
+      <div class="filter-group">
         <span class="filter-label">所在系:</span>
         <select v-model="filters.department" @change="filterApplications">
           <option value="all">全部</option>
@@ -41,11 +49,29 @@
         </select>
       </div>
       <div class="filter-group">
-        <span class="filter-label">时间段:</span>
+        <span class="filter-label">审核人:</span>
+        <input type="text" class="form-control small" v-model="filters.reviewedBy" placeholder="输入审核人姓名">
+      </div>
+      <div class="filter-group checkbox-filter">
+        <label>
+          <input type="checkbox" v-model="filters.myReviewsOnly">
+          <span>只显示我审核的</span>
+        </label>
+      </div>
+      <!-- 申请时间和审核时间放在第二行 -->
+      <div class="filter-group date-range-group">
+        <span class="filter-label">申请时间:</span>
         <input type="date" class="form-control small" v-model="filters.startDate">
         至 <input type="date" class="form-control small" v-model="filters.endDate">
       </div>
-      <button class="btn" @click="applyFilters">应用筛选</button>
+      <div class="filter-group date-range-group">
+        <span class="filter-label">审核时间:</span>
+        <input type="date" class="form-control small" v-model="filters.reviewedStartDate">
+        至 <input type="date" class="form-control small" v-model="filters.reviewedEndDate">
+      </div>
+      <div class="filter-group">
+        <button class="btn btn-outline" @click="clearFilters">清空筛选</button>
+      </div>
     </div>
 
     <!-- 审核记录表格 -->
@@ -146,7 +172,13 @@ const filters = ref({
   type: 'all',
   status: 'all',
   startDate: '',
-  endDate: ''
+  endDate: '',
+  reviewedStartDate: '',
+  reviewedEndDate: '',
+  reviewedBy: '',
+  myReviewsOnly: false,
+  studentId: '',
+  studentName: ''
 })
 
 // 分页
@@ -160,13 +192,20 @@ const loading = computed(() => applicationsStore.loading)
 
 // 筛选和分页处理后的申请数据
 const paginatedApplications = computed(() => {
+  // 获取当前登录教师姓名
+  const currentTeacherName = authStore.user?.name
+  
   // 先筛选
   let filtered = applicationsStore.filterApplications({
     department: filters.value.department !== 'all' ? filters.value.department : undefined,
     major: filters.value.major !== 'all' ? filters.value.major : undefined,
     type: filters.value.type !== 'all' ? filters.value.type : undefined,
     startDate: filters.value.startDate,
-    endDate: filters.value.endDate
+    endDate: filters.value.endDate,
+    reviewedBy: filters.value.reviewedBy || undefined,
+    myReviewsOnly: filters.value.myReviewsOnly ? currentTeacherName : undefined,
+    studentId: filters.value.studentId || undefined,
+    studentName: filters.value.studentName || undefined
   })
   
   // 只保留已审核的
@@ -175,6 +214,23 @@ const paginatedApplications = computed(() => {
   // 如果有状态筛选
   if (filters.value.status !== 'all') {
     filtered = filtered.filter(app => app.status === filters.value.status)
+  }
+  
+  // 如果有审核时间筛选
+  if (filters.value.reviewedStartDate) {
+    const startDate = new Date(filters.value.reviewedStartDate)
+    filtered = filtered.filter(app => {
+      if (!app.reviewedAt) return false
+      return new Date(app.reviewedAt) >= startDate
+    })
+  }
+  if (filters.value.reviewedEndDate) {
+    const endDate = new Date(filters.value.reviewedEndDate)
+    endDate.setHours(23, 59, 59, 999) // 设置为当天结束时间
+    filtered = filtered.filter(app => {
+      if (!app.reviewedAt) return false
+      return new Date(app.reviewedAt) <= endDate
+    })
   }
   
   // 按审核时间倒序排序
@@ -192,18 +248,42 @@ const paginatedApplications = computed(() => {
 
 // 总记录数
 const totalApplications = computed(() => {
+  // 获取当前登录教师姓名
+  const currentTeacherName = authStore.user?.name
+  
   let filtered = applicationsStore.filterApplications({
     department: filters.value.department !== 'all' ? filters.value.department : undefined,
     major: filters.value.major !== 'all' ? filters.value.major : undefined,
     type: filters.value.type !== 'all' ? filters.value.type : undefined,
     startDate: filters.value.startDate,
-    endDate: filters.value.endDate
+    endDate: filters.value.endDate,
+    reviewedBy: filters.value.reviewedBy || undefined,
+    myReviewsOnly: filters.value.myReviewsOnly ? currentTeacherName : undefined,
+    studentId: filters.value.studentId || undefined,
+    studentName: filters.value.studentName || undefined
   })
   
   filtered = filtered.filter(app => app.status === 'approved' || app.status === 'rejected')
   
   if (filters.value.status !== 'all') {
     filtered = filtered.filter(app => app.status === filters.value.status)
+  }
+  
+  // 如果有审核时间筛选
+  if (filters.value.reviewedStartDate) {
+    const startDate = new Date(filters.value.reviewedStartDate)
+    filtered = filtered.filter(app => {
+      if (!app.reviewedAt) return false
+      return new Date(app.reviewedAt) >= startDate
+    })
+  }
+  if (filters.value.reviewedEndDate) {
+    const endDate = new Date(filters.value.reviewedEndDate)
+    endDate.setHours(23, 59, 59, 999) // 设置为当天结束时间
+    filtered = filtered.filter(app => {
+      if (!app.reviewedAt) return false
+      return new Date(app.reviewedAt) <= endDate
+    })
   }
   
   return filtered.length
@@ -244,9 +324,32 @@ const getStatusText = (status) => {
   return statusText[status] || status
 }
 
+// 格式化日期
 const formatDate = (dateString) => {
-  if (!dateString) return '-'
+  if (!dateString) return '-'  
   return new Date(dateString).toLocaleDateString('zh-CN')
+}
+
+// 清空筛选条件
+const clearFilters = async () => {
+  filters.value = {
+    department: 'all',
+    major: 'all',
+    type: 'all',
+    status: 'all',
+    startDate: '',
+    endDate: '',
+    reviewedStartDate: '',
+    reviewedEndDate: '',
+    reviewedBy: '',
+    myReviewsOnly: false,
+    studentId: '',
+    studentName: ''
+  }
+  // 重置到第一页
+  pagination.value.currentPage = 1
+  // 重新加载数据
+  await applicationsStore.fetchApplications()
 }
 
 const filterApplications = () => {
@@ -327,7 +430,9 @@ const resetFilters = () => {
     type: 'all',
     status: 'all',
     startDate: '',
-    endDate: ''
+    endDate: '',
+    reviewedBy: '',
+    myReviewsOnly: false
   }
   pagination.value.currentPage = 1
 }
@@ -347,6 +452,16 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* 确保日期范围筛选组在视觉上形成第二行 */
+.date-range-group {
+  margin-top: 0px;
+}
+
+/* 重置日期范围筛选组前面的margin-top */
+.date-range-group:first-of-type {
+  margin-left: 0;
 }
 
 .date-range {

@@ -2,7 +2,7 @@
   <div class="page-content">
     <div class="page-title">
       <span>个人信息</span>
-      <button class="btn btn-outline" @click="toggleEdit" :disabled="saving">
+      <button class="btn btn-outline" @click="toggleEdit" :disabled="saving || uploadingAvatar">
         <font-awesome-icon :icon="['fas', 'edit']" />
         {{ isEditing ? '取消编辑' : '编辑信息' }}
       </button>
@@ -11,6 +11,23 @@
     <div class="card">
       <div class="card-title">基本资料</div>
       <form @submit.prevent="saveProfile">
+        <!-- 头像显示与上传 -->
+        <div class="form-row avatar-row">
+          <div class="form-group avatar-group">
+            <div class="avatar-container">
+              <img :src="getAvatarUrl" alt="头像" class="avatar-img" />
+              <div class="avatar-overlay" @click="triggerAvatarUpload">
+                <font-awesome-icon :icon="['fas', 'camera']" class="avatar-icon" />
+                <span>更换头像</span>
+              </div>
+            </div>
+            <div class="avatar-tooltip">
+              上传图片限制：JPG、PNG格式，大小不超过2MB
+            </div>
+            <input type="file" ref="avatarInput" @change="handleAvatarChange" accept="image/*" style="display: none;">
+          </div>
+        </div>
+
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">姓名</label>
@@ -29,18 +46,18 @@
           </div>
           <div class="form-group">
             <label class="form-label">职称</label>
-            <input type="text" class="form-control" v-model="profile.title" :disabled="!isEditing" required>
+            <input type="text" class="form-control" v-model="profile.title" :disabled="!isEditing">
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">电子邮箱</label>
-            <input type="email" class="form-control" v-model="profile.email" :disabled="!isEditing" required>
+            <input type="email" class="form-control" v-model="profile.email" :disabled="!isEditing">
           </div>
           <div class="form-group">
             <label class="form-label">手机号码</label>
-            <input type="tel" class="form-control" v-model="profile.phone" :disabled="!isEditing" required>
+            <input type="tel" class="form-control" v-model="profile.phone" :disabled="!isEditing">
           </div>
         </div>
 
@@ -66,8 +83,6 @@
         </div>
       </form>
     </div>
-
-
 
     <!-- 审核统计 -->
     <div class="card">
@@ -160,6 +175,8 @@ const authStore = useAuthStore()
 const isEditing = ref(false)
 const saving = ref(false)
 const showChangePassword = ref(false)
+const uploadingAvatar = ref(false)
+const avatarInput = ref(null)
 
 const originalProfile = ref({})
 const profile = reactive({
@@ -170,7 +187,23 @@ const profile = reactive({
   email: '',
   phone: '',
   office: '',
-  officePhone: ''
+  officePhone: '',
+  avatar: ''
+})
+
+// 计算头像URL，确保包含完整的服务器地址前缀
+const getAvatarUrl = computed(() => {
+  if (!profile.avatar || profile.avatar === '') return '/images/default-avatar.jpg'
+  // 检查头像URL是否已经包含完整路径
+  if (profile.avatar.startsWith('http://') || profile.avatar.startsWith('https://')) {
+    return profile.avatar
+  }
+  // 检查是否是本地默认头像路径
+  if (profile.avatar.startsWith('/images/')) {
+    return profile.avatar
+  }
+  // 添加服务器地址前缀
+  return `http://localhost:5001${profile.avatar}`
 })
 
 const passwordForm = reactive({
@@ -186,16 +219,7 @@ const stats = reactive({
   avgReviewTime: '1.5'
 })
 
-// 计算属性
-const pendingApplications = computed(() => {
-  const savedApplications = JSON.parse(localStorage.getItem('studentApplications') || '[]')
-  return savedApplications.filter(app => app.status === 'pending')
-})
-
-const reviewedApplications = computed(() => {
-  const savedApplications = JSON.parse(localStorage.getItem('studentApplications') || '[]')
-  return savedApplications.filter(app => app.status === 'approved' || app.status === 'rejected')
-})
+// 计算属性 - 不再使用本地存储，改为从API获取
 
 const toggleEdit = () => {
   if (isEditing.value) {
@@ -214,12 +238,53 @@ const cancelEdit = () => {
   isEditing.value = false
 }
 
+const triggerAvatarUpload = () => {
+  if (avatarInput.value) {
+    avatarInput.value.click()
+  }
+}
+
+const handleAvatarChange = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  // 检查文件大小（限制为2MB）
+  if (file.size > 2 * 1024 * 1024) {
+    alert('头像文件大小不能超过2MB')
+    return
+  }
+
+  uploadingAvatar.value = true
+  try {
+    // 调用上传头像API
+    const response = await api.uploadAvatar(authStore.user.username, file)
+    
+    // 更新用户信息
+    authStore.updateUserInfo(response.user)
+    
+    // 更新本地profile中的头像
+    profile.avatar = response.user.avatar
+    
+    alert('头像上传成功')
+  } catch (error) {
+    console.error('头像上传失败:', error)
+    alert(`头像上传失败: ${error.message || '请稍后重试'}`)
+  } finally {
+    uploadingAvatar.value = false
+    // 清空文件输入
+    if (avatarInput.value) {
+      avatarInput.value.value = ''
+    }
+  }
+}
+
 const saveProfile = async () => {
   saving.value = true
 
   try {
     // 准备更新数据
     const updateData = {
+      username: profile.teacherId, // 添加用户名参数
       name: profile.name,
       faculty: profile.faculty,
       title: profile.title,
@@ -293,21 +358,22 @@ const closePasswordModal = () => {
   })
 }
 
-const calculateStats = () => {
-  stats.pendingCount = pendingApplications.value.length
-  stats.totalReviewed = reviewedApplications.value.length
-
-  // 计算本月审核数量
-  const currentMonth = new Date().getMonth()
-  const currentYear = new Date().getFullYear()
-  stats.reviewedThisMonth = reviewedApplications.value.filter(app => {
-    const reviewDate = new Date(app.reviewedAt)
-    return reviewDate.getMonth() === currentMonth && reviewDate.getFullYear() === currentYear
-  }).length
+// 获取教师审核统计数据
+const fetchTeacherStatistics = async () => {
+  try {
+    const response = await api.getTeacherStatistics(profile.teacherId)
+    stats.pendingCount = response.pending_count
+    stats.reviewedThisMonth = response.reviewed_this_month
+    stats.totalReviewed = response.total_reviewed
+    stats.avgReviewTime = response.avg_review_time
+  } catch (error) {
+    console.error('获取审核统计失败:', error)
+    // 错误处理：保持当前数据不变或显示默认值
+  }
 }
 
 // 生命周期
-onMounted(() => {
+onMounted(async () => {
   // 从auth store获取当前用户信息
   if (authStore.user) {
     Object.assign(profile, {
@@ -318,17 +384,349 @@ onMounted(() => {
       email: authStore.user.email || '',
       phone: authStore.user.phone || '',
       office: authStore.user.office || '',
-      officePhone: authStore.user.officePhone || ''
+      officePhone: authStore.user.officePhone || '',
+      avatar: authStore.user.avatar || ''
     })
   }
   originalProfile.value = { ...profile }
 
-  // 计算统计信息
-  calculateStats()
+  // 获取审核统计信息
+  await fetchTeacherStatistics()
 })
 </script>
 
 <style scoped>
+/* 引入共享样式 */
+@import '../common/shared-styles.css';
+
+.teacher-profile {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+
+
+.form-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.form-group {
+  flex: 1;
+}
+
+.label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #333;
+}
+
+.input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #409eff;
+}
+
+.button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-right: 10px;
+}
+
+.button-primary {
+  background-color: #409eff;
+  color: white;
+}
+
+.button-primary:hover {
+  background-color: #66b1ff;
+}
+
+.button-success {
+  background-color: #67c23a;
+  color: white;
+}
+
+.button-success:hover {
+  background-color: #85ce61;
+}
+
+.button-default {
+  background-color: #909399;
+  color: white;
+}
+
+.button-default:hover {
+  background-color: #a6a9ad;
+}
+
+.button:disabled {
+  background-color: #c0c4cc;
+  cursor: not-allowed;
+}
+
+/* 头像样式 */
+.avatar-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 20px;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.avatar-upload-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+  cursor: pointer;
+  color: white;
+}
+
+.avatar-container:hover .avatar-upload-overlay {
+  opacity: 1;
+}
+
+.avatar-upload-text {
+  font-size: 0.875rem;
+  margin-top: 5px;
+}
+
+/* 统计信息样式 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: 500;
+  color: #409eff;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  color: #606266;
+  font-size: 0.875rem;
+}
+
+/* 安全设置样式 */
+.security-section {
+  margin-top: 30px;
+}
+
+.security-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.security-item:last-child {
+  border-bottom: none;
+}
+
+.security-label {
+  font-weight: 500;
+}
+
+/* 模态框样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #909399;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-close:hover {
+  color: #606266;
+}
+
+/* 头像样式 */
+.avatar-row {
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.avatar-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  position: relative;
+}
+
+.avatar-container {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #e8e8e8;
+  cursor: pointer;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* 添加抗锯齿效果 */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  /* 添加轻微阴影增强视觉效果 */
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.avatar-container:hover .avatar-overlay {
+  opacity: 1;
+}
+
+.avatar-icon {
+  font-size: 24px;
+  margin-bottom: 5px;
+}
+
+.avatar-tooltip {
+  position: absolute;
+  top: 160px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.3);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  z-index: 10;
+}
+
+.avatar-container:hover + .avatar-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
 /* 组件特有样式 */
 /* 模态框底部按钮居中 */
 .modal-footer {
@@ -342,25 +740,6 @@ onMounted(() => {
   display: flex;
   gap: 15px;
 }
-.form-row {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.form-row .form-group {
-  flex: 1;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-}
 
 .form-control:disabled {
   background-color: #f5f5f5;
@@ -368,13 +747,10 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
-.form-actions {
-  display: flex;
-  gap: 15px;
-  justify-content: flex-end;
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 1px solid #eee;
+.help-text {
+  font-size: 12px;
+  color: #6c757d;
+  margin-top: 5px;
 }
 
 .error-text {
@@ -383,12 +759,7 @@ onMounted(() => {
   margin-top: 5px;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-}
-
+/* 统计信息样式 */
 .stat-card {
   background: white;
   border-radius: 8px;
@@ -416,15 +787,12 @@ onMounted(() => {
   margin-top: 5px;
 }
 
-/* 模态框样式 */
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 20px;
-  border-top: 1px solid #eee;
+/* 模态框尺寸调整 */
+.modal-content {
+  max-width: 500px;
 }
 
+/* 响应式调整 */
 @media (max-width: 768px) {
   .form-row {
     flex-direction: column;
@@ -438,10 +806,10 @@ onMounted(() => {
   .stats-grid {
     grid-template-columns: 1fr;
   }
-}
-</style>
 
-<style>
-/* 引入共享样式 */
-@import '../common/shared-styles.css';
+  .modal-content {
+    width: 95%;
+    margin: 20px;
+  }
+}
 </style>

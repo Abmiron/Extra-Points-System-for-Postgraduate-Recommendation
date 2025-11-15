@@ -73,4 +73,5 @@ export default {
   updateApplication: (id, data) => apiRequest(`/applications/${id}`, 'PUT', data),
   deleteApplication: (id) => apiRequest(`/applications/${id}`, 'DELETE'),
   getStatistics: (studentId) => apiRequest(`/applications/statistics?studentId=${studentId}`),
+  getTeacherStatistics: (teacherId) => apiRequest(`/applications/teacher-statistics?teacherId=${teacherId}`),
 };

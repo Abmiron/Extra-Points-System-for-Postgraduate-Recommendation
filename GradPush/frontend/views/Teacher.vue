@@ -27,8 +27,6 @@ import PendingReview from '../components/teacher/PendingReview.vue'
 import ReviewHistory from '../components/teacher/ReviewHistory.vue'
 import StatisticsReport from '../components/teacher/StatisticsReport.vue'
 import TeacherProfile from '../components/teacher/TeacherProfile.vue'
-// 导入调试组件
-import DebugPage from '../components/teacher/DebugPage.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -42,8 +40,7 @@ const pageComponents = {
   'pending-review': PendingReview,
   'review-history': ReviewHistory,
   'statistics-report': StatisticsReport,
-  'profile': TeacherProfile,
-  'debug': DebugPage // 添加调试页面
+  'profile': TeacherProfile
 }
 
 const currentPageComponent = computed(() => pageComponents[currentPage.value])

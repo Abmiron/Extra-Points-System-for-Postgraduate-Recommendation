@@ -67,8 +67,12 @@ export const useApplicationsStore = defineStore('applications', () => {
     try {
       const queryParams = new URLSearchParams()
       if (filters.studentId) queryParams.append('studentId', filters.studentId)
+      if (filters.studentName) queryParams.append('studentName', filters.studentName)
       if (filters.status) queryParams.append('status', filters.status)
       if (filters.applicationType) queryParams.append('applicationType', filters.applicationType)
+      if (filters.reviewedBy) queryParams.append('reviewedBy', filters.reviewedBy)
+      if (filters.reviewedStartDate) queryParams.append('reviewedStartDate', filters.reviewedStartDate)
+      if (filters.reviewedEndDate) queryParams.append('reviewedEndDate', filters.reviewedEndDate)
       
       const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ''
       const data = await apiRequest(`/applications${queryString}`)
@@ -111,6 +115,8 @@ export const useApplicationsStore = defineStore('applications', () => {
       if (filters.department) queryParams.append('department', filters.department)
       if (filters.major) queryParams.append('major', filters.major)
       if (filters.applicationType) queryParams.append('applicationType', filters.applicationType)
+      if (filters.studentId) queryParams.append('studentId', filters.studentId)
+      if (filters.studentName) queryParams.append('studentName', filters.studentName)
       
       const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ''
       const data = await apiRequest(`/applications/pending${queryString}`)
@@ -359,6 +365,24 @@ export const useApplicationsStore = defineStore('applications', () => {
         return false
       }
       
+      // 按学生学号筛选（模糊匹配）
+      if (filters.studentId) {
+        const searchTerm = filters.studentId.toLowerCase()
+        const studentId = (application.studentId || '').toLowerCase()
+        if (!studentId.includes(searchTerm)) {
+          return false
+        }
+      }
+      
+      // 按学生姓名筛选（模糊匹配）
+      if (filters.studentName) {
+        const searchTerm = filters.studentName.toLowerCase()
+        const studentName = (application.studentName || '').toLowerCase()
+        if (!studentName.includes(searchTerm)) {
+          return false
+        }
+      }
+      
       // 按时间段筛选
       if (filters.startDate) {
         const applicationDate = new Date(application.appliedAt)
@@ -373,6 +397,22 @@ export const useApplicationsStore = defineStore('applications', () => {
         const endDate = new Date(filters.endDate)
         endDate.setHours(23, 59, 59, 999) // 设置为当天结束时间
         if (applicationDate > endDate) {
+          return false
+        }
+      }
+      
+      // 按审核人筛选（模糊匹配）
+      if (filters.reviewedBy && filters.reviewedBy !== 'all') {
+        const searchTerm = filters.reviewedBy.toLowerCase()
+        const reviewedBy = (application.reviewedBy || '').toLowerCase()
+        if (!reviewedBy.includes(searchTerm)) {
+          return false
+        }
+      }
+      
+      // 只显示我审核的
+      if (filters.myReviewsOnly) {
+        if (application.reviewedBy !== filters.myReviewsOnly) {
           return false
         }
       }
