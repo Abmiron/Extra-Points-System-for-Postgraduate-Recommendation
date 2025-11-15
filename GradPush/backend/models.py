@@ -2,12 +2,13 @@
 """
 数据模型文件
 
-该文件定义了应用的数据库模型，包括用户模型(User)和申请模型(Application)，
+该文件定义了应用的数据库模型，包括用户模型(User)、申请模型(Application)和学生模型(Student)，
 负责数据库表结构的设计和数据关系的定义，提供数据操作的基础。
 
 主要模型：
 - User: 用户信息模型，存储用户账号、密码、角色等信息
 - Application: 申请信息模型，存储推免加分申请的相关数据
+- Student: 学生信息模型，存储学生基本信息和学业成绩
 """
 
 from extensions import db
@@ -93,3 +94,94 @@ class Application(db.Model):
     
     def __repr__(self):
         return f'<Application {self.id}>'
+
+# 学术专长详情模型
+class AcademicSpecialtyDetail(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.String(20), nullable=False)
+    project_name = db.Column(db.String(200), nullable=False)  # 项目名称
+    award_date = db.Column(db.Date, nullable=False)  # 获奖时间
+    award_level = db.Column(db.String(50), nullable=True)  # 奖项级别
+    award_type = db.Column(db.String(50), nullable=True)  # 个人或集体奖项
+    author_order = db.Column(db.String(20), nullable=True)  # 集体奖项中第几作者/参赛者
+    self_score = db.Column(db.Float, nullable=False)  # 自评加分
+    score_basis = db.Column(db.Text, nullable=True)  # 加分依据
+    approved_score = db.Column(db.Float, nullable=True)  # 学院核定加分
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<AcademicSpecialtyDetail {self.id}>'
+
+# 综合表现详情模型
+class ComprehensivePerformanceDetail(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.String(20), nullable=False)
+    project_name = db.Column(db.String(200), nullable=False)  # 项目名称
+    award_date = db.Column(db.Date, nullable=False)  # 获奖时间
+    award_level = db.Column(db.String(50), nullable=True)  # 奖项级别
+    award_type = db.Column(db.String(50), nullable=True)  # 个人或集体奖项
+    author_order = db.Column(db.String(20), nullable=True)  # 集体奖项中第几作者/参赛者
+    self_score = db.Column(db.Float, nullable=False)  # 自评加分
+    score_basis = db.Column(db.Text, nullable=True)  # 加分依据
+    approved_score = db.Column(db.Float, nullable=True)  # 学院核定加分
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<ComprehensivePerformanceDetail {self.id}>'
+
+# 学生总评模型
+class StudentEvaluation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.String(20), unique=True, nullable=False)  # 学号
+    student_name = db.Column(db.String(100), nullable=False)  # 姓名
+    department = db.Column(db.String(100), nullable=False)  # 系
+    major = db.Column(db.String(100), nullable=False)  # 专业
+    gender = db.Column(db.String(10), nullable=True)  # 性别
+    cet4_score = db.Column(db.Integer, nullable=True)  # CET4成绩
+    cet6_score = db.Column(db.Integer, nullable=True)  # CET6成绩
+    
+    # 学业综合成绩
+    gpa = db.Column(db.Float, nullable=True)  # 推免绩点(满分4分)
+    academic_score = db.Column(db.Float, nullable=True)  # 换算后的成绩(满分100分)
+    academic_weighted = db.Column(db.Float, nullable=True)  # 学业综合成绩（80%）
+    
+    # 学术专长成绩（占总分12%）
+    academic_specialty_total = db.Column(db.Float, nullable=True)  # 学院核定总分
+    
+    # 综合表现加分（占总分8%）
+    comprehensive_performance_total = db.Column(db.Float, nullable=True)  # 学院核定总分
+    
+    # 总分与排名
+    total_score = db.Column(db.Float, nullable=True)  # 考核综合成绩总分
+    comprehensive_score = db.Column(db.Float, nullable=True)  # 综合成绩
+    major_ranking = db.Column(db.Integer, nullable=True)  # 专业成绩排名
+    total_students = db.Column(db.Integer, nullable=True)  # 排名人数
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<StudentEvaluation {self.student_name} ({self.student_id})>'
+
+# 学生模型
+class Student(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.String(20), unique=True, nullable=False)  # 学号
+    student_name = db.Column(db.String(100), nullable=False)  # 姓名
+    gender = db.Column(db.String(10), nullable=True)  # 性别
+    department = db.Column(db.String(100), nullable=False)  # 系
+    major = db.Column(db.String(100), nullable=False)  # 专业
+    cet4_score = db.Column(db.Integer, nullable=True)  # CET4成绩
+    cet6_score = db.Column(db.Integer, nullable=True)  # CET6成绩
+    gpa = db.Column(db.Float, nullable=True)  # 推免绩点(满分4分)
+    academic_score = db.Column(db.Float, nullable=True)  # 换算后的学业成绩(满分100分)
+    academic_weighted = db.Column(db.Float, nullable=True)  # 学业综合成绩（80%）
+    ranking = db.Column(db.Integer, nullable=True)  # 专业成绩排名
+    total_students = db.Column(db.Integer, nullable=True)  # 排名人数
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Student {self.student_name} ({self.student_id})>'

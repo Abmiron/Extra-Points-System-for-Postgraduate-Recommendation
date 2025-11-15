@@ -84,32 +84,7 @@
       </form>
     </div>
 
-    <!-- 审核统计 -->
-    <div class="card">
-      <div class="card-title">审核统计</div>
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">待审核申请</div>
-          <div class="stat-value">{{ stats.pendingCount }}</div>
-          <div class="stat-note">需要尽快处理</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">本月已审核</div>
-          <div class="stat-value">{{ stats.reviewedThisMonth }}</div>
-          <div class="stat-note">本月审核数量</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">总审核数量</div>
-          <div class="stat-value">{{ stats.totalReviewed }}</div>
-          <div class="stat-note">累计审核数量</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">平均审核时间</div>
-          <div class="stat-value">{{ stats.avgReviewTime }}</div>
-          <div class="stat-note">天</div>
-        </div>
-      </div>
-    </div>
+
 
     <!-- 修改密码 -->
     <div class="card">
@@ -212,12 +187,7 @@ const passwordForm = reactive({
   confirmPassword: ''
 })
 
-const stats = reactive({
-  pendingCount: 0,
-  reviewedThisMonth: 0,
-  totalReviewed: 0,
-  avgReviewTime: '1.5'
-})
+
 
 // 计算属性 - 不再使用本地存储，改为从API获取
 
@@ -358,19 +328,7 @@ const closePasswordModal = () => {
   })
 }
 
-// 获取教师审核统计数据
-const fetchTeacherStatistics = async () => {
-  try {
-    const response = await api.getTeacherStatistics(profile.teacherId)
-    stats.pendingCount = response.pending_count
-    stats.reviewedThisMonth = response.reviewed_this_month
-    stats.totalReviewed = response.total_reviewed
-    stats.avgReviewTime = response.avg_review_time
-  } catch (error) {
-    console.error('获取审核统计失败:', error)
-    // 错误处理：保持当前数据不变或显示默认值
-  }
-}
+
 
 // 生命周期
 onMounted(async () => {
@@ -390,8 +348,7 @@ onMounted(async () => {
   }
   originalProfile.value = { ...profile }
 
-  // 获取审核统计信息
-  await fetchTeacherStatistics()
+
 })
 </script>
 
@@ -542,33 +499,7 @@ onMounted(async () => {
   margin-top: 5px;
 }
 
-/* 统计信息样式 */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-bottom: 20px;
-}
 
-.stat-card {
-  background-color: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  text-align: center;
-}
-
-.stat-number {
-  font-size: 2rem;
-  font-weight: 500;
-  color: #409eff;
-  margin-bottom: 5px;
-}
-
-.stat-label {
-  color: #606266;
-  font-size: 0.875rem;
-}
 
 /* 安全设置样式 */
 .security-section {
@@ -759,33 +690,7 @@ onMounted(async () => {
   margin-top: 5px;
 }
 
-/* 统计信息样式 */
-.stat-card {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  text-align: center;
-  border-left: 4px solid #003366;
-}
 
-.stat-value {
-  font-size: 28px;
-  font-weight: bold;
-  color: #003366;
-  margin: 10px 0;
-}
-
-.stat-label {
-  color: #666;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.stat-note {
-  color: #888;
-  font-size: 12px;
-  margin-top: 5px;
-}
 
 /* 模态框尺寸调整 */
 .modal-content {

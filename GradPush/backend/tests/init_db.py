@@ -5,8 +5,14 @@
 该脚本用于初始化数据库表结构
 """
 
+import sys
+import os
+
+# 添加当前目录的父目录到Python路径
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from app import app, db
-from models import User, Application
+from models import User, Application, AcademicSpecialtyDetail, ComprehensivePerformanceDetail, StudentEvaluation, Student
 
 with app.app_context():
     try:

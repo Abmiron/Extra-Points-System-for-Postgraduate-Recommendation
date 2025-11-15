@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
 // API基础URL
-const API_BASE_URL = 'http://localhost:5001/api'
+const API_BASE_URL = '/api'
 
 // 封装fetch请求
 async function apiRequest(endpoint, options = {}) {
@@ -23,19 +23,23 @@ async function apiRequest(endpoint, options = {}) {
   try {
     const response = await fetch(url, config)
     
+    // 先读取响应体为文本
+    const responseText = await response.text()
+    
     if (!response.ok) {
-      // 尝试获取响应的详细内容
-      let errorDetails = ''
+      // 尝试解析为JSON
+      let errorDetails = responseText
       try {
-        const errorData = await response.json()
+        const errorData = JSON.parse(responseText)
         errorDetails = JSON.stringify(errorData, null, 2)
       } catch {
-        errorDetails = await response.text()
+        // 如果解析失败，直接使用文本
       }
       throw new Error(`API请求失败: ${response.statusText}\n详细信息: ${errorDetails}`)
     }
 
-    return await response.json()
+    // 解析为JSON并返回
+    return JSON.parse(responseText)
   } catch (error) {
     console.error('API请求错误:', error)
     throw error
@@ -438,6 +442,28 @@ export const useApplicationsStore = defineStore('applications', () => {
     }
   }
 
+  // 获取学生推免成绩排名
+  const fetchStudentsRanking = async (filters = {}) => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const queryParams = new URLSearchParams()
+      if (filters.department && filters.department !== 'all') queryParams.append('department', filters.department)
+      if (filters.major && filters.major !== 'all') queryParams.append('major', filters.major)
+      
+      const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ''
+      const data = await apiRequest(`/applications/students-ranking${queryString}`)
+      return data
+    } catch (err) {
+      console.error('加载学生排名数据失败:', err)
+      error.value = '加载学生排名数据失败'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     // 状态
     applications,
@@ -461,6 +487,7 @@ export const useApplicationsStore = defineStore('applications', () => {
     filterApplications,
     approveApplication,
     rejectApplication,
-    fetchStatistics
+    fetchStatistics,
+    fetchStudentsRanking
   }
 })
