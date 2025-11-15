@@ -381,6 +381,23 @@ export const useApplicationsStore = defineStore('applications', () => {
     })
   }
 
+  // 获取学生加分统计数据
+  const fetchStatistics = async (studentId) => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const data = await apiRequest(`/applications/statistics?studentId=${studentId}`)
+      return data
+    } catch (err) {
+      console.error('加载加分统计数据失败:', err)
+      error.value = '加载加分统计数据失败'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     // 状态
     applications,
@@ -403,6 +420,7 @@ export const useApplicationsStore = defineStore('applications', () => {
     getApplicationById,
     filterApplications,
     approveApplication,
-    rejectApplication
+    rejectApplication,
+    fetchStatistics
   }
 })

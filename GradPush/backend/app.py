@@ -39,6 +39,16 @@ from routes import main_bp
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+# 配置头像文件的静态服务
+@app.route('/uploads/avatars/<path:filename>')
+def uploaded_avatar(filename):
+    return send_from_directory(app.config['AVATAR_FOLDER'], filename)
+
+# 配置普通文件的静态服务
+@app.route('/uploads/files/<path:filename>')
+def uploaded_app_file(filename):
+    return send_from_directory(app.config['FILE_FOLDER'], filename)
+
 # 注册蓝图
 app.register_blueprint(auth_bp)
 app.register_blueprint(user_bp)

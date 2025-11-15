@@ -2,7 +2,7 @@
   <div class="page-content">
     <div class="page-title">
       <span>个人信息</span>
-      <button class="btn btn-outline" @click="toggleEdit" :disabled="saving">
+      <button class="btn btn-outline" @click="toggleEdit" :disabled="saving || uploadingAvatar">
         <font-awesome-icon :icon="['fas', 'edit']" />
         {{ isEditing ? '取消编辑' : '编辑信息' }}
       </button>
@@ -11,6 +11,24 @@
     <div class="card">
       <div class="card-title">基本资料</div>
       <form @submit.prevent="saveProfile">
+        <!-- 头像显示与上传 -->
+        <div class="form-row avatar-row">
+          <div class="form-group avatar-group">
+            <div class="avatar-container">
+              <img :src="getAvatarUrl" alt="头像" class="avatar-img" />
+              <div class="avatar-overlay" @click="triggerAvatarUpload">
+                <font-awesome-icon :icon="['fas', 'camera']" class="avatar-icon" />
+                <span>更换头像</span>
+              </div>
+            </div>
+            <div class="avatar-tooltip">
+              上传图片限制：JPG、PNG格式，大小不超过2MB
+            </div>
+            <input type="file" ref="avatarInput" @change="handleAvatarChange" accept="image/*" style="display: none;">
+          </div>
+        </div>
+
+        <!-- 基本资料表单 -->
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">姓名</label>
@@ -36,11 +54,11 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">电子邮箱</label>
-            <input type="email" class="form-control" v-model="profile.email" :disabled="!isEditing" required>
+            <input type="email" class="form-control" v-model="profile.email" :disabled="!isEditing">
           </div>
           <div class="form-group">
             <label class="form-label">手机号码</label>
-            <input type="tel" class="form-control" v-model="profile.phone" :disabled="!isEditing" required>
+            <input type="tel" class="form-control" v-model="profile.phone" :disabled="!isEditing">
           </div>
         </div>
 
@@ -111,8 +129,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useAuthStore } from '../../stores/auth'
+import api from '../../utils/api.js'
 
 const authStore = useAuthStore()
 
@@ -125,10 +144,26 @@ const profile = reactive({
   name: '',
   studentId: '',
   faculty: '',
+  department: '',
   major: '',
   email: '',
-  phone: ''
+  phone: '',
+  avatar: ''
 })
+
+// 计算头像URL，确保包含完整的服务器地址前缀
+const getAvatarUrl = computed(() => {
+  if (!profile.avatar) return '/images/default-avatar.jpg'
+  // 检查头像URL是否已经包含完整路径
+  if (profile.avatar.startsWith('http://') || profile.avatar.startsWith('https://')) {
+    return profile.avatar
+  }
+  // 添加服务器地址前缀
+  return `http://localhost:5001${profile.avatar}`
+})
+
+const uploadingAvatar = ref(false)
+const avatarInput = ref(null)
 
 const passwordForm = reactive({
   currentPassword: '',
@@ -153,36 +188,73 @@ const cancelEdit = () => {
   isEditing.value = false
 }
 
+const triggerAvatarUpload = () => {
+  if (avatarInput.value) {
+    avatarInput.value.click()
+  }
+}
+
+const handleAvatarChange = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  // 检查文件大小（限制为2MB）
+  if (file.size > 2 * 1024 * 1024) {
+    alert('头像文件大小不能超过2MB')
+    return
+  }
+
+  uploadingAvatar.value = true
+  try {
+    // 调用上传头像API
+    const response = await api.uploadAvatar(authStore.user.username, file)
+    
+    // 更新用户信息
+    authStore.updateUserInfo(response.user)
+    
+    // 更新本地profile中的头像
+    profile.avatar = response.user.avatar
+    
+    alert('头像上传成功')
+  } catch (error) {
+    console.error('头像上传失败:', error)
+    alert(`头像上传失败: ${error.message || '请稍后重试'}`)
+  } finally {
+    uploadingAvatar.value = false
+    // 清空文件输入
+    if (avatarInput.value) {
+      avatarInput.value.value = ''
+    }
+  }
+}
+
 const saveProfile = async () => {
   saving.value = true
   try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // 保存到本地存储
-    const users = JSON.parse(localStorage.getItem('users') || '{}')
-    const currentUser = users[authStore.user.studentId || authStore.user.username]
-    
-    if (currentUser) {
-      // 更新用户信息
-      currentUser.name = profile.name
-      currentUser.faculty = profile.faculty
-      currentUser.major = profile.major
-      currentUser.email = profile.email
-      currentUser.phone = profile.phone
-      
-      // 保存更新后的用户数据
-      localStorage.setItem('users', JSON.stringify(users))
-      
-      // 更新auth store中的用户信息
-      authStore.login({ ...currentUser })
+    // 准备更新数据
+    const updateData = {
+      username: authStore.user.username,
+      name: profile.name,
+      faculty: profile.faculty,
+      major: profile.major,
+      email: profile.email,
+      phone: profile.phone
     }
+    
+    // 调用API更新个人信息
+    const response = await api.updateProfile(updateData)
+    
+    // 更新auth store中的用户信息
+    authStore.updateUserInfo(response.user)
+    
+    // 从API获取最新的用户信息，确保与数据库同步
+    await authStore.getCurrentUser()
     
     alert('个人信息已更新')
     isEditing.value = false
   } catch (error) {
     console.error('保存失败:', error)
-    alert('保存失败，请稍后重试')
+    alert(`保存失败: ${error.message || '请稍后重试'}`)
   } finally {
     saving.value = false
   }
@@ -200,22 +272,17 @@ const changePassword = async () => {
   }
 
   try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // 更新密码到localStorage
-    const users = JSON.parse(localStorage.getItem('users') || '{}')
-    const currentUser = users[authStore.user.studentId || authStore.user.username]
-    
-    if (currentUser && currentUser.password === passwordForm.currentPassword) {
-      currentUser.password = passwordForm.newPassword
-      localStorage.setItem('users', JSON.stringify(users))
-      alert('密码修改成功')
-    } else {
-      alert('当前密码错误')
-      return
+    // 准备修改密码数据
+    const passwordData = {
+      username: authStore.user.username,
+      currentPassword: passwordForm.currentPassword,
+      newPassword: passwordForm.newPassword
     }
-
+    
+    // 调用API修改密码
+    await api.changePassword(passwordData)
+    
+    alert('密码修改成功')
     closePasswordModal()
 
     // 清空表单
@@ -226,7 +293,7 @@ const changePassword = async () => {
     })
   } catch (error) {
     console.error('密码修改失败:', error)
-    alert('密码修改失败，请稍后重试')
+    alert(`密码修改失败: ${error.message || '请稍后重试'}`)
   }
 }
 
@@ -250,7 +317,8 @@ onMounted(() => {
         faculty: authStore.user.faculty || '',
         major: authStore.user.major || '',
         email: authStore.user.email || '',
-        phone: authStore.user.phone || ''
+        phone: authStore.user.phone || '',
+        avatar: authStore.user.avatar || ''
       })
     }
   originalProfile.value = { ...profile }
@@ -260,6 +328,88 @@ onMounted(() => {
 <style scoped>
 /* 引入共享样式 */
 @import '../common/shared-styles.css';
+
+/* 头像样式 */
+.avatar-row {
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.avatar-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  position: relative;
+}
+
+.avatar-container {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #e8e8e8;
+  cursor: pointer;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* 添加抗锯齿效果 */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  /* 添加轻微阴影增强视觉效果 */
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.avatar-container:hover .avatar-overlay {
+  opacity: 1;
+}
+
+.avatar-icon {
+  font-size: 24px;
+  margin-bottom: 5px;
+}
+
+.avatar-tooltip {
+  position: absolute;
+  top: 160px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.3);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  z-index: 10;
+}
+
+.avatar-container:hover + .avatar-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
 
 /* 组件特有样式 */
 /* 模态框底部按钮居中 */

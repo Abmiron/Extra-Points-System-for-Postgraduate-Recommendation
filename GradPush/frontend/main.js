@@ -25,13 +25,13 @@ app.use(router)
 app.use(pinia)
 app.component('font-awesome-icon', FontAwesomeIcon)
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // 初始化stores
   const authStore = useAuthStore()
   const applicationsStore = useApplicationsStore()
   
   // 初始化auth store（检查是否有保存的登录状态）
-  authStore.initialize()
+  await authStore.initialize()
   
   // 加载申请数据
   applicationsStore.fetchApplications()

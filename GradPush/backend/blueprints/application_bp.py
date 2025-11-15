@@ -56,9 +56,14 @@ def get_applications():
                 if isinstance(processed_file, dict) and 'path' in processed_file:
                     # 如果是本地绝对路径，转换为相对URL
                     if os.path.isabs(processed_file['path']):
-                        # 从绝对路径中提取文件名
+                        # 从绝对路径中提取文件名和子文件夹
                         filename = os.path.basename(processed_file['path'])
-                        processed_file['path'] = f'/uploads/{filename}'
+                        # 判断文件应该属于哪个子文件夹
+                        if 'avatars' in processed_file['path']:
+                            processed_file['path'] = f'/uploads/avatars/{filename}'
+                        else:
+                            # 默认将其他文件归类到files文件夹
+                            processed_file['path'] = f'/uploads/files/{filename}'
                 processed_files.append(processed_file)
         
         app_data = {
@@ -117,9 +122,14 @@ def get_application(id):
             if isinstance(processed_file, dict) and 'path' in processed_file:
                 # 如果是本地绝对路径，转换为相对URL
                 if os.path.isabs(processed_file['path']):
-                    # 从绝对路径中提取文件名
-                    filename = os.path.basename(processed_file['path'])
-                    processed_file['path'] = f'/uploads/{filename}'
+                        # 从绝对路径中提取文件名和子文件夹
+                        filename = os.path.basename(processed_file['path'])
+                        # 判断文件应该属于哪个子文件夹
+                        if 'avatars' in processed_file['path']:
+                            processed_file['path'] = f'/uploads/avatars/{filename}'
+                        else:
+                            # 默认将其他文件归类到files文件夹
+                            processed_file['path'] = f'/uploads/files/{filename}'
             processed_files.append(processed_file)
     
     app_data = {
@@ -222,10 +232,16 @@ def create_application():
         # 处理文件上传
         files = []
         if request.files:
+            # 导入app以访问配置
+            from app import app
+            
             # 创建上传目录（如果不存在）
-            upload_dir = os.path.join(os.getcwd(), 'uploads')
-            if not os.path.exists(upload_dir):
-                os.makedirs(upload_dir)
+            if not os.path.exists(app.config['UPLOAD_FOLDER']):
+                os.makedirs(app.config['UPLOAD_FOLDER'])
+            
+            # 确保文件上传目录存在
+            if not os.path.exists(app.config['FILE_FOLDER']):
+                os.makedirs(app.config['FILE_FOLDER'])
             
             # 保存文件并记录信息
             for key, file in request.files.items():
@@ -248,13 +264,13 @@ def create_application():
                     
                     # 使用自定义函数生成文件名
                     filename = generate_safe_filename(file.filename)
-                    filepath = os.path.join(upload_dir, filename)
+                    filepath = os.path.join(app.config['FILE_FOLDER'], filename)
                     file.save(filepath)
                     
                     # 记录文件信息（存储相对URL而不是本地路径）
                     files.append({
                         'name': filename,
-                        'path': f'/uploads/{filename}',
+                        'path': f'/uploads/files/{filename}',
                         'size': file.content_length,
                         'type': file.content_type
                     })
@@ -432,9 +448,14 @@ def get_pending_applications():
                 if isinstance(processed_file, dict) and 'path' in processed_file:
                     # 如果是本地绝对路径，转换为相对URL
                     if os.path.isabs(processed_file['path']):
-                        # 从绝对路径中提取文件名
+                        # 从绝对路径中提取文件名和子文件夹
                         filename = os.path.basename(processed_file['path'])
-                        processed_file['path'] = f'/uploads/{filename}'
+                        # 判断文件应该属于哪个子文件夹
+                        if 'avatars' in processed_file['path']:
+                            processed_file['path'] = f'/uploads/avatars/{filename}'
+                        else:
+                            # 默认将其他文件归类到files文件夹
+                            processed_file['path'] = f'/uploads/files/{filename}'
                 processed_files.append(processed_file)
         
         app_data = {
@@ -471,6 +492,46 @@ def get_pending_applications():
         app_list.append(app_data)
     
     return jsonify(app_list), 200
+
+# 获取学生加分统计
+@application_bp.route('/applications/statistics', methods=['GET'])
+def get_application_statistics():
+    # 获取查询参数
+    student_id = request.args.get('studentId')
+    if not student_id:
+        return jsonify({'error': '缺少学生ID参数'}), 400
+    
+    # 查询学生的所有已通过申请
+    applications = Application.query.filter_by(
+        student_id=student_id,
+        status='approved'
+    ).all()
+    
+    # 按申请类型分类统计
+    academic_score_calculated = sum(app.final_score for app in applications if app.final_score is not None and app.application_type == 'academic')
+    comprehensive_score = sum(app.final_score for app in applications if app.final_score is not None and app.application_type == 'comprehensive')
+    
+    # 计算学术专长总分（对应前端的specialtyScore）
+    specialty_score = academic_score_calculated
+    
+    # 学业综合成绩和推免综合成绩暂时设置为0（根据需求）
+    academic_score = 0.0
+    total_score = 0.0
+    
+    # 构建响应数据
+    # 注意：这里使用下划线命名以匹配前端期望的格式
+    statistics_data = {
+        'student_id': student_id,
+        'total_score': round(total_score, 2),
+        'academic_score': round(academic_score, 2),
+        'gpa': 0.0,  # 暂时硬编码，后续可从数据库获取
+        'specialty_score': round(specialty_score, 2),
+        'comprehensive_score': round(comprehensive_score, 2),
+        'ranking': '-',  # 暂时硬编码，后续可从数据库获取
+        'approved_count': len(applications)
+    }
+    
+    return jsonify(statistics_data), 200
 
 # 健康检查接口
 @application_bp.route('/health', methods=['GET'])

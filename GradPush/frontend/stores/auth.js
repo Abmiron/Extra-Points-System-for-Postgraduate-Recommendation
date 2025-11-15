@@ -11,11 +11,53 @@ export const useAuthStore = defineStore('auth', () => {
   const userName = computed(() => {
     return user.value?.name || '张三'
   })
-  const userAvatar = computed(() => user.value?.avatar || '/images/default-avatar.jpg')
+  const userAvatar = computed(() => {
+    if (!user.value?.avatar) return '/images/default-avatar.jpg'
+    // 检查头像URL是否已经包含完整路径
+    if (user.value.avatar.startsWith('http://') || user.value.avatar.startsWith('https://')) {
+      return user.value.avatar
+    }
+    // 添加服务器地址前缀
+    return `http://localhost:5001${user.value.avatar}`
+  })
+
+  // 获取当前用户信息
+  const getCurrentUser = async () => {
+    if (!user.value) return null
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/${user.value.username}`)
+      
+      if (!response.ok) {
+        throw new Error('获取用户信息失败')
+      }
+      
+      const data = await response.json()
+      user.value = data.user
+      role.value = data.user.role
+      isAuthenticated.value = true
+      localStorage.setItem('user', JSON.stringify(data.user)) // 保留localStorage作为缓存
+      
+      return data.user
+    } catch (error) {
+      console.error('获取用户信息错误:', error)
+      return user.value // 出错时返回当前缓存的用户信息
+    }
+  }
+
+  // 更新用户信息
+  const updateUserInfo = (userInfo) => {
+    user.value = userInfo
+    role.value = userInfo.role
+    isAuthenticated.value = true
+    localStorage.setItem('user', JSON.stringify(userInfo)) // 保留localStorage作为缓存
+    return '用户信息已更新'
+  }
 
   // 登录
   const login = async (username, password) => {
     try {
+      // 执行正常的登录流程
       const response = await fetch(`${API_BASE_URL}/login`, {
         method: 'POST',
         headers: {
@@ -33,7 +75,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = data.user
       role.value = data.user.role
       isAuthenticated.value = true
-      localStorage.setItem('user', JSON.stringify(data.user))
+      localStorage.setItem('user', JSON.stringify(data.user)) // 保留localStorage作为缓存
       
       return data.message
     } catch (error) {
@@ -97,13 +139,21 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('user')
   }
 
-  const initialize = () => {
+  const initialize = async () => {
     const savedUser = localStorage.getItem('user')
     if (savedUser) {
       const userData = JSON.parse(savedUser)
       user.value = userData
       role.value = userData.role
       isAuthenticated.value = true
+      
+      // 初始化后尝试从API获取最新的用户信息
+      try {
+        await getCurrentUser()
+      } catch (error) {
+        console.error('初始化时获取用户信息失败:', error)
+        // 失败时继续使用localStorage中的数据
+      }
     }
   }
 
@@ -117,6 +167,8 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     resetPassword,
     logout,
-    initialize
+    initialize,
+    getCurrentUser,
+    updateUserInfo
   }
 })

@@ -8,10 +8,16 @@
 - 管理员删除用户
 - 管理员更新用户信息
 - 管理员重置用户密码
+- 用户上传头像
 """
 
 from flask import Blueprint, request, jsonify
 from models import User
+import os
+import uuid
+from werkzeug.utils import secure_filename
+from PIL import Image
+from io import BytesIO
 
 # 创建蓝图实例
 user_bp = Blueprint('user', __name__, url_prefix='/api')
@@ -174,3 +180,178 @@ def admin_reset_password(user_id):
     db.session.commit()
     
     return jsonify({'message': '密码重置成功'}), 200
+
+# 用户更新个人信息接口
+@user_bp.route('/user/profile', methods=['PUT'])
+def update_profile():
+    # 从请求头获取用户名（实际项目中应该从JWT token获取）
+    # 这里简化处理，假设从请求体获取username
+    data = request.get_json()
+    username = data.get('username')
+    
+    if not username:
+        return jsonify({'message': '缺少用户名参数'}), 400
+    
+    user = User.query.filter_by(username=username).first()
+    
+    if not user:
+        return jsonify({'message': '用户不存在'}), 404
+    
+    # 更新用户信息
+    if 'name' in data:
+        user.name = data['name']
+    if 'faculty' in data:
+        user.faculty = data['faculty']
+    if 'major' in data:
+        user.major = data['major']
+    if 'email' in data:
+        user.email = data['email']
+    if 'phone' in data:
+        user.phone = data['phone']
+    
+    from app import db
+    db.session.commit()
+    
+    # 返回更新后的用户信息
+    user_data = {
+        'id': user.id,
+        'username': user.username,
+        'name': user.name,
+        'role': user.role,
+        'avatar': user.avatar,
+        'faculty': user.faculty,
+        'department': user.department,
+        'major': user.major,
+        'studentId': user.student_id,
+        'email': user.email,
+        'phone': user.phone,
+        'roleName': user.role_name,
+        'lastLogin': user.last_login.isoformat() if user.last_login else None
+    }
+    
+    return jsonify({'user': user_data, 'message': '个人信息更新成功'}), 200
+
+# 用户上传头像接口
+@user_bp.route('/user/avatar', methods=['POST'])
+def upload_avatar():
+    # 检查是否有文件上传
+    if 'avatar' not in request.files:
+        return jsonify({'message': '没有文件上传'}), 400
+    
+    file = request.files['avatar']
+    
+    # 检查文件名是否为空
+    if file.filename == '':
+        return jsonify({'message': '请选择一个文件'}), 400
+    
+    # 检查文件类型是否为图片
+    if not file.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+        return jsonify({'message': '只支持PNG、JPG、JPEG和GIF格式的图片'}), 400
+    
+    # 从请求头或表单获取用户名（实际项目中应该从JWT token获取）
+    # 这里简化处理，从表单获取username
+    username = request.form.get('username')
+    
+    if not username:
+        return jsonify({'message': '缺少用户名参数'}), 400
+    
+    user = User.query.filter_by(username=username).first()
+    
+    if not user:
+        return jsonify({'message': '用户不存在'}), 404
+    
+    try:
+        # 导入app以避免循环导入
+        from app import app
+        
+        # 确保上传目录存在
+        if not os.path.exists(app.config['UPLOAD_FOLDER']):
+            os.makedirs(app.config['UPLOAD_FOLDER'])
+        
+        # 确保头像上传目录存在
+        if not os.path.exists(app.config['AVATAR_FOLDER']):
+            os.makedirs(app.config['AVATAR_FOLDER'])
+        
+        # 生成唯一的文件名
+        filename = secure_filename(file.filename)
+        ext = os.path.splitext(filename)[1]
+        unique_filename = f"{uuid.uuid4().hex}{ext}"
+        file_path = os.path.join(app.config['AVATAR_FOLDER'], unique_filename)
+        
+        # 处理图片：调整大小和压缩
+        image = Image.open(file)
+        
+        # 最大尺寸限制
+        max_size = (500, 500)
+        
+        # 调整图片大小
+        image.thumbnail(max_size)
+        
+        # 创建字节流来保存处理后的图片
+        output = BytesIO()
+        
+        # 保存图片（根据文件类型选择格式）
+        if filename.lower().endswith(('.png', '.gif')):
+            image.save(output, format='PNG', optimize=True)
+        else:
+            # JPEG格式可以压缩质量
+            image.save(output, format='JPEG', quality=85, optimize=True)
+        
+        # 将字节流内容保存到文件
+        with open(file_path, 'wb') as f:
+            f.write(output.getvalue())
+        
+        # 更新用户头像路径
+        user.avatar = f"/uploads/avatars/{unique_filename}"
+        
+        from app import db
+        db.session.commit()
+        
+        # 返回更新后的用户信息
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'name': user.name,
+            'role': user.role,
+            'avatar': user.avatar,
+            'faculty': user.faculty,
+            'department': user.department,
+            'major': user.major,
+            'studentId': user.student_id,
+            'email': user.email,
+            'phone': user.phone,
+            'roleName': user.role_name,
+            'lastLogin': user.last_login.isoformat() if user.last_login else None
+        }
+        
+        return jsonify({'user': user_data, 'message': '头像上传成功'}), 200
+    except Exception as e:
+        return jsonify({'message': f'头像上传失败: {str(e)}'}), 500
+
+# 用户修改密码接口
+@user_bp.route('/user/change-password', methods=['POST'])
+def change_password():
+    data = request.get_json()
+    username = data.get('username')
+    current_password = data.get('currentPassword')
+    new_password = data.get('newPassword')
+    
+    if not username or not current_password or not new_password:
+        return jsonify({'message': '缺少必要参数'}), 400
+    
+    user = User.query.filter_by(username=username).first()
+    
+    if not user:
+        return jsonify({'message': '用户不存在'}), 404
+    
+    # 验证当前密码
+    if not user.check_password(current_password):
+        return jsonify({'message': '当前密码错误'}), 400
+    
+    # 设置新密码
+    user.set_password(new_password)
+    
+    from app import db
+    db.session.commit()
+    
+    return jsonify({'message': '密码修改成功'}), 200

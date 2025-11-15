@@ -271,7 +271,7 @@ const getFileUrl = (file) => {
   if (file.url) return file.url
   if (file instanceof File) return URL.createObjectURL(file)
   if (file.data) return file.data
-  return `/uploads/${file.name}`
+  return `/uploads/files/${file.name}`
 }
 
 // 图片导航方法

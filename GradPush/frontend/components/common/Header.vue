@@ -135,6 +135,11 @@ const handleLogout = () => {
   border-radius: 50%;
   margin-right: 8px;
   object-fit: cover;
+  /* 添加抗锯齿效果 */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  /* 添加轻微阴影增强视觉效果 */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .logout-btn {

@@ -113,6 +113,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useAuthStore } from '../../stores/auth'
+import api from '../../utils/api'
 
 const authStore = useAuthStore()
 
@@ -156,33 +157,26 @@ const cancelEdit = () => {
 const saveProfile = async () => {
   saving.value = true
   try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // 保存到本地存储
-    const users = JSON.parse(localStorage.getItem('users') || '{}')
-    const currentUser = users[authStore.user.username]
-    
-    if (currentUser) {
-      // 更新用户信息
-      currentUser.name = profile.name
-      currentUser.faculty = profile.faculty
-      currentUser.roleName = profile.roleName
-      currentUser.email = profile.email
-      currentUser.phone = profile.phone
-      
-      // 保存更新后的用户数据
-      localStorage.setItem('users', JSON.stringify(users))
-      
-      // 更新auth store中的用户信息
-      authStore.login({ ...currentUser })
+    // 准备更新数据
+    const updateData = {
+      name: profile.name,
+      faculty: profile.faculty,
+      roleName: profile.roleName,
+      email: profile.email,
+      phone: profile.phone
     }
+    
+    // 调用API更新个人信息
+    const response = await api.updateProfile(updateData)
+    
+    // 更新auth store中的用户信息
+    authStore.updateUserInfo(response.user)
     
     alert('个人信息已更新')
     isEditing.value = false
   } catch (error) {
     console.error('保存失败:', error)
-    alert('保存失败，请稍后重试')
+    alert(`保存失败: ${error.message || '请稍后重试'}`)
   } finally {
     saving.value = false
   }
@@ -200,22 +194,17 @@ const changePassword = async () => {
   }
 
   try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // 更新密码到localStorage
-    const users = JSON.parse(localStorage.getItem('users') || '{}')
-    const currentUser = users[authStore.user.username]
-    
-    if (currentUser && currentUser.password === passwordForm.currentPassword) {
-      currentUser.password = passwordForm.newPassword
-      localStorage.setItem('users', JSON.stringify(users))
-      alert('密码修改成功')
-    } else {
-      alert('当前密码错误')
-      return
+    // 准备修改密码数据
+    const passwordData = {
+      username: authStore.user.username,
+      currentPassword: passwordForm.currentPassword,
+      newPassword: passwordForm.newPassword
     }
-
+    
+    // 调用API修改密码
+    await api.changePassword(passwordData)
+    
+    alert('密码修改成功')
     closePasswordModal()
 
     // 清空表单
@@ -226,7 +215,7 @@ const changePassword = async () => {
     })
   } catch (error) {
     console.error('密码修改失败:', error)
-    alert('密码修改失败，请稍后重试')
+    alert(`密码修改失败: ${error.message || '请稍后重试'}`)
   }
 }
 

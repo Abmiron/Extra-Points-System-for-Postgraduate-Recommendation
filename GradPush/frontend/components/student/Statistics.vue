@@ -5,7 +5,7 @@
     </div>
 
     <!-- 统计卡片 -->
-    <div class="stats-grid">
+    <div class="stats-grid" :class="{ 'loading-content': loading }">
       <div class="stat-card">
         <div class="stat-label">学业综合成绩</div>
         <div class="stat-value">{{ statistics.academicScore }}</div>
@@ -32,7 +32,7 @@
     </div>
 
     <!-- 学术专长成绩明细 -->
-    <div class="card">
+    <div class="card" :class="{ 'loading-content': loading }">
       <div class="card-title">学术专长成绩明细</div>
       <div class="table-container">
         <table class="application-table">
@@ -68,7 +68,7 @@
     </div>
 
     <!-- 综合表现成绩明细 -->
-    <div class="card">
+    <div class="card" :class="{ 'loading-content': loading }">
       <div class="card-title">综合表现成绩明细</div>
       <div class="table-container">
         <table class="application-table">
@@ -102,21 +102,34 @@
         </table>
       </div>
     </div>
+    
+    <!-- 加载状态指示器 -->
+    <div v-if="loading" class="loading-overlay">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">加载中...</div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useAuthStore } from '../../stores/auth.js'
+import { useApplicationsStore } from '../../stores/applications.js'
+
+const authStore = useAuthStore()
+const applicationsStore = useApplicationsStore()
 
 const applications = ref([])
+const loading = ref(false)
+const error = ref(null)
 
 const statistics = reactive({
-  academicScore: 92.5,
-  gpa: 3.85,
-  specialtyScore: 12.5,
-  comprehensiveScore: 3.5,
-  totalScore: 86.5,
-  ranking: '5/120'
+  academicScore: 0,
+  gpa: 0,
+  specialtyScore: 0,
+  comprehensiveScore: 0,
+  totalScore: 0,
+  ranking: '-'
 })
 
 // 计算属性
@@ -158,31 +171,54 @@ const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString('zh-CN')
 }
 
-const calculateStatistics = () => {
-  // 计算学术专长总分
-  statistics.specialtyScore = academicApplications.value.reduce((total, app) => {
-    return total + (app.finalScore || app.selfScore || 0)
-  }, 0)
-
-  // 计算综合表现总分
-  statistics.comprehensiveScore = comprehensiveApplications.value.reduce((total, app) => {
-    return total + (app.finalScore || app.selfScore || 0)
-  }, 0)
-
-  // 计算推免综合成绩（这里是一个简化公式）
-  statistics.totalScore = statistics.academicScore * 0.8 +
-    statistics.specialtyScore +
-    statistics.comprehensiveScore
+const loadStatistics = async () => {
+  loading.value = true
+  error.value = null
+  
+  try {
+    if (!authStore.isAuthenticated) {
+      error.value = '用户未登录'
+      return
+    }
+    
+    // 调试：查看用户信息
+    console.log('当前用户:', authStore.user)
+    
+    // 使用正确的学生学号字段（studentId）而不是用户ID（id）
+    const studentId = authStore.user.studentId || 'student'
+    console.log('使用的学生ID:', studentId)
+    
+    // 获取学生的所有申请
+    console.log('开始获取申请记录...')
+    await applicationsStore.fetchApplications({ studentId })
+    applications.value = applicationsStore.applications
+    console.log('获取到的申请记录:', applications.value)
+    
+    // 获取加分统计数据
+    console.log('开始获取加分统计数据...')
+    const statsData = await applicationsStore.fetchStatistics(studentId)
+    console.log('获取到的加分统计数据:', statsData)
+    
+    // 更新统计信息
+    // 注意：后端返回的是下划线命名，前端使用的是驼峰式命名
+    statistics.academicScore = statsData.academic_score || 0
+    statistics.gpa = statsData.gpa || 0
+    statistics.specialtyScore = statsData.specialty_score || 0
+    statistics.comprehensiveScore = statsData.comprehensive_score || 0
+    statistics.totalScore = statsData.total_score || 0
+    statistics.ranking = statsData.ranking || '-'
+    
+  } catch (err) {
+    console.error('加载统计数据失败:', err)
+    error.value = '加载统计数据失败，请刷新页面重试'
+  } finally {
+    loading.value = false
+  }
 }
 
 // 生命周期
 onMounted(() => {
-  // 从本地存储加载数据
-  const savedApplications = JSON.parse(localStorage.getItem('studentApplications') || '[]')
-  applications.value = savedApplications
-
-  // 计算统计信息
-  calculateStatistics()
+  loadStatistics()
 })
 </script>
 
@@ -231,5 +267,47 @@ onMounted(() => {
   .stats-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* 加载状态样式 */
+.page-content {
+  position: relative;
+}
+
+.loading-content {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.loading-spinner {
+  border: 4px solid rgba(0, 51, 102, 0.1);
+  border-left-color: #003366;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-top: 16px;
+  color: #003366;
+  font-size: 16px;
+  font-weight: 500;
 }
 </style>
