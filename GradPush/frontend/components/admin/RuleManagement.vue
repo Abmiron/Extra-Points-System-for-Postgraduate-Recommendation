@@ -3,7 +3,7 @@
     <div class="page-title">
       <span>规则管理</span>
       <div class="page-title-actions">
-        <button class="btn btn-outline" @click="showAddRuleModal = true">
+        <button class="btn btn-outline" @click="openAddRuleModal">
           <font-awesome-icon :icon="['fas', 'plus']" /> 添加规则
         </button>
       </div>
@@ -13,10 +13,31 @@
     <div class="filters">
       <div class="filter-group">
         <span class="filter-label">规则类型:</span>
-        <select class="form-control" v-model="filters.type">
+        <select class="form-control" v-model="filters.type" @change="handleFilterTypeChange">
           <option value="all">全部</option>
           <option value="academic">学术专长</option>
           <option value="comprehensive">综合表现</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">子类型:</span>
+        <select class="form-control" v-model="filters.subType">
+          <option value="all">全部</option>
+          <!-- 学术专长子类型 -->
+          <template v-if="filters.type === 'academic' || filters.type === 'all'">
+            <option value="competition">学业竞赛</option>
+            <option value="research">科研成果</option>
+            <option value="innovation">创新创业训练</option>
+          </template>
+          <!-- 综合表现子类型 -->
+          <template v-if="filters.type === 'comprehensive' || filters.type === 'all'">
+            <option value="international_internship">国际组织实习</option>
+            <option value="military_service">参军入伍服兵役</option>
+            <option value="volunteer">志愿服务</option>
+            <option value="social_work">社会工作</option>
+            <option value="sports">体育比赛</option>
+            <option value="honor_title">荣誉称号</option>
+          </template>
         </select>
       </div>
       <div class="filter-group">
@@ -38,7 +59,9 @@
             <tr>
               <th>规则名称</th>
               <th>类型</th>
+              <th>子类型</th>
               <th>级别</th>
+              <th>等级</th>
               <th>分值</th>
               <th>状态</th>
               <th>创建时间</th>
@@ -49,7 +72,9 @@
             <tr v-for="rule in paginatedRules" :key="rule.id">
               <td>{{ rule.name }}</td>
               <td>{{ getTypeText(rule.type) }}</td>
-              <td>{{ rule.level }}</td>
+              <td>{{ getSubTypeText(rule.sub_type) }}</td>
+              <td>{{ getLevelText(rule.level) }}</td>
+              <td>{{ getGradeText(rule.grade) }}</td>
               <td>{{ rule.score }}</td>
               <td>
                 <span :class="`status-badge status-${rule.status === 'active' ? 'approved' : 'rejected'}`">
@@ -112,19 +137,176 @@
               <label class="form-label">规则名称</label>
               <input type="text" class="form-control" v-model="ruleForm.name" required>
             </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">规则类型</label>
-                <select class="form-control" v-model="ruleForm.type" required>
-                  <option value="academic">学术专长</option>
-                  <option value="comprehensive">综合表现</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">级别</label>
-                <input type="text" class="form-control" v-model="ruleForm.level" required>
+            
+            <!-- 规则类型（卡片式选择） -->
+            <div class="form-group">
+              <label class="form-label">规则类型</label>
+              <div class="radio-cards compact">
+                <div class="radio-card" :class="{ active: ruleForm.type === 'academic' }" @click.stop="handleTypeChange('academic')">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'book']" />
+                  </div>
+                  <span>学术专长</span>
+                </div>
+                <div class="radio-card" :class="{ active: ruleForm.type === 'comprehensive' }" @click.stop="handleTypeChange('comprehensive')">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'trophy']" />
+                  </div>
+                  <span>综合表现</span>
+                </div>
               </div>
             </div>
+            
+            <!-- 规则子类型（卡片式选择） -->
+            <div class="form-group" v-if="ruleForm.type">
+              <label class="form-label">规则子类型</label>
+              <div class="radio-cards">
+                <div class="radio-card" v-for="type in currentSubTypes" :key="type.value" 
+                  :class="{ active: ruleForm.sub_type === type.value }" 
+                  @click.stop="ruleForm.sub_type = type.value; handleSubTypeChange()">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="type.icon" />
+                  </div>
+                  <span>{{ type.label }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 级别选择（科研成果和创新创业训练不需要） -->
+            <div class="form-group" v-if="!(ruleForm.type === 'academic' && (ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation'))">
+              <label class="form-label">级别</label>
+              <div class="radio-cards">
+                <div class="radio-card" v-for="level in currentLevels" :key="level.value" 
+                  :class="{ active: ruleForm.level === level.value }" 
+                  @click.stop="ruleForm.level = level.value; handleLevelChange()">
+                  <span>{{ level.label }}</span>
+                </div>
+                <div class="radio-card" v-if="currentLevels.length === 0" :class="{ disabled: true }">
+                  <span>请先选择类型和子类型</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 等级选择（综合表现、科研成果和创新创业训练不需要） -->
+            <div class="form-group" v-if="ruleForm.type !== 'comprehensive' && !(ruleForm.type === 'academic' && (ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation'))">
+              <label class="form-label">等级</label>
+              <div class="radio-cards">
+                <div class="radio-card" v-for="grade in currentGrades" :key="grade.value" 
+                  :class="{ active: ruleForm.grade === grade.value, disabled: !ruleForm.level }" 
+                  @click.stop="ruleForm.level && (ruleForm.grade = grade.value)">
+                  <span>{{ grade.label }}</span>
+                </div>
+                <div class="radio-card" v-if="currentGrades.length === 0" :class="{ disabled: true }">
+                  <span>{{ !ruleForm.level ? '请先选择级别' : '该级别无等级选项' }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 科研成果类型选择（只有科研成果需要） -->
+            <div class="form-group" v-if="ruleForm.type === 'academic' && ruleForm.sub_type === 'research'">
+              <label class="form-label">科研成果类型</label>
+              <div class="radio-cards compact">
+                <div class="radio-card small" :class="{ active: ruleForm.research_type === 'paper' }" 
+                  @click.stop="ruleForm.research_type = 'paper'">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'file-alt']" />
+                  </div>
+                  <span>学术论文</span>
+                </div>
+                <div class="radio-card small" :class="{ active: ruleForm.research_type === 'patent' }" 
+                  @click.stop="ruleForm.research_type = 'patent'">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'file-invoice']" />
+                  </div>
+                  <span>发明专利</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 只有学业竞赛才显示奖项类别选择 -->
+            <div class="form-group" v-if="ruleForm.type === 'academic' && ruleForm.sub_type === 'competition'">
+              <label class="form-label">奖项类别</label>
+              <div class="radio-cards">
+                <div class="radio-card" v-for="category in currentCategories" :key="category" 
+                  :class="{ active: ruleForm.category === category }" 
+                  @click.stop="ruleForm.category = category">
+                  <span>{{ category }}</span>
+                </div>
+                <div class="radio-card" v-if="currentCategories.length === 0" :class="{ disabled: true }">
+                  <span>暂无奖项类别</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 参与类型选择（创新创业训练不需要） -->
+            <div class="form-group" v-if="!(ruleForm.type === 'academic' && ruleForm.sub_type === 'innovation')">
+              <label class="form-label">参与类型</label>
+              <div class="radio-cards compact">
+                <div class="radio-card small" :class="{ active: ruleForm.participation_type === 'individual' }" 
+                  @click.stop="ruleForm.participation_type = 'individual'">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'user']" />
+                  </div>
+                  <span>个人</span>
+                </div>
+                <div class="radio-card small" :class="{ active: ruleForm.participation_type === 'team' }" 
+                  @click.stop="ruleForm.participation_type = 'team'">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'users']" />
+                  </div>
+                  <span>集体</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 团队角色选择（综合表现且选择集体时，或创新创业训练时显示） -->
+            <div class="form-group" v-if="(ruleForm.type === 'comprehensive' && ruleForm.participation_type === 'team') || (ruleForm.type === 'academic' && ruleForm.sub_type === 'innovation')">
+              <label class="form-label">团队角色</label>
+              <div class="radio-cards compact">
+                <div class="radio-card small" :class="{ active: ruleForm.team_role === 'leader' }" 
+                  @click.stop="ruleForm.team_role = 'leader'">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'flag']" />
+                  </div>
+                  <span>队长</span>
+                </div>
+                <div class="radio-card small" :class="{ active: ruleForm.team_role === 'member' }" 
+                  @click.stop="ruleForm.team_role = 'member'">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'user-friends']" />
+                  </div>
+                  <span>队员</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 作者排序类型选择（只有集体参与且为学业竞赛时显示） -->
+            <div class="form-group" v-if="ruleForm.type === 'academic' && ruleForm.sub_type === 'competition' && ruleForm.participation_type === 'team'">
+              <label class="form-label">作者排序类型</label>
+              <div class="radio-cards compact">
+                <div class="radio-card small" :class="{ active: ruleForm.author_rank_type === 'ranked' }" 
+                  @click.stop="ruleForm.author_rank_type = 'ranked'">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'sort-numeric-up']" />
+                  </div>
+                  <span>区分排名</span>
+                </div>
+                <div class="radio-card small" :class="{ active: ruleForm.author_rank_type === 'unranked' }" 
+                  @click.stop="ruleForm.author_rank_type = 'unranked'">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'sort']" />
+                  </div>
+                  <span>不区分排名</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 作者排序输入（只有区分排名时显示） -->
+            <div class="form-group" v-if="ruleForm.type === 'academic' && ruleForm.sub_type === 'competition' && ruleForm.participation_type === 'team' && ruleForm.author_rank_type === 'ranked'">
+              <label class="form-label">作者排序</label>
+              <input type="number" class="form-control" v-model="ruleForm.author_rank" min="1" placeholder="请输入作者排序（数字）">
+            </div>
+            
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">分值</label>
@@ -155,6 +337,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import api from '../../utils/api'
 
 const showAddRuleModal = ref(false)
 const editingRule = ref(null)
@@ -163,150 +346,38 @@ const pageSize = 10
 
 const filters = reactive({
   type: 'all',
+  subType: 'all',
   status: 'all'
 })
 
 const ruleForm = reactive({
   name: '',
   type: 'academic',
+  sub_type: '',
   level: '',
+  grade: '',
+  category: '',  // 奖项类别，用于学业竞赛
+  research_type: '',  // 科研成果类型：学术论文/paper、发明专利/patent
+  participation_type: 'individual',  // 参与类型：个人/集体
+  team_role: '',  // 团队角色：队长/队员
+  author_rank_type: 'unranked',  // 作者排序类型：区分排名/ranked、不区分排名/unranked
+  author_rank: null,  // 作者排序：数字，仅当区分排名时填写
   score: 0,
   status: 'active',
   description: ''
 })
 
-// 模拟规则数据
-const rules = ref([
-  {
-    id: 1,
-    name: 'SCI论文A区',
-    type: 'academic',
-    level: 'A+',
-    score: 5.0,
-    status: 'active',
-    description: '在SCI A区期刊发表论文',
-    createdAt: '2023-01-15T00:00:00Z'
-  },
-  {
-    id: 2,
-    name: '国家级竞赛一等奖',
-    type: 'academic',
-    level: '国家级',
-    score: 4.0,
-    status: 'active',
-    description: '获得国家级竞赛一等奖',
-    createdAt: '2023-01-15T00:00:00Z'
-  },
-  {
-    id: 3,
-    name: '优秀志愿者',
-    type: 'comprehensive',
-    level: '省级',
-    score: 2.0,
-    status: 'disabled',
-    description: '获得省级优秀志愿者称号',
-    createdAt: '2023-02-20T00:00:00Z'
-  },
-  // 添加更多测试数据
-  {
-    id: 4,
-    name: 'EI论文',
-    type: 'academic',
-    level: 'A',
-    score: 3.0,
-    status: 'active',
-    description: '在EI期刊发表论文',
-    createdAt: '2023-03-10T00:00:00Z'
-  },
-  {
-    id: 5,
-    name: '省级竞赛一等奖',
-    type: 'academic',
-    level: '省级',
-    score: 2.5,
-    status: 'active',
-    description: '获得省级竞赛一等奖',
-    createdAt: '2023-03-15T00:00:00Z'
-  },
-  {
-    id: 6,
-    name: '学生干部',
-    type: 'comprehensive',
-    level: '校级',
-    score: 1.5,
-    status: 'active',
-    description: '担任校级学生干部',
-    createdAt: '2023-04-01T00:00:00Z'
-  },
-  {
-    id: 7,
-    name: '发明专利',
-    type: 'academic',
-    level: '国家级',
-    score: 4.5,
-    status: 'active',
-    description: '获得国家发明专利',
-    createdAt: '2023-04-05T00:00:00Z'
-  },
-  {
-    id: 8,
-    name: '社会实践优秀',
-    type: 'comprehensive',
-    level: '校级',
-    score: 1.0,
-    status: 'disabled',
-    description: '社会实践获得优秀评价',
-    createdAt: '2023-04-10T00:00:00Z'
-  },
-  {
-    id: 9,
-    name: '核心期刊论文',
-    type: 'academic',
-    level: 'B',
-    score: 2.0,
-    status: 'active',
-    description: '在核心期刊发表论文',
-    createdAt: '2023-04-15T00:00:00Z'
-  },
-  {
-    id: 10,
-    name: '文体竞赛获奖',
-    type: 'comprehensive',
-    level: '省级',
-    score: 1.5,
-    status: 'active',
-    description: '获得省级文体竞赛奖项',
-    createdAt: '2023-04-20T00:00:00Z'
-  },
-  {
-    id: 11,
-    name: '软件著作权',
-    type: 'academic',
-    level: '国家级',
-    score: 3.0,
-    status: 'active',
-    description: '获得软件著作权',
-    createdAt: '2023-05-01T00:00:00Z'
-  },
-  {
-    id: 12,
-    name: '志愿服务时长',
-    type: 'comprehensive',
-    level: '校级',
-    score: 0.5,
-    status: 'active',
-    description: '累计志愿服务时长达标',
-    createdAt: '2023-05-05T00:00:00Z'
-  }
-])
+// 规则数据
+const rules = ref([])
 
 // 计算属性
 const filteredRules = computed(() => {
   let filtered = rules.value.filter(rule => {
     const typeMatch = filters.type === 'all' || rule.type === filters.type
+    const subTypeMatch = filters.subType === 'all' || rule.sub_type === filters.subType
     const statusMatch = filters.status === 'all' || rule.status === filters.status
 
-    return typeMatch && statusMatch
+    return typeMatch && subTypeMatch && statusMatch
   })
 
   return filtered
@@ -326,60 +397,196 @@ const getTypeText = (type) => {
   return type === 'academic' ? '学术专长' : '综合表现'
 }
 
+const getSubTypeText = (subType) => {
+  const subTypeMap = {
+    // 学术专长
+    'competition': '学业竞赛',
+    'research': '科研成果',
+    'innovation': '创新创业训练',
+    // 综合表现
+    'international_internship': '国际组织实习',
+    'military_service': '参军入伍服兵役',
+    'volunteer': '志愿服务',
+    'social_work': '社会工作',
+    'sports': '体育比赛',
+    'honor_title': '荣誉称号'
+  }
+  return subTypeMap[subType] || '-'  // 如果找不到对应的子类型，显示'-'
+}
+
+// 获取级别文本
+const getLevelText = (level) => {
+  const levelMap = {
+    'national': '国家级',
+    'provincial': '省级',
+    'university': '校级',
+    'school': '校级',  // 与学生端保持一致，同时支持school和university
+    'college': '院级',
+    'department': '系级',
+    'international': '国际级'
+  }
+  return levelMap[level] || '-'  // 如果找不到对应的级别，显示'-'
+}
+
+// 获取等级文本
+const getGradeText = (grade) => {
+  const gradeMap = {
+    'special': '特等奖',
+    'first': '一等奖',
+    'second': '二等奖',
+    'third': '三等奖',
+    'firstOrHigher': '一等奖及以上',  // 与学生端保持一致
+    'excellent': '优秀奖',
+    'good': '良好',
+    'general': '合格',
+    'participation': '参与奖'
+  }
+  return gradeMap[grade] || '-'  // 如果找不到对应的等级，显示'-'
+}
+
 const formatDate = (dateString) => {
   if (!dateString) return '-'
   return new Date(dateString).toLocaleDateString('zh-CN')
 }
 
+// 加载规则数据
+const loadRules = async () => {
+  try {
+    const response = await api.getRules(filters)
+    rules.value = response.rules
+  } catch (error) {
+    console.error('加载规则失败:', error)
+    alert('加载规则失败')
+  }
+}
+
+// 处理筛选类型变化
+const handleFilterTypeChange = () => {
+  filters.subType = 'all' // 切换类型时重置子类型筛选
+}
+
+// 处理规则类型变化
+const handleRuleTypeChange = () => {
+  // 如果规则类型不是综合表现，清空团队角色
+  if (ruleForm.type !== 'comprehensive') {
+    ruleForm.team_role = ''
+  }
+  // 重置子类型
+  ruleForm.sub_type = ''
+  // 重置等级
+  ruleForm.grade = ''
+}
+
+// 搜索规则
 const searchRules = () => {
   currentPage.value = 1
+  loadRules()
 }
 
 const editRule = (rule) => {
   editingRule.value = rule
-  Object.assign(ruleForm, rule)
+  ruleForm.name = rule.name
+  ruleForm.type = rule.type
+  ruleForm.sub_type = rule.sub_type || ''
+  ruleForm.level = rule.level
+  ruleForm.grade = rule.grade || ''
+  ruleForm.category = rule.category || '' // 设置奖项类别
+  ruleForm.research_type = rule.research_type || '' // 设置科研成果类型
+  ruleForm.participation_type = rule.participation_type || 'individual' // 设置参与类型
+  ruleForm.team_role = rule.team_role || '' // 设置团队角色
+  ruleForm.author_rank_type = rule.author_rank_type || 'unranked' // 设置作者排序类型
+  ruleForm.author_rank = rule.author_rank || null // 设置作者排序
+  ruleForm.score = rule.score
+  ruleForm.status = rule.status
+  ruleForm.description = rule.description || ''
   showAddRuleModal.value = true
 }
 
-const saveRule = () => {
-  if (editingRule.value) {
-    // 更新规则
-    const index = rules.value.findIndex(r => r.id === editingRule.value.id)
-    if (index !== -1) {
-      rules.value[index] = { ...ruleForm, id: editingRule.value.id }
+const saveRule = async () => {
+  try {
+    // 表单验证
+    if (!ruleForm.name || !ruleForm.type || !ruleForm.sub_type || !ruleForm.score) {
+      // 级别字段对于科研成果和创新创业训练不是必填的
+      if (!(ruleForm.type === 'academic' && (ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation')) && !ruleForm.level) {
+        alert('请填写必填字段')
+        return
+      }
     }
-  } else {
-    // 添加新规则
-    const newRule = {
-      id: Math.max(...rules.value.map(r => r.id)) + 1,
-      ...ruleForm,
-      createdAt: new Date().toISOString()
+    
+    // 对于非综合表现类型且不是科研成果和创新创业训练，等级是必填的
+    if (ruleForm.type !== 'comprehensive' && !(ruleForm.type === 'academic' && (ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation')) && !ruleForm.grade) {
+      alert('请选择等级')
+      return
     }
-    rules.value.push(newRule)
-  }
+    
+    // 对于学业竞赛，奖项类别是必填的
+    if (ruleForm.type === 'academic' && ruleForm.sub_type === 'competition' && !ruleForm.category) {
+      alert('请选择奖项类别')
+      return
+    }
+    
+    // 对于科研成果，科研成果类型是必填的
+    if (ruleForm.type === 'academic' && ruleForm.sub_type === 'research' && !ruleForm.research_type) {
+      alert('请选择科研成果类型')
+      return
+    }
+    
+    // 对于综合表现类型，清空等级字段
+    if (ruleForm.type === 'comprehensive') {
+      ruleForm.grade = ''
+    }
+    
+    // 对于非学业竞赛类型，清空奖项类别字段
+    if (!(ruleForm.type === 'academic' && ruleForm.sub_type === 'competition')) {
+      ruleForm.category = ''
+    }
+    
+    // 对于非科研成果类型，清空科研成果类型字段
+    if (!(ruleForm.type === 'academic' && ruleForm.sub_type === 'research')) {
+      ruleForm.research_type = ''
+    }
+    
+    if (editingRule.value) {
+      // 更新规则
+      await api.updateRule(editingRule.value.id, ruleForm)
+      alert('规则更新成功')
+    } else {
+      // 添加新规则
+      await api.createRule(ruleForm)
+      alert('规则添加成功')
+    }
 
-  closeModal()
-  alert('规则保存成功')
+    closeModal()
+    loadRules() // 重新加载规则数据
+  } catch (error) {
+    console.error('保存规则失败:', error)
+    alert('保存规则失败')
+  }
 }
 
-const toggleRuleStatus = (ruleId, status) => {
-  const rule = rules.value.find(r => r.id === ruleId)
-  if (rule) {
-    rule.status = status
-    alert(`规则已${status === 'active' ? '启用' : '禁用'}`)
+const toggleRuleStatus = async (ruleId) => {
+  try {
+    await api.toggleRuleStatus(ruleId)
+    await loadRules() // 重新加载规则数据
+  } catch (error) {
+    console.error('切换规则状态失败:', error)
+    alert('切换规则状态失败')
   }
 }
 
-const deleteRule = (rule) => {
+const deleteRule = async (rule) => {
   if (confirm(`确定要删除规则「${rule.name}」吗？此操作不可撤销。`)) {
-    const index = rules.value.findIndex(r => r.id === rule.id)
-    if (index !== -1) {
-      rules.value.splice(index, 1)
+    try {
+      await api.deleteRule(rule.id)
+      await loadRules() // 重新加载规则数据
       // 如果当前页没有数据了，且不是第一页，则回到上一页
       if (paginatedRules.value.length === 0 && currentPage.value > 1) {
         currentPage.value--
       }
       alert('规则删除成功')
+    } catch (error) {
+      console.error('删除规则失败:', error)
+      alert('删除规则失败')
     }
   }
 }
@@ -396,13 +603,180 @@ const nextPage = () => {
   }
 }
 
+// 根据规则类型和子类型定义级别和等级选项，与学生端保持一致
+const levelGradeOptions = {
+  academic: {
+    competition: {
+      levels: ['national', 'provincial'],
+      grades: {
+        national: ['firstOrHigher', 'second', 'third'],
+        provincial: ['firstOrHigher', 'second']
+      },
+      categories: ['A+', 'A', 'A-']  // 学业竞赛奖项类别
+    },
+    research: {
+      levels: ['national', 'provincial', 'university'],
+      grades: {
+        national: ['first', 'second', 'third'],
+        provincial: ['first', 'second', 'third'],
+        university: ['first', 'second']
+      }
+    },
+    innovation: {
+      levels: ['national', 'provincial', 'school'],
+      grades: {
+        national: ['first', 'second', 'third'],
+        provincial: ['first', 'second', 'third'],
+        school: ['first', 'second']
+      }
+    }
+  },
+  comprehensive: {
+    international_internship: {
+      levels: ['provincial', 'school', 'college']  // 只保留级别选项，不包含等级
+    },
+    military_service: {
+      levels: ['provincial', 'school', 'college']  // 只保留级别选项，不包含等级
+    },
+    volunteer: {
+      levels: ['provincial', 'school', 'college']  // 只保留级别选项，不包含等级
+    },
+    social_work: {
+      levels: ['provincial', 'school', 'college']  // 只保留级别选项，不包含等级
+    },
+    sports: {
+      levels: ['provincial', 'school', 'college']  // 只保留级别选项，不包含等级
+    },
+    honor_title: {
+      levels: ['provincial', 'school', 'college']  // 只保留级别选项，不包含等级
+    }
+  }
+}
+
+// 处理规则类型变化
+const handleTypeChange = (type) => {
+  ruleForm.type = type
+  ruleForm.sub_type = '' // 切换类型时清空子类型
+  ruleForm.level = '' // 清空级别
+  ruleForm.grade = '' // 清空等级
+  ruleForm.category = '' // 清空奖项类别
+  // 如果不是综合表现类型，清空团队角色
+  if (type !== 'comprehensive') {
+    ruleForm.team_role = ''
+  }
+}
+
+// 处理子类型变化
+const handleSubTypeChange = () => {
+  ruleForm.level = '' // 切换子类型时清空级别
+  ruleForm.grade = '' // 清空等级
+  ruleForm.category = '' // 清空奖项类别
+  ruleForm.research_type = '' // 清空科研成果类型
+}
+
+// 处理级别变化
+const handleLevelChange = () => {
+  ruleForm.grade = '' // 切换级别时清空等级
+}
+
+// 根据当前规则类型获取子类型选项
+const currentSubTypes = computed(() => {
+  const subTypes = {
+    academic: [
+      { value: 'competition', label: '学业竞赛', icon: ['fas', 'trophy'] },
+      { value: 'research', label: '科研成果', icon: ['fas', 'flask'] },
+      { value: 'innovation', label: '创新创业训练', icon: ['fas', 'lightbulb'] }
+    ],
+    comprehensive: [
+      { value: 'international_internship', label: '国际组织实习', icon: ['fas', 'globe'] },
+      { value: 'military_service', label: '参军入伍服兵役', icon: ['fas', 'shield-alt'] },
+      { value: 'volunteer', label: '志愿服务', icon: ['fas', 'hands-helping'] },
+      { value: 'social_work', label: '社会工作', icon: ['fas', 'users'] },
+      { value: 'sports', label: '体育比赛', icon: ['fas', 'futbol'] },
+      { value: 'honor_title', label: '荣誉称号', icon: ['fas', 'award'] }
+    ]
+  }
+  return ruleForm.type ? subTypes[ruleForm.type] : []
+})
+
+// 根据当前规则类型和子类型获取级别选项
+const currentLevels = computed(() => {
+  if (!ruleForm.type || !ruleForm.sub_type) return []
+  
+  const options = levelGradeOptions[ruleForm.type][ruleForm.sub_type]
+  if (!options) return []
+  
+  return options.levels.map(level => ({
+    value: level,
+    label: getLevelText(level)
+  }))
+})
+
+// 根据当前级别获取等级选项
+const currentGrades = computed(() => {
+  if (!ruleForm.type || !ruleForm.sub_type || !ruleForm.level) return []
+  
+  // 综合表现类型没有等级选项
+  if (ruleForm.type === 'comprehensive') {
+    return []
+  }
+  
+  const options = levelGradeOptions[ruleForm.type][ruleForm.sub_type]
+  if (!options || !options.grades[ruleForm.level]) return []
+  
+  return options.grades[ruleForm.level].map(grade => ({
+    value: grade,
+    label: getGradeText(grade)
+  }))
+})
+
+// 根据当前规则类型和子类型获取奖项类别选项
+const currentCategories = computed(() => {
+  if (!ruleForm.type || !ruleForm.sub_type) {
+    return []
+  }
+  // 只有学业竞赛有奖项类别
+  if (ruleForm.type === 'academic' && ruleForm.sub_type === 'competition') {
+    return levelGradeOptions[ruleForm.type]?.[ruleForm.sub_type]?.categories || []
+  }
+  return []
+})
+
+// 打开添加规则模态框
+const openAddRuleModal = () => {
+  editingRule.value = null
+  ruleForm.name = ''
+  ruleForm.type = 'academic'
+  ruleForm.sub_type = ''
+  ruleForm.level = ''
+  ruleForm.grade = ''
+  ruleForm.category = ''
+  ruleForm.research_type = ''
+  ruleForm.participation_type = 'individual' // 默认为个人参与
+  ruleForm.team_role = '' // 默认为空，仅当参与类型为集体时需要
+  ruleForm.author_rank_type = 'unranked' // 默认为不区分排名
+  ruleForm.author_rank = null // 默认为空，仅当区分排名时需要
+  ruleForm.score = 0
+  ruleForm.status = 'active'
+  ruleForm.description = ''
+  showAddRuleModal.value = true
+}
+
 const closeModal = () => {
   showAddRuleModal.value = false
   editingRule.value = null
   Object.assign(ruleForm, {
     name: '',
     type: 'academic',
+    sub_type: '',
     level: '',
+    grade: '',
+    category: '',
+    research_type: '',
+    participation_type: 'individual',
+    team_role: '',
+    author_rank_type: 'unranked',
+    author_rank: null,
     score: 0,
     status: 'active',
     description: ''
@@ -411,7 +785,7 @@ const closeModal = () => {
 
 // 生命周期
 onMounted(() => {
-  // 可以从API加载规则数据
+  loadRules() // 从API加载规则数据
 })
 </script>
 

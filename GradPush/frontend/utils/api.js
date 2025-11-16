@@ -65,7 +65,14 @@ export default {
   
   // 申请相关
   getApplications: (filters) => {
-    const queryParams = new URLSearchParams(filters).toString();
+    const filteredParams = { ...filters };
+    // 排除值为'all'的参数
+    Object.keys(filteredParams).forEach(key => {
+      if (filteredParams[key] === 'all') {
+        delete filteredParams[key];
+      }
+    });
+    const queryParams = new URLSearchParams(filteredParams).toString();
     return apiRequest(`/applications?${queryParams}`);
   },
   getApplication: (id) => apiRequest(`/applications/${id}`),
@@ -73,4 +80,22 @@ export default {
   updateApplication: (id, data) => apiRequest(`/applications/${id}`, 'PUT', data),
   deleteApplication: (id) => apiRequest(`/applications/${id}`, 'DELETE'),
   getStatistics: (studentId) => apiRequest(`/applications/statistics?studentId=${studentId}`),
+  
+  // 规则管理相关
+  getRules: (filters) => {
+    const filteredParams = { ...filters };
+    // 排除值为'all'的参数
+    Object.keys(filteredParams).forEach(key => {
+      if (filteredParams[key] === 'all') {
+        delete filteredParams[key];
+      }
+    });
+    const queryParams = new URLSearchParams(filteredParams).toString();
+    return apiRequest(`/rules?${queryParams}`);
+  },
+  getRule: (id) => apiRequest(`/rules/${id}`),
+  createRule: (data) => apiRequest('/rules', 'POST', data),
+  updateRule: (id, data) => apiRequest(`/rules/${id}`, 'PUT', data),
+  deleteRule: (id) => apiRequest(`/rules/${id}`, 'DELETE'),
+  toggleRuleStatus: (id) => apiRequest(`/rules/${id}/toggle-status`, 'PATCH')
 };

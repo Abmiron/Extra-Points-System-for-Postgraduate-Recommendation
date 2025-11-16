@@ -21,17 +21,22 @@ CORS(app, resources={"/*": {"origins": "*"}})
 # 加载配置
 app.config.from_object('config.Config')
 
+# 配置JSON编码
+app.config['JSON_AS_ASCII'] = False  # 支持中文输出
+app.config['JSONIFY_MIMETYPE'] = 'application/json; charset=utf-8'  # 设置响应头 charset
+
 # 初始化数据库
 db.init_app(app)
 migrate = Migrate(app, db)
 
 # 先创建数据库对象，再导入模型
-from models import User, Application
+from models import User, Application, Rule
 
 # 导入并注册蓝图
 from blueprints.auth_bp import auth_bp
 from blueprints.user_bp import user_bp
 from blueprints.application_bp import application_bp
+from blueprints.rule_bp import rule_bp
 from routes import main_bp
 
 # 配置静态文件服务
@@ -53,6 +58,7 @@ def uploaded_app_file(filename):
 app.register_blueprint(auth_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(application_bp)
+app.register_blueprint(rule_bp)
 app.register_blueprint(main_bp)
 
 if __name__ == '__main__':

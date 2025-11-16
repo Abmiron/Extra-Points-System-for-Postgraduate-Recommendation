@@ -9,6 +9,7 @@
 - User: 用户信息模型，存储用户账号、密码、角色等信息
 - Application: 申请信息模型，存储推免加分申请的相关数据
 - Student: 学生信息模型，存储学生基本信息和学业成绩
+- Rule: 加分规则模型，存储推免加分的规则定义
 """
 
 from extensions import db
@@ -185,3 +186,26 @@ class Student(db.Model):
     
     def __repr__(self):
         return f'<Student {self.student_name} ({self.student_id})>'
+
+# 加分规则模型
+class Rule(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)  # 规则名称
+    type = db.Column(db.String(50), nullable=False)  # 规则类型: academic(学术专长), comprehensive(综合表现)
+    sub_type = db.Column(db.String(50), nullable=True)  # 子类型: research(科研成果), competition(学业竞赛), innovation(创新创业训练), etc.
+    level = db.Column(db.String(50), nullable=True)  # 级别: 国家级, 省级, 校级, A+, A, A-, etc.
+    grade = db.Column(db.String(50), nullable=True)  # 等级: 一等奖及以上, 二等奖, 三等奖
+    category = db.Column(db.String(50), nullable=True)  # 奖项类别: 个人奖项, 团队奖项
+    participation_type = db.Column(db.String(50), default='individual')  # 参与类型: individual(个人), team(集体)
+    team_role = db.Column(db.String(50), nullable=True)  # 团队角色: captain(队长), member(队员)
+    author_rank_type = db.Column(db.String(50), default='unranked')  # 作者排序类型: ranked(区分排名), unranked(不区分排名)
+    author_rank = db.Column(db.Integer, nullable=True)  # 作者排序: 数字，仅当区分排名时填写
+    research_type = db.Column(db.String(50), nullable=True)  # 科研成果类型: thesis(学术论文), patent(发明专利)
+    score = db.Column(db.Float, nullable=False)  # 分值
+    status = db.Column(db.String(20), default='active')  # 状态: active, disabled
+    description = db.Column(db.Text, nullable=True)  # 规则描述
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 创建时间
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 更新时间
+    
+    def __repr__(self):
+        return f'<Rule {self.name}>'

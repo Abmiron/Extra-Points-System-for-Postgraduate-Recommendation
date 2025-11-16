@@ -236,7 +236,7 @@
   background: white;
   border-radius: 8px;
   width: 90%;
-  max-width: 600px;
+  max-width: 800px;
   max-height: 90vh;
   overflow: auto;
 }
@@ -358,6 +358,65 @@
   align-items: center;
   gap: 8px;
   cursor: pointer;
+}
+
+/* 卡片式选择样式 */
+.radio-cards {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.radio-cards.compact {
+  gap: 8px;
+}
+
+.radio-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 20px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 100px;
+  background-color: white;
+}
+
+.radio-card:hover {
+  border-color: #003366;
+  box-shadow: 0 2px 8px rgba(0, 51, 102, 0.1);
+}
+
+.radio-card.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.radio-card.disabled:hover {
+  border-color: #e0e0e0;
+}
+
+.radio-card.active {
+  border-color: #003366;
+  background-color: #f0f4f8;
+  box-shadow: 0 2px 8px rgba(0, 51, 102, 0.15);
+}
+
+.radio-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+  color: #003366;
+}
+
+.radio-card span {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  text-align: center;
 }
 
 /* 系统状态指示器 */
