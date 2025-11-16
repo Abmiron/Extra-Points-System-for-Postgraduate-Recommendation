@@ -457,8 +457,9 @@ export const useApplicationsStore = defineStore('applications', () => {
     
     try {
       const queryParams = new URLSearchParams()
-      if (filters.department && filters.department !== 'all') queryParams.append('department', filters.department)
-      if (filters.major && filters.major !== 'all') queryParams.append('major', filters.major)
+      if (filters.faculty && filters.faculty !== 'all') queryParams.append('facultyId', filters.faculty)
+      if (filters.department && filters.department !== 'all') queryParams.append('departmentId', filters.department)
+      if (filters.major && filters.major !== 'all') queryParams.append('majorId', filters.major)
       
       const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ''
       const data = await apiRequest(`/applications/students-ranking${queryString}`)

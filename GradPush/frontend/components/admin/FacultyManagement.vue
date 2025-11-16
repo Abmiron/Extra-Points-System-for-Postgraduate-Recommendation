@@ -420,15 +420,31 @@
               >
             </div>
             <div class="form-group">
+              <label for="majorFaculty">所属学院</label>
+              <select 
+                id="majorFaculty" 
+                v-model="newMajor.faculty_id" 
+                required
+                class="form-control"
+                @change="onNewMajorFacultyChange"
+              >
+                <option value="">请选择学院</option>
+                <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
+                  {{ faculty.name }}
+                </option>
+              </select>
+            </div>
+            <div class="form-group">
               <label for="majorDepartment">所属系</label>
               <select 
                 id="majorDepartment" 
                 v-model="newMajor.department_id" 
                 required
                 class="form-control"
+                :disabled="!newMajor.faculty_id"
               >
                 <option value="">请选择系</option>
-                <option v-for="department in departments" :key="department.id" :value="department.id">
+                <option v-for="department in filteredDepartmentsForMajor" :key="department.id" :value="department.id">
                   {{ department.name }}
                 </option>
               </select>
@@ -473,15 +489,31 @@
               >
             </div>
             <div class="form-group">
+              <label for="editMajorFaculty">所属学院</label>
+              <select 
+                id="editMajorFaculty" 
+                v-model="editingMajor.faculty_id" 
+                required
+                class="form-control"
+                @change="onEditMajorFacultyChange"
+              >
+                <option value="">请选择学院</option>
+                <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
+                  {{ faculty.name }}
+                </option>
+              </select>
+            </div>
+            <div class="form-group">
               <label for="editMajorDepartment">所属系</label>
               <select 
                 id="editMajorDepartment" 
                 v-model="editingMajor.department_id" 
                 required
                 class="form-control"
+                :disabled="!editingMajor.faculty_id"
               >
                 <option value="">请选择系</option>
-                <option v-for="department in departments" :key="department.id" :value="department.id">
+                <option v-for="department in filteredDepartmentsForEditMajor" :key="department.id" :value="department.id">
                   {{ department.name }}
                 </option>
               </select>
@@ -549,8 +581,8 @@ export default {
     const editingFaculty = ref({ id: null, name: '', description: '' })
     const newDepartment = ref({ name: '', faculty_id: '', description: '' })
     const editingDepartment = ref({ id: null, name: '', faculty_id: '', description: '' })
-    const newMajor = ref({ name: '', department_id: '', description: '' })
-    const editingMajor = ref({ id: null, name: '', department_id: '', description: '' })
+    const newMajor = ref({ name: '', faculty_id: '', department_id: '', description: '' })
+    const editingMajor = ref({ id: null, name: '', faculty_id: '', department_id: '', description: '' })
     
     // 加载数据
     const loadFaculties = async () => {
@@ -590,6 +622,10 @@ export default {
     const filteredFaculties = ref([])
     const filteredDepartments = ref([])
     const filteredMajors = ref([])
+    
+    // 用于添加和编辑专业的系筛选
+    const filteredDepartmentsForMajor = ref([])
+    const filteredDepartmentsForEditMajor = ref([])
     
     // 监听筛选条件变化
     const updateFilters = () => {
@@ -745,7 +781,7 @@ export default {
       try {
         await api.createMajorAdmin(newMajor.value)
         showAddMajorModal.value = false
-        newMajor.value = { name: '', department_id: '', description: '' }
+        newMajor.value = { name: '', faculty_id: '', department_id: '', description: '' }
         loadMajors()
         alert('专业添加成功')
       } catch (error) {
@@ -755,8 +791,38 @@ export default {
     }
     
     const editMajor = (major) => {
-      editingMajor.value = { ...major }
+      // 查找专业所属的系
+      const department = departments.value.find(d => d.id === major.department_id)
+      // 设置学院ID
+      editingMajor.value = { ...major, faculty_id: department ? department.faculty_id : '' }
+      // 更新编辑专业时的系筛选
+      updateEditMajorDepartments()
       showEditMajorModal.value = true
+    }
+    
+    // 监听添加专业时学院变化
+    const onNewMajorFacultyChange = () => {
+      // 重置系选择
+      newMajor.value.department_id = ''
+      // 过滤系列表
+      filteredDepartmentsForMajor.value = departments.value.filter(d => d.faculty_id === parseInt(newMajor.value.faculty_id))
+    }
+    
+    // 监听编辑专业时学院变化
+    const onEditMajorFacultyChange = () => {
+      // 重置系选择
+      editingMajor.value.department_id = ''
+      // 过滤系列表
+      updateEditMajorDepartments()
+    }
+    
+    // 更新编辑专业时的系列表
+    const updateEditMajorDepartments = () => {
+      if (editingMajor.value.faculty_id) {
+        filteredDepartmentsForEditMajor.value = departments.value.filter(d => d.faculty_id === parseInt(editingMajor.value.faculty_id))
+      } else {
+        filteredDepartmentsForEditMajor.value = []
+      }
     }
     
     const updateMajor = async () => {
@@ -828,6 +894,8 @@ export default {
       filteredFaculties,
       filteredDepartments,
       filteredMajors,
+      filteredDepartmentsForMajor,
+      filteredDepartmentsForEditMajor,
       showAddFacultyModal,
       showEditFacultyModal,
       showAddDepartmentModal,
@@ -854,7 +922,9 @@ export default {
       deleteMajor,
       getFacultyName,
       getDepartmentName,
-      resetFilters
+      resetFilters,
+      onNewMajorFacultyChange,
+      onEditMajorFacultyChange
     }
   }
 }

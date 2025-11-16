@@ -815,6 +815,7 @@ def health_check():
 def get_students_ranking():
     try:
         # 获取查询参数
+        faculty_id = request.args.get('facultyId')
         department_id = request.args.get('departmentId')
         major_id = request.args.get('majorId')
     
@@ -822,6 +823,9 @@ def get_students_ranking():
         query = Student.query
     
         # 应用筛选条件
+        if faculty_id and faculty_id != 'all':
+            query = query.filter_by(faculty_id=faculty_id)
+
         if department_id and department_id != 'all':
             query = query.filter_by(department_id=department_id)
 
@@ -838,14 +842,14 @@ def get_students_ranking():
         for student in students:
             student_id = student.id
             student_stats[student_id] = {
-                'student_id': student.id,
-                'student_name': student.name,
+                'student_id': student.student_id,
+                'student_name': student.student_name,
                 'departmentId': student.department_id,
-                'department': student.department.name,
+                'department': student.department.name if student.department else '未知系别',
                 'majorId': student.major_id,
-                'major': student.major.name,
+                'major': student.major.name if student.major else '未知专业',
                 'facultyId': student.faculty_id,  # 添加学院ID
-                'faculty': student.faculty.name,  # 添加学院名称
+                'faculty': student.faculty.name if student.faculty else '未知学院',  # 添加学院名称，处理空值情况
                 'gender': student.gender,
                 'cet4_score': student.cet4_score,
                 'cet6_score': student.cet6_score,
@@ -866,7 +870,11 @@ def get_students_ranking():
     
         # 获取学术专长详情 - 使用PerformanceDetail模型，type='academic'
         for student_id in student_stats:
-            academic_details = PerformanceDetail.query.filter_by(student_id=student_id, type='academic').all()
+            # 使用学生学号(字符串)而不是学生ID(整数)进行查询
+            student_number = student_stats[student_id]['student_id']
+            # 确保student_number是字符串类型
+            student_number_str = str(student_number)
+            academic_details = PerformanceDetail.query.filter_by(student_id=student_number_str, type='academic').all()
             academic_items = []
             for detail in academic_details:
                 academic_items.append({
@@ -884,7 +892,11 @@ def get_students_ranking():
     
         # 获取综合表现详情 - 使用PerformanceDetail模型，type='comprehensive'
         for student_id in student_stats:
-            comprehensive_details = PerformanceDetail.query.filter_by(student_id=student_id, type='comprehensive').all()
+            # 使用学生学号(字符串)而不是学生ID(整数)进行查询
+            student_number = student_stats[student_id]['student_id']
+            # 确保student_number是字符串类型
+            student_number_str = str(student_number)
+            comprehensive_details = PerformanceDetail.query.filter_by(student_id=student_number_str, type='comprehensive').all()
             comprehensive_items = []
             for detail in comprehensive_details:
                 comprehensive_items.append({
