@@ -338,6 +338,39 @@
           </div>
         </div>
 
+        <!-- 规则选择 -->
+        <div class="form-section">
+          <div class="section-title">
+            <font-awesome-icon :icon="['fas', 'scroll']" />
+            <span>规则选择</span>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">选择适用规则 <span class="required">*</span></label>
+              <div class="select-with-icon">
+                <font-awesome-icon :icon="['fas', 'list-check']" />
+                <select class="form-control" v-model="formData.ruleId" required @change="calculateEstimatedScore">
+                  <option value="">请选择规则</option>
+                  <option v-for="rule in availableRules" :key="rule.id" :value="rule.id">
+                    {{ rule.name }} (基础分数: {{ rule.score }})
+                  </option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">预估分数</label>
+              <div class="input-with-icon">
+                <font-awesome-icon :icon="['fas', 'chart-line']" />
+                <input type="number" class="form-control" v-model="estimatedScore" step="0.1" min="0" readonly>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary" @click="refreshRules">
+            <font-awesome-icon :icon="['fas', 'sync-alt']" />
+            刷新规则列表
+          </button>
+        </div>
+
         <!-- 加分详情（通用） -->
         <div class="form-section">
           <div class="section-title">
@@ -491,6 +524,8 @@ const formData = reactive({
   performanceLevel: '', // 奖项级别
   performanceParticipation: 'individual', // 参与类型（个人/集体）
   teamRole: '', // 团队角色（队长/队员）
+  // 规则选择字段
+  ruleId: '', // 选择的规则ID
   // 通用字段
   selfScore: '',
   description: '',
@@ -501,6 +536,115 @@ const formData = reactive({
 // 级别变更时重置等级
 const handleLevelChange = () => {
   formData.awardGrade = ''
+}
+
+// 规则选择和预估分数计算相关
+import api from '../../utils/api'
+
+const availableRules = ref([])
+const estimatedScore = ref(0)
+
+// 监听表单关键字段变化，自动匹配规则
+watch([
+  () => formData.applicationType,
+  () => formData.academicType,
+  () => formData.awardLevel,
+  () => formData.awardGrade,
+  () => formData.awardCategory,
+  () => formData.awardType,
+  () => formData.teamRole,
+  () => formData.performanceType,
+  () => formData.performanceLevel,
+  () => formData.performanceParticipation
+], () => {
+  fetchMatchingRules()
+}, { deep: true })
+
+// 获取匹配的规则
+const fetchMatchingRules = async () => {
+  try {
+    // 构建匹配规则的请求参数
+    const matchParams = {
+      application_type: formData.applicationType,
+      academic_type: formData.academicType,
+      award_level: formData.awardLevel,
+      award_grade: formData.awardGrade,
+      award_category: formData.awardCategory,
+      award_type: formData.awardType,
+      team_role: formData.teamRole || formData.innovationRole,
+      // 综合表现相关字段
+      performance_type: formData.performanceType,
+      performance_level: formData.performanceLevel,
+      performance_participation: formData.performanceParticipation
+    }
+    
+    // 过滤掉空值
+    Object.keys(matchParams).forEach(key => {
+      if (!matchParams[key]) delete matchParams[key]
+    })
+    
+    // 只有当有足够的信息时才请求匹配规则
+    if (Object.keys(matchParams).length > 0) {
+      const rules = await api.matchRules(matchParams)
+      availableRules.value = rules
+      
+      // 如果当前选择的规则不在匹配列表中，清除选择
+      if (formData.ruleId && !rules.some(rule => rule.id === formData.ruleId)) {
+        formData.ruleId = ''
+      }
+      
+      // 如果只有一个匹配规则，自动选择
+      if (rules.length === 1 && !formData.ruleId) {
+        formData.ruleId = rules[0].id
+      }
+      
+      // 重新计算预估分数
+      calculateEstimatedScore()
+    }
+  } catch (error) {
+    console.error('获取匹配规则失败:', error)
+  }
+}
+
+// 计算预估分数
+const calculateEstimatedScore = () => {
+  if (!formData.ruleId) {
+    estimatedScore.value = 0
+    return
+  }
+  
+  const selectedRule = availableRules.value.find(rule => rule.id === formData.ruleId)
+  if (!selectedRule) {
+    estimatedScore.value = 0
+    return
+  }
+  
+  let score = selectedRule.score
+  
+  // 根据作者排序调整分数
+  if (formData.awardType === 'team' && formData.authorRankType === 'ranked' && formData.authorOrder) {
+    const order = parseInt(formData.authorOrder)
+    if (order === 1) {
+      // 第一作者使用规则中定义的比例
+      score = score * (selectedRule.author_rank_ratio || 1)
+    } else {
+      // 非第一作者分数递减，最低不低于30%
+      const reductionFactor = Math.max(0.3, 1 - (order - 1) * 0.1)
+      score = score * reductionFactor
+    }
+  }
+  
+  // 应用最大分数限制
+  if (selectedRule.max_score && score > selectedRule.max_score) {
+    score = selectedRule.max_score
+  }
+  
+  estimatedScore.value = parseFloat(score.toFixed(1))
+}
+
+// 刷新规则列表
+const refreshRules = () => {
+  fetchMatchingRules()
 }
 
 
@@ -798,10 +942,15 @@ const submitForm = async () => {
           performanceLevel: '',
           performanceParticipation: 'individual',
           teamRole: '',
+          ruleId: '',
           selfScore: '',
           description: '',
           files: []
         })
+        
+        // 重置规则列表和预估分数
+        availableRules.value = []
+        estimatedScore.value = 0
         
         // 通知父组件切换到申请历史页面
         emit('switch-page', 'application-history')

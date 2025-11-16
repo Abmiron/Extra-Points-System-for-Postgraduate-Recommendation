@@ -110,8 +110,8 @@
                   <button class="btn-outline btn small-btn" @click="resetPassword(user.id)" title="重置密码">
                     <font-awesome-icon :icon="['fas', 'key']" />
                   </button>
-                  <button class="btn-outline btn small-btn" @click="viewUserHistory(user.id)" title="操作历史">
-                    <font-awesome-icon :icon="['fas', 'history']" />
+                  <button class="btn-outline btn small-btn" @click="deleteUser(user.id)" title="删除">
+                    <font-awesome-icon :icon="['fas', 'trash']" />
                   </button>
                 </div>
               </td>
@@ -514,8 +514,28 @@ const resetPassword = async (userId) => {
   }
 }
 
-const viewUserHistory = (userId) => {
-  alert(`查看用户 ${userId} 的操作历史`)
+const deleteUser = async (userId) => {
+  if (confirm(`确定要删除该用户吗？此操作不可恢复！`)) {
+    try {
+      isLoading.value = true
+      
+      const response = await fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
+        method: 'DELETE'
+      })
+      
+      if (!response.ok) {
+        throw new Error('删除用户失败')
+      }
+      
+      alert('用户已删除')
+      loadUsersFromAPI() // 重新加载用户列表
+    } catch (error) {
+      console.error('删除用户失败:', error)
+      alert('操作失败，请稍后重试')
+    } finally {
+      isLoading.value = false
+    }
+  }
 }
 
 const batchDisable = async () => {

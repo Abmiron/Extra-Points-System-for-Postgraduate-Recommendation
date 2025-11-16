@@ -28,6 +28,7 @@ import RuleManagement from '../components/admin/RuleManagement.vue'
 import StatisticsReport from '../components/admin/StatisticsReport.vue'
 import SystemSettings from '../components/admin/SystemSettings.vue'
 import AdminProfile from '../components/admin/AdminProfile.vue'
+import FacultyManagement from '../components/admin/FacultyManagement.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -40,6 +41,7 @@ const pageComponents = {
   'user-management': UserManagement,
   'data-management': DataManagement,
   'rule-management': RuleManagement,
+  'faculty-management': FacultyManagement,
   'statistics-report': StatisticsReport,
   'system-settings': SystemSettings,
   'profile': AdminProfile

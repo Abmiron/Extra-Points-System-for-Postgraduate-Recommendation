@@ -37,6 +37,7 @@ from blueprints.auth_bp import auth_bp
 from blueprints.user_bp import user_bp
 from blueprints.application_bp import application_bp
 from blueprints.rule_bp import rule_bp
+from blueprints.admin_bp import admin_bp
 from routes import main_bp
 
 # 配置静态文件服务
@@ -59,6 +60,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(application_bp)
 app.register_blueprint(rule_bp)
+app.register_blueprint(admin_bp)
 app.register_blueprint(main_bp)
 
 if __name__ == '__main__':

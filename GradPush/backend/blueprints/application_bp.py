@@ -204,7 +204,14 @@ def get_application(id):
         'performanceType': app.performance_type,
         'performanceLevel': app.performance_level,
         'performanceParticipation': app.performance_participation,
-        'teamRole': app.team_role
+        'teamRole': app.team_role,
+        # 规则相关字段
+        'ruleId': app.rule_id,
+        'rule': {
+            'id': app.rule.id,
+            'name': app.rule.name,
+            'score': app.rule.score
+        } if app.rule else None
     }
     
     return jsonify(app_data), 200
@@ -244,6 +251,7 @@ def create_application():
             'performanceLevel': 'performance_level',
             'performanceParticipation': 'performance_participation',
             'teamRole': 'team_role',
+            'ruleId': 'rule_id',
             'finalScore': 'final_score',
             'reviewComment': 'review_comment',
             'reviewedAt': 'reviewed_at',
@@ -259,7 +267,7 @@ def create_application():
             # 使用映射的字段名，如果没有映射则使用原字段名
             new_key = field_mapping.get(key, key)
             # 处理数值类型字段：将空字符串转换为None
-            numeric_fields = ['author_order', 'self_score', 'final_score']
+            numeric_fields = ['author_order', 'self_score', 'final_score', 'rule_id']
             if new_key in numeric_fields and value == '':
                 transformed_data[new_key] = None
             else:
@@ -330,6 +338,7 @@ def create_application():
             award_type=data.get('award_type'),
             description=data['description'],
             files=files,
+            rule_id=data.get('rule_id'),
             # 学术专长相关字段
             academic_type=data.get('academic_type'),
             research_type=data.get('research_type'),
@@ -366,6 +375,7 @@ def create_application():
             'awardType': new_application.award_type,
             'description': new_application.description,
             'files': new_application.files,
+            'ruleId': new_application.rule_id,
             'message': '申请创建成功'
         }
         
@@ -439,28 +449,33 @@ def review_application(id):
     if app.application_type == 'academic' and app.status == 'approved':
         matched_rule = None
         
-        # 1. 首先检查是否有匹配的特殊规则
-        special_rule_query = Rule.query.filter_by(
-            type='academic',
-            sub_type=app.academic_type,
-            is_special=True,
-            status='active'
-        )
+        # 1. 首先检查学生是否已经选择了规则
+        if app.rule_id:
+            matched_rule = Rule.query.get(app.rule_id)
         
-        if app.academic_type == 'research':
-            special_rule_query = special_rule_query.filter_by(research_type=app.research_type)
-        elif app.academic_type == 'competition':
-            special_rule_query = special_rule_query.filter_by(
-                level=app.award_level,
-                grade=app.award_grade,
-                category=app.award_category
+        # 2. 如果学生没有选择规则，先检查是否有匹配的特殊规则
+        if not matched_rule:
+            special_rule_query = Rule.query.filter_by(
+                type='academic',
+                sub_type=app.academic_type,
+                is_special=True,
+                status='active'
             )
-        elif app.academic_type == 'innovation':
-            special_rule_query = special_rule_query.filter_by(level=app.innovation_level)
+            
+            if app.academic_type == 'research':
+                special_rule_query = special_rule_query.filter_by(research_type=app.research_type)
+            elif app.academic_type == 'competition':
+                special_rule_query = special_rule_query.filter_by(
+                    level=app.award_level,
+                    grade=app.award_grade,
+                    category=app.award_category
+                )
+            elif app.academic_type == 'innovation':
+                special_rule_query = special_rule_query.filter_by(level=app.innovation_level)
+            
+            matched_rule = special_rule_query.first()
         
-        matched_rule = special_rule_query.first()
-        
-        # 2. 如果没有特殊规则，查找普通规则
+        # 3. 如果没有特殊规则，查找普通规则
         if not matched_rule:
             regular_rule_query = Rule.query.filter_by(
                 type='academic',

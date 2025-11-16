@@ -58,6 +58,7 @@ const menuConfig = {
   admin: [
     { key: 'user-management', icon: ['fas', 'users'], title: '用户管理' },
     { key: 'data-management', icon: ['fas', 'database'], title: '数据管理' },
+    { key: 'faculty-management', icon: ['fas', 'university'], title: '学院管理' },
     { key: 'rule-management', icon: ['fas', 'ruler'], title: '规则管理' },
     { key: 'statistics-report', icon: ['fas', 'chart-pie'], title: '统计报表' },
     { key: 'system-settings', icon: ['fas', 'cog'], title: '系统设置' },

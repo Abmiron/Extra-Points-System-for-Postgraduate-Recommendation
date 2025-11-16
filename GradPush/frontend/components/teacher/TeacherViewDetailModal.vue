@@ -146,6 +146,14 @@
                 <span>{{ application.selfScore }}</span>
               </div>
               <div class="compact-group">
+                <label>选择规则</label>
+                <span>{{ application.rule?.name || (application.ruleId ? '规则ID: ' + application.ruleId : '未选择') }}</span>
+              </div>
+              <div class="compact-group">
+                <label>自动计算分数</label>
+                <span class="highlight-score">{{ application.rule?.score || 'N/A' }}</span>
+              </div>
+              <div class="compact-group">
                 <label>最终分数</label>
                 <span>{{ application.finalScore || '-' }}</span>
               </div>

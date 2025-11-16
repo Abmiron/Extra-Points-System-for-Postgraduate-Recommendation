@@ -28,6 +28,48 @@
             </div>
             
             <div class="input-group">
+              <font-awesome-icon :icon="['fas', 'user-shield']" class="input-icon" />
+              <select v-model="registerForm.role" required @change="handleRoleChange">
+                <option value="">请选择角色</option>
+                <option value="student">学生</option>
+                <option value="teacher">教师</option>
+              </select>
+            </div>
+            
+            <!-- 学院选择 -->
+            <div class="input-group">
+              <font-awesome-icon :icon="['fas', 'university']" class="input-icon" />
+              <select v-model="registerForm.faculty" required @change="handleFacultyChange">
+                <option value="">请选择学院</option>
+                <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.name">
+                  {{ faculty.name }}
+                </option>
+              </select>
+            </div>
+            
+            <!-- 系选择（仅学生显示） -->
+            <div class="input-group" v-if="registerForm.role === 'student'">
+              <font-awesome-icon :icon="['fas', 'building']" class="input-icon" />
+              <select v-model="registerForm.department" required @change="handleDepartmentChange">
+                <option value="">请选择系</option>
+                <option v-for="department in departments" :key="department.id" :value="department.name">
+                  {{ department.name }}
+                </option>
+              </select>
+            </div>
+            
+            <!-- 专业选择（仅学生显示） -->
+            <div class="input-group" v-if="registerForm.role === 'student'">
+              <font-awesome-icon :icon="['fas', 'graduation-cap']" class="input-icon" />
+              <select v-model="registerForm.major" required>
+                <option value="">请选择专业</option>
+                <option v-for="major in majors" :key="major.id" :value="major.name">
+                  {{ major.name }}
+                </option>
+              </select>
+            </div>
+            
+            <div class="input-group">
               <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
               <input type="password" v-model="registerForm.password" placeholder="请设置密码" required minlength="6">
             </div>
@@ -35,15 +77,6 @@
             <div class="input-group">
               <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
               <input type="password" v-model="registerForm.confirmPassword" placeholder="请确认密码" required minlength="6">
-            </div>
-            
-            <div class="input-group">
-              <font-awesome-icon :icon="['fas', 'user-shield']" class="input-icon" />
-              <select v-model="registerForm.role" required>
-                <option value="">请选择角色</option>
-                <option value="student">学生</option>
-                <option value="teacher">教师</option>
-              </select>
             </div>
 
             <div class="form-actions">
@@ -73,29 +106,45 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import api from '../utils/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 const loading = ref(false)
+const loadingOptions = ref(false)
 
+// 表单数据
 const registerForm = reactive({
   username: '',
   name: '',
   password: '',
   confirmPassword: '',
-  role: ''
+  role: '',
+  faculty: '',
+  department: '',
+  major: ''
 })
+
+// 下拉选项数据
+const faculties = ref([])
+const departments = ref([])
+const majors = ref([])
 
 // 表单验证
 const isFormValid = computed(() => {
-  const { username, name, password, confirmPassword, role } = registerForm
+  const { username, name, password, confirmPassword, role, faculty, department, major } = registerForm
   
   // 基本字段验证
-  if (!username || !name || !password || !confirmPassword || !role) {
+  if (!username || !name || !password || !confirmPassword || !role || !faculty) {
+    return false
+  }
+  
+  // 学生需要验证系和专业
+  if (role === 'student' && (!department || !major)) {
     return false
   }
   
@@ -111,6 +160,101 @@ const isFormValid = computed(() => {
   
   return true
 })
+
+// 组件挂载时加载学院列表
+onMounted(() => {
+  loadFaculties()
+})
+
+// 加载学院列表
+const loadFaculties = async () => {
+  try {
+    loadingOptions.value = true
+    const response = await api.getFaculties()
+    faculties.value = response.faculties
+  } catch (error) {
+    console.error('加载学院列表失败:', error)
+    alert('加载学院列表失败，请刷新页面重试')
+  } finally {
+    loadingOptions.value = false
+  }
+}
+
+// 加载系列表
+const loadDepartments = async (facultyName) => {
+  try {
+    loadingOptions.value = true
+    // 找到选中的学院ID
+    const selectedFaculty = faculties.value.find(f => f.name === facultyName)
+    if (selectedFaculty) {
+      const response = await api.getDepartmentsByFaculty(selectedFaculty.id)
+      departments.value = response.departments
+      // 重置系和专业选择
+      registerForm.department = ''
+      registerForm.major = ''
+      majors.value = []
+    }
+  } catch (error) {
+    console.error('加载系列表失败:', error)
+    alert('加载系列表失败，请重试')
+  } finally {
+    loadingOptions.value = false
+  }
+}
+
+// 加载专业列表
+const loadMajors = async (departmentName) => {
+  try {
+    loadingOptions.value = true
+    // 找到选中的系ID
+    const selectedDepartment = departments.value.find(d => d.name === departmentName)
+    if (selectedDepartment) {
+      const response = await api.getMajorsByDepartment(selectedDepartment.id)
+      majors.value = response.majors
+      // 重置专业选择
+      registerForm.major = ''
+    }
+  } catch (error) {
+    console.error('加载专业列表失败:', error)
+    alert('加载专业列表失败，请重试')
+  } finally {
+    loadingOptions.value = false
+  }
+}
+
+// 角色变化处理
+const handleRoleChange = () => {
+  // 重置学院、系和专业选择
+  registerForm.faculty = ''
+  registerForm.department = ''
+  registerForm.major = ''
+  departments.value = []
+  majors.value = []
+}
+
+// 学院变化处理
+const handleFacultyChange = () => {
+  if (registerForm.faculty) {
+    loadDepartments(registerForm.faculty)
+  } else {
+    // 重置系和专业选择
+    registerForm.department = ''
+    registerForm.major = ''
+    departments.value = []
+    majors.value = []
+  }
+}
+
+// 系变化处理
+const handleDepartmentChange = () => {
+  if (registerForm.department) {
+    loadMajors(registerForm.department)
+  } else {
+    // 重置专业选择
+    registerForm.major = ''
+    majors.value = []
+  }
+}
 
 const handleRegister = async () => {
   // 检测输入框是否为空
@@ -134,6 +278,18 @@ const handleRegister = async () => {
     alert('请选择角色')
     return
   }
+  if (!registerForm.faculty) {
+    alert('请选择学院')
+    return
+  }
+  if (registerForm.role === 'student' && !registerForm.department) {
+    alert('请选择系')
+    return
+  }
+  if (registerForm.role === 'student' && !registerForm.major) {
+    alert('请选择专业')
+    return
+  }
   
   // 密码一致性和长度验证
   if (registerForm.password !== registerForm.confirmPassword) {
@@ -153,7 +309,10 @@ const handleRegister = async () => {
       username: registerForm.username,
       name: registerForm.name,
       password: registerForm.password,
-      role: registerForm.role
+      role: registerForm.role,
+      faculty: registerForm.faculty,
+      department: registerForm.department,
+      major: registerForm.major
     })
     
     // 注册成功后跳转到登录页面
@@ -218,6 +377,17 @@ const goToLogin = () => {
   transform: translateZ(0);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   border: 1px solid rgba(255, 255, 255, 0.3);
+  max-height: 80vh;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 480px;
+  /* 隐藏滚动条 */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* WebKit浏览器隐藏滚动条 */
+.register-box::-webkit-scrollbar {
+  display: none;
 }
 
 /* 徽标区域样式 */
@@ -292,7 +462,7 @@ const goToLogin = () => {
 
 /* 输入组样式 */
 .input-group {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
   position: relative;
 }
 
@@ -311,7 +481,7 @@ const goToLogin = () => {
 .input-group input,
 .input-group select {
   width: 100%;
-  height: 52px;
+  height: 50px;
   padding: 10px 20px 10px 45px;
   border: 1px solid #ddd;
   border-radius: 8px;

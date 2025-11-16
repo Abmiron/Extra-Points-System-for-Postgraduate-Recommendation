@@ -10,11 +10,55 @@
 - Application: 申请信息模型，存储推免加分申请的相关数据
 - Student: 学生信息模型，存储学生基本信息和学业成绩
 - Rule: 加分规则模型，存储推免加分的规则定义
+- Faculty: 学院信息模型，存储学院信息
+- Department: 系信息模型，存储系信息
+- Major: 专业信息模型，存储专业信息
 """
 
 from extensions import db
 from datetime import datetime
 import bcrypt
+
+# 学院模型
+class Faculty(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)  # 学院名称
+    description = db.Column(db.Text, nullable=True)  # 学院描述
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 创建时间
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 更新时间
+    
+    # 关系
+    departments = db.relationship('Department', backref='faculty', lazy=True)
+    
+    def __repr__(self):
+        return f'<Faculty {self.name}>'
+
+# 系模型
+class Department(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)  # 系名称
+    faculty_id = db.Column(db.Integer, db.ForeignKey('faculty.id'), nullable=False)  # 所属学院
+    description = db.Column(db.Text, nullable=True)  # 系描述
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 创建时间
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 更新时间
+    
+    # 关系
+    majors = db.relationship('Major', backref='department', lazy=True)
+    
+    def __repr__(self):
+        return f'<Department {self.name}>'
+
+# 专业模型
+class Major(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)  # 专业名称
+    department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False)  # 所属系
+    description = db.Column(db.Text, nullable=True)  # 专业描述
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 创建时间
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 更新时间
+    
+    def __repr__(self):
+        return f'<Major {self.name}>'
 
 # 用户模型
 class User(db.Model):
@@ -89,6 +133,10 @@ class Application(db.Model):
     review_comment = db.Column(db.Text, nullable=True)  # 审核意见
     reviewed_at = db.Column(db.DateTime, nullable=True)  # 审核时间
     reviewed_by = db.Column(db.String(100), nullable=True)  # 审核人
+    
+    # 规则关联
+    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=True)
+    rule = db.relationship('Rule', backref=db.backref('applications', lazy=True))
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

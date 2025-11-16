@@ -75,7 +75,7 @@ def register():
         name=data['name'],
         role=data['role'],
         avatar='/images/default-avatar.jpg',  # 统一使用默认头像
-        faculty='信息学院',  # 默认值
+        faculty=data.get('faculty', ''),  # 从请求中获取学院
         email='',  # 默认值
         phone=''   # 默认值
     )
@@ -86,8 +86,8 @@ def register():
     # 根据角色添加额外信息
     if data['role'] == 'student':
         new_user.student_id = data['username']
-        new_user.department = '计算机科学与技术系'  # 默认值
-        new_user.major = '计算机科学与技术'  # 默认值
+        new_user.department = data.get('department', '')  # 从请求中获取系
+        new_user.major = data.get('major', '')  # 从请求中获取专业
     elif data['role'] == 'teacher':
         new_user.role_name = '审核员'  # 默认值
     
@@ -117,3 +117,42 @@ def reset_password():
     db.session.commit()
     
     return jsonify({'message': '密码重置成功'}), 200
+
+# 获取所有学院（用于注册选择）
+@auth_bp.route('/faculties', methods=['GET'])
+def get_faculties():
+    from models import Faculty
+    faculties = Faculty.query.all()
+    result = []
+    for faculty in faculties:
+        result.append({
+            'id': faculty.id,
+            'name': faculty.name
+        })
+    return jsonify({'faculties': result}), 200
+
+# 根据学院ID获取系列表（用于注册选择）
+@auth_bp.route('/departments/<int:faculty_id>', methods=['GET'])
+def get_departments_by_faculty(faculty_id):
+    from models import Department
+    departments = Department.query.filter_by(faculty_id=faculty_id).all()
+    result = []
+    for department in departments:
+        result.append({
+            'id': department.id,
+            'name': department.name
+        })
+    return jsonify({'departments': result}), 200
+
+# 根据系ID获取专业列表（用于注册选择）
+@auth_bp.route('/majors/<int:department_id>', methods=['GET'])
+def get_majors_by_department(department_id):
+    from models import Major
+    majors = Major.query.filter_by(department_id=department_id).all()
+    result = []
+    for major in majors:
+        result.append({
+            'id': major.id,
+            'name': major.name
+        })
+    return jsonify({'majors': result}), 200
