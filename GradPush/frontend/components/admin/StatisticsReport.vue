@@ -78,7 +78,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(student, index) in filteredStudents" :key="`${student.studentId}-${index}`">
+              <tr v-for="(student, index) in filteredStudents" :key="`${student.studentId}-${index}`" :class="{ 'student-group-start': student.isFirstRow }">
                 <!-- A-H: 学生基本信息 -->
                 <td v-if="student.isFirstRow">{{ student.sequence }}</td>
                 <td v-else></td>
@@ -222,7 +222,7 @@ const allApplications = ref([])
 const loadFaculties = async () => {
   try {
     const response = await api.getFacultiesAdmin()
-    console.log('学院数据响应:', response)
+
     faculties.value = response.faculties || []
   } catch (error) {
     console.error('加载学院数据失败:', error)
@@ -375,7 +375,31 @@ const filteredStudents = computed(() => {
     students = students.filter(student => student.faculty_id === facultyId)
   }
   
-  return students
+  // 按专业成绩排名显示
+  // 1. 首先将学生数据按学生ID分组
+  const studentGroups = new Map()
+  students.forEach(student => {
+    if (!studentGroups.has(student.studentId)) {
+      studentGroups.set(student.studentId, [])
+    }
+    studentGroups.get(student.studentId).push(student)
+  })
+  
+  // 2. 对学生组进行排序，按照专业排名从小到大
+  const sortedGroups = Array.from(studentGroups.values()).sort((groupA, groupB) => {
+    // 获取每个学生的第一行（包含排名信息）
+    const studentA = groupA.find(s => s.isFirstRow)
+    const studentB = groupB.find(s => s.isFirstRow)
+    
+    // 按专业排名排序
+    const rankingA = studentA ? (studentA.majorRanking || Infinity) : Infinity
+    const rankingB = studentB ? (studentB.majorRanking || Infinity) : Infinity
+    
+    return rankingA - rankingB
+  })
+  
+  // 3. 重新组合所有行数据
+  return sortedGroups.flat()
 })
 
 // 计算属性 - 总体统计信息
@@ -405,8 +429,7 @@ const totalStats = computed(() => {
 
 // 方法
 const getFacultyText = (facultyId) => {
-  console.log('getFacultyText调用，参数：', facultyId, '类型：', typeof facultyId)
-  console.log('当前学院列表：', faculties.value)
+
   
   // 处理'all'值
   if (facultyId === 'all') {
@@ -423,7 +446,7 @@ const getFacultyText = (facultyId) => {
   
   // 从学院列表中查找学院名称
   const faculty = faculties.value.find(f => f.id === id)
-  console.log('查找学院结果：', faculty)
+
   return faculty ? faculty.name : '未知学院'
 }
 
@@ -639,7 +662,7 @@ const updateTopScrollWidth = () => {
     if (topScrollContent) {
       topScrollContent.style.width = `${contentWidth}px`
       // 调试信息
-      console.log('Table width:', contentWidth, 'Top scroll content width set to:', topScrollContent.style.width)
+
     }
   }
 }
@@ -656,11 +679,11 @@ onMounted(async () => {
     // 添加滚动事件监听器
     if (tableContainer.value) {
       tableContainer.value.addEventListener('scroll', syncScroll)
-      console.log('Bottom scroll container event listener added')
+
     }
     if (topScrollContainer.value) {
       topScrollContainer.value.addEventListener('scroll', reverseSyncScroll)
-      console.log('Top scroll container event listener added')
+
     }
     
     // 监听窗口大小变化
@@ -770,6 +793,28 @@ onMounted(async () => {
 .comprehensive-table th:nth-child(17),
 .comprehensive-table td:nth-child(17) {
   min-width: 150px;
+}
+
+/* 学生组之间的分割线 */
+.application-table tbody tr.student-group-start td {
+  border-top: 3px solid #adb5bd;
+}
+
+/* 第一个学生组不添加顶部边框 */
+.application-table tbody tr:first-child.student-group-start td {
+  border-top: 1px solid #e9ecef;
+}
+
+/* 学术专长项目相关栏目的背景色 */
+.comprehensive-table th:nth-child(n+12):nth-child(-n+20),
+.comprehensive-table td:nth-child(n+12):nth-child(-n+20) {
+  background-color: rgba(222, 235, 247, 0.5); /* 浅蓝色背景 */
+}
+
+/* 综合表现项目相关栏目的背景色 */
+.comprehensive-table th:nth-child(n+21):nth-child(-n+29),
+.comprehensive-table td:nth-child(n+21):nth-child(-n+29) {
+  background-color: rgba(237, 247, 237, 0.5); /* 浅绿色背景 */
 }
 
 .comprehensive-table th:nth-child(26),
