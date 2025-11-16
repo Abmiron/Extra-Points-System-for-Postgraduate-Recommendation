@@ -54,6 +54,7 @@ export default {
   getFaculties: () => apiRequest('/faculties'),
   getDepartmentsByFaculty: (facultyId) => apiRequest(`/departments/${facultyId}`),
   getMajorsByDepartment: (departmentId) => apiRequest(`/majors/${departmentId}`),
+  getMajors: () => apiRequest('/majors'),
   
   // 用户相关
   getUser: (username) => apiRequest(`/user/${username}`),

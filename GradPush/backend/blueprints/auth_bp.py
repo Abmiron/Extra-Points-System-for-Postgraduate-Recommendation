@@ -47,9 +47,12 @@ def login():
         'name': user.name,
         'role': user.role,
         'avatar': user.avatar,
-        'faculty': user.faculty,
-        'department': user.department,
-        'major': user.major,
+        'faculty': user.faculty.name if user.faculty else '',
+        'facultyId': user.faculty_id,
+        'department': user.department.name if user.department else '',
+        'departmentId': user.department_id,
+        'major': user.major.name if user.major else '',
+        'majorId': user.major_id,
         'studentId': user.student_id,
         'email': user.email,
         'phone': user.phone,
@@ -69,25 +72,32 @@ def register():
     if existing_user:
         return jsonify({'message': '用户名已存在'}), 400
     
+    from models import Faculty, Department, Major
+    
+    # 获取关联ID
+    faculty_id = data.get('facultyId')
+    department_id = data.get('departmentId')
+    major_id = data.get('majorId')
+    
     # 创建新用户
     new_user = User(
         username=data['username'],
         name=data['name'],
         role=data['role'],
         avatar='/images/default-avatar.jpg',  # 统一使用默认头像
-        faculty=data.get('faculty', ''),  # 从请求中获取学院
+        faculty_id=faculty_id,
         email='',  # 默认值
         phone=''   # 默认值
     )
     
-    # 设置密码（哈希）
-    new_user.set_password(data['password'])
+    # 设置密码（哈希）- 如果没有提供密码，使用默认密码
+    new_user.set_password(data.get('password', '123456'))
     
     # 根据角色添加额外信息
     if data['role'] == 'student':
         new_user.student_id = data['username']
-        new_user.department = data.get('department', '')  # 从请求中获取系
-        new_user.major = data.get('major', '')  # 从请求中获取专业
+        new_user.department_id = department_id
+        new_user.major_id = major_id
     elif data['role'] == 'teacher':
         new_user.role_name = '审核员'  # 默认值
     
@@ -143,6 +153,19 @@ def get_departments_by_faculty(faculty_id):
             'name': department.name
         })
     return jsonify({'departments': result}), 200
+
+# 获取所有专业列表
+@auth_bp.route('/majors', methods=['GET'])
+def get_all_majors():
+    from models import Major
+    majors = Major.query.all()
+    result = []
+    for major in majors:
+        result.append({
+            'id': major.id,
+            'name': major.name
+        })
+    return jsonify({'majors': result}), 200
 
 # 根据系ID获取专业列表（用于注册选择）
 @auth_bp.route('/majors/<int:department_id>', methods=['GET'])

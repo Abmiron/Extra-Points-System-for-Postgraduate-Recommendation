@@ -42,7 +42,12 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">学院</label>
-            <input type="text" class="form-control" v-model="profile.faculty" :disabled="!isEditing" required>
+            <select class="form-control" v-model="profile.facultyId" :disabled="!isEditing" required>
+              <option value="" disabled>请选择学院</option>
+              <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
+                {{ faculty.name }}
+              </option>
+            </select>
           </div>
           <div class="form-group">
             <label class="form-label">职称</label>
@@ -157,7 +162,8 @@ const originalProfile = ref({})
 const profile = reactive({
   name: '',
   teacherId: '',
-  faculty: '',
+  facultyId: '',
+  facultyName: '',
   title: '',
   email: '',
   phone: '',
@@ -165,6 +171,9 @@ const profile = reactive({
   officePhone: '',
   avatar: ''
 })
+
+// 学院列表
+const faculties = ref([])
 
 // 计算头像URL，确保包含完整的服务器地址前缀
 const getAvatarUrl = computed(() => {
@@ -248,6 +257,16 @@ const handleAvatarChange = async (event) => {
   }
 }
 
+// 加载学院列表
+const loadFaculties = async () => {
+  try {
+    const response = await api.getFaculties()
+    faculties.value = response.faculties
+  } catch (error) {
+    console.error('加载学院列表失败:', error)
+  }
+}
+
 const saveProfile = async () => {
   saving.value = true
 
@@ -256,7 +275,7 @@ const saveProfile = async () => {
     const updateData = {
       username: profile.teacherId, // 添加用户名参数
       name: profile.name,
-      faculty: profile.faculty,
+      facultyId: profile.facultyId,
       title: profile.title,
       email: profile.email,
       phone: profile.phone,
@@ -332,12 +351,16 @@ const closePasswordModal = () => {
 
 // 生命周期
 onMounted(async () => {
+  // 加载学院列表
+  await loadFaculties()
+  
   // 从auth store获取当前用户信息
   if (authStore.user) {
     Object.assign(profile, {
       name: authStore.user.name || '',
       teacherId: authStore.user.username || '',
-      faculty: authStore.user.faculty || '',
+      facultyId: authStore.user.facultyId || '',
+      facultyName: authStore.user.faculty || '',
       title: authStore.user.title || '',
       email: authStore.user.email || '',
       phone: authStore.user.phone || '',
@@ -347,8 +370,6 @@ onMounted(async () => {
     })
   }
   originalProfile.value = { ...profile }
-
-
 })
 </script>
 

@@ -37,9 +37,12 @@ def get_user(username):
         'name': user.name,
         'role': user.role,
         'avatar': user.avatar,
-        'faculty': user.faculty,
-        'department': user.department,
-        'major': user.major,
+        'faculty': user.faculty.name if user.faculty else '',
+        'facultyId': user.faculty_id,
+        'department': user.department.name if user.department else '',
+        'departmentId': user.department_id,
+        'major': user.major.name if user.major else '',
+        'majorId': user.major_id,
         'studentId': user.student_id,
         'email': user.email,
         'phone': user.phone,
@@ -90,9 +93,12 @@ def get_all_users():
             'name': user.name,
             'role': user.role,
             'avatar': user.avatar,
-            'faculty': user.faculty,
-            'department': user.department,
-            'major': user.major,
+            'faculty': user.faculty.name if user.faculty else '',
+            'facultyId': user.faculty_id,
+            'department': user.department.name if user.department else '',
+            'departmentId': user.department_id,
+            'major': user.major.name if user.major else '',
+            'majorId': user.major_id,
             'studentId': user.student_id,
             'email': user.email,
             'phone': user.phone,
@@ -113,6 +119,13 @@ def get_all_users():
 # 管理员删除用户接口
 @user_bp.route('/admin/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
+    # 获取当前登录用户的ID
+    current_user_id = request.args.get('currentUserId', type=int)
+    
+    # 检查是否尝试删除自己
+    if current_user_id == user_id:
+        return jsonify({'message': '无法删除自己的账号'}), 400
+    
     user = User.query.get(user_id)
     
     if not user:
@@ -127,6 +140,13 @@ def delete_user(user_id):
 # 管理员更新用户信息接口
 @user_bp.route('/admin/users/<int:user_id>', methods=['PUT'])
 def update_user(user_id):
+    # 获取当前登录用户的ID
+    current_user_id = request.args.get('currentUserId', type=int)
+    
+    # 检查是否尝试修改自己
+    if current_user_id == user_id:
+        return jsonify({'message': '无法修改自己的账号信息'}), 400
+    
     user = User.query.get(user_id)
     
     if not user:
@@ -139,12 +159,12 @@ def update_user(user_id):
         user.name = data['name']
     if 'role' in data:
         user.role = data['role']
-    if 'faculty' in data:
-        user.faculty = data['faculty']
-    if 'department' in data:
-        user.department = data['department']
-    if 'major' in data:
-        user.major = data['major']
+    if 'facultyId' in data:
+        user.faculty_id = data['facultyId']
+    if 'departmentId' in data:
+        user.department_id = data['departmentId']
+    if 'majorId' in data:
+        user.major_id = data['majorId']
     if 'email' in data:
         user.email = data['email']
     if 'phone' in data:
@@ -162,6 +182,13 @@ def update_user(user_id):
 # 管理员重置用户密码接口
 @user_bp.route('/admin/users/<int:user_id>/reset-password', methods=['POST'])
 def admin_reset_password(user_id):
+    # 获取当前登录用户的ID
+    current_user_id = request.args.get('currentUserId', type=int)
+    
+    # 检查是否尝试重置自己的密码
+    if current_user_id == user_id:
+        return jsonify({'message': '无法重置自己的密码，请使用个人设置修改密码'}), 400
+    
     user = User.query.get(user_id)
     
     if not user:
@@ -200,10 +227,12 @@ def update_profile():
     # 更新用户信息
     if 'name' in data:
         user.name = data['name']
-    if 'faculty' in data:
-        user.faculty = data['faculty']
-    if 'major' in data:
-        user.major = data['major']
+    if 'facultyId' in data:
+        user.faculty_id = data['facultyId']
+    if 'departmentId' in data:
+        user.department_id = data['departmentId']
+    if 'majorId' in data:
+        user.major_id = data['majorId']
     if 'email' in data:
         user.email = data['email']
     if 'phone' in data:
@@ -219,9 +248,12 @@ def update_profile():
         'name': user.name,
         'role': user.role,
         'avatar': user.avatar,
-        'faculty': user.faculty,
-        'department': user.department,
-        'major': user.major,
+        'faculty': user.faculty.name if user.faculty else '',
+        'facultyId': user.faculty_id,
+        'department': user.department.name if user.department else '',
+        'departmentId': user.department_id,
+        'major': user.major.name if user.major else '',
+        'majorId': user.major_id,
         'studentId': user.student_id,
         'email': user.email,
         'phone': user.phone,
@@ -314,9 +346,12 @@ def upload_avatar():
             'name': user.name,
             'role': user.role,
             'avatar': user.avatar,
-            'faculty': user.faculty,
-            'department': user.department,
-            'major': user.major,
+            'faculty': user.faculty.name if user.faculty else None,
+            'facultyId': user.faculty_id,
+            'department': user.department.name if user.department else None,
+            'departmentId': user.department_id,
+            'major': user.major.name if user.major else None,
+            'majorId': user.major_id,
             'studentId': user.student_id,
             'email': user.email,
             'phone': user.phone,

@@ -28,9 +28,9 @@
         <span class="filter-label">学院:</span>
         <select class="form-control" v-model="filters.faculty">
           <option value="all">全部</option>
-          <option value="cs">计算机科学系</option>
-          <option value="se">软件工程系</option>
-          <option value="ai">人工智能系</option>
+          <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.name">
+            {{ faculty.name }}
+          </option>
         </select>
       </div>
       <div class="filter-group">
@@ -41,7 +41,7 @@
           <option value="disabled">禁用</option>
         </select>
       </div>
-      <button class="btn" @click="searchUsers">搜索</button>
+      <button class="btn btn-outline" @click="resetFilters">清空筛选</button>
     </div>
 
     <!-- 批量操作工具栏 -->
@@ -78,46 +78,50 @@
               <th>专业/角色</th>
               <th>状态</th>
               <th>最后登录</th>
+              <th v-if="activeTab === 'admin'">登录状态</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="user in paginatedUsers" :key="user.id">
-              <td><input type="checkbox" v-model="selectedUsers" :value="user.id"></td>
+              <td><input type="checkbox" v-model="selectedUsers" :value="user.id" :disabled="user.id === authStore.user.id" :class="{ 'checkbox-disabled': user.id === authStore.user.id }"></td>
               <td>{{ user.username }}</td>
               <td>{{ user.name }}</td>
-              <td>{{ getFacultyText(user.faculty) }}</td>
-              <td>{{ user.role === 'student' ? user.major : (user.role === 'teacher' ? user.roleName : user.roleName || '管理员') }}</td>
+              <td>{{ user.faculty?.name || getFacultyText(user.faculty) }}</td>
+              <td>{{ user.role === 'student' ? (user.major?.name || user.major) : (user.role === 'teacher' ? user.roleName : user.roleName || '管理员') }}</td>
               <td>
                 <span :class="`status-badge status-${user.status === 'active' ? 'approved' : 'rejected'}`">
                   {{ user.status === 'active' ? '启用' : '禁用' }}
                 </span>
               </td>
               <td>{{ formatDate(user.lastLogin) }}</td>
+              <td v-if="activeTab === 'admin'">
+                <span v-if="user.id === authStore.user.id" class="current-login-badge">当前登录</span>
+              </td>
               <td>
                 <div class="action-buttons">
-                  <button class="btn-outline btn small-btn" @click="editUser(user)" title="编辑">
+                  <button class="btn-outline btn small-btn" @click="editUser(user)" title="编辑" :disabled="user.id === authStore.user.id" :class="{ 'btn-disabled': user.id === authStore.user.id }">
                     <font-awesome-icon :icon="['fas', 'edit']" />
                   </button>
                   <button v-if="user.status === 'active'" class="btn-outline btn small-btn"
-                    @click="toggleUserStatus(user.id, 'disabled')" title="禁用">
+                    @click="toggleUserStatus(user.id, 'disabled')" title="禁用" :disabled="user.id === authStore.user.id" :class="{ 'btn-disabled': user.id === authStore.user.id }">
                     <font-awesome-icon :icon="['fas', 'ban']" />
                   </button>
                   <button v-else class="btn-outline btn small-btn" @click="toggleUserStatus(user.id, 'active')"
-                    title="启用">
+                    title="启用" :disabled="user.id === authStore.user.id" :class="{ 'btn-disabled': user.id === authStore.user.id }">
                     <font-awesome-icon :icon="['fas', 'check']" />
                   </button>
-                  <button class="btn-outline btn small-btn" @click="resetPassword(user.id)" title="重置密码">
+                  <button class="btn-outline btn small-btn" @click="resetPassword(user.id)" title="重置密码" :disabled="user.id === authStore.user.id" :class="{ 'btn-disabled': user.id === authStore.user.id }">
                     <font-awesome-icon :icon="['fas', 'key']" />
                   </button>
-                  <button class="btn-outline btn small-btn" @click="deleteUser(user.id)" title="删除">
+                  <button class="btn-outline btn small-btn" @click="deleteUser(user.id)" title="删除" :disabled="user.id === authStore.user.id" :class="{ 'btn-disabled': user.id === authStore.user.id }">
                     <font-awesome-icon :icon="['fas', 'trash']" />
                   </button>
                 </div>
               </td>
             </tr>
             <tr v-if="paginatedUsers.length === 0">
-              <td colspan="8" class="no-data">暂无用户数据</td>
+              <td :colspan="activeTab === 'admin' ? 8 : 7" class="no-data">暂无用户数据</td>
             </tr>
           </tbody>
         </table>
@@ -151,7 +155,8 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">用户类型</label>
-                <select class="form-control" v-model="userForm.role" required>
+                <select class="form-control" v-model="userForm.role" required @change="handleRoleChange">
+                  <option value="">请选择角色</option>
                   <option value="student">学生</option>
                   <option value="teacher">教师</option>
                   <option value="admin">管理员</option>
@@ -169,20 +174,32 @@
               </div>
               <div class="form-group">
                 <label class="form-label">学院</label>
-                <select class="form-control" v-model="userForm.faculty" required>
-                  <option value="cs">计算机科学系</option>
-                  <option value="se">软件工程系</option>
-                  <option value="ai">人工智能系</option>
+                <select class="form-control" v-model="userForm.facultyId" required @change="handleFacultyChange">
+                  <option value="">请选择学院</option>
+                  <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
+                    {{ faculty.name }}
+                  </option>
                 </select>
               </div>
             </div>
+            <!-- 系选择（仅学生显示） -->
             <div class="form-row" v-if="userForm.role === 'student'">
               <div class="form-group">
+                <label class="form-label">系</label>
+                <select class="form-control" v-model="userForm.departmentId" required @change="handleDepartmentChange">
+                  <option value="">请选择系</option>
+                  <option v-for="department in departments" :key="department.id" :value="department.id">
+                    {{ department.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="form-group">
                 <label class="form-label">专业</label>
-                <select class="form-control" v-model="userForm.major" required>
-                  <option value="cs">计算机科学与技术</option>
-                  <option value="se">软件工程</option>
-                  <option value="ai">人工智能</option>
+                <select class="form-control" v-model="userForm.majorId" required>
+                  <option value="">请选择专业</option>
+                  <option v-for="major in majors" :key="major.id" :value="major.id">
+                    {{ major.name }}
+                  </option>
                 </select>
               </div>
             </div>
@@ -190,21 +207,23 @@
               <div class="form-group">
                 <label class="form-label">角色</label>
                 <input type="text" class="form-control" v-model="userForm.roleName"
-                  placeholder="如：审核员" required>
+                  placeholder="如：审核员">
+                <div class="help-text">默认为审核员</div>
               </div>
             </div>
             <div class="form-row" v-else-if="userForm.role === 'admin'">
               <div class="form-group">
                 <label class="form-label">管理员类型</label>
                 <input type="text" class="form-control" v-model="userForm.roleName"
-                  placeholder="如：系统管理员" required>
+                  placeholder="如：系统管理员">
+                <div class="help-text">默认为系统管理员</div>
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">初始密码</label>
-                <input type="password" class="form-control" v-model="userForm.password" :required="!editingUser">
-                <div class="help-text">若不修改密码请留空</div>
+                <input type="password" class="form-control" v-model="userForm.password">
+                <div class="help-text">若不修改密码请留空，默认为123456</div>
               </div>
               <div class="form-group">
                 <label class="form-label">状态</label>
@@ -270,6 +289,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watchEffect } from 'vue'
 import { useAuthStore } from '../../stores/auth'
+import api from '../../utils/api'
 
 const activeTab = ref('student')
 const showAddUserModal = ref(false)
@@ -291,20 +311,123 @@ const userForm = reactive({
   role: 'student',
   username: '',
   name: '',
-  faculty: 'cs',
-  major: 'cs',
+  facultyId: '',
+  departmentId: '',
+  majorId: '',
   roleName: '',
   password: '',
   status: 'active'
 })
+
+// 下拉选项数据
+const faculties = ref([])
+const departments = ref([])
+const majors = ref([])
+const loadingOptions = ref(false)
 
 // 从后端API获取用户数据
 const users = ref([])
 const totalUsers = ref(0)
 const totalPages = ref(0)
 
+// 组件挂载时加载学院列表
+onMounted(() => {
+  loadFaculties()
+})
+
+// 加载学院列表
+const loadFaculties = async () => {
+  try {
+    loadingOptions.value = true
+    const response = await api.getFaculties()
+    faculties.value = response.faculties
+  } catch (error) {
+    console.error('加载学院列表失败:', error)
+    alert('加载学院列表失败，请刷新页面重试')
+  } finally {
+    loadingOptions.value = false
+  }
+}
+
+// 加载系列表
+const loadDepartments = async (facultyId) => {
+  try {
+    loadingOptions.value = true
+    if (facultyId) {
+      const response = await api.getDepartmentsByFaculty(facultyId)
+      departments.value = response.departments
+      // 重置系和专业选择
+      userForm.departmentId = ''
+      userForm.majorId = ''
+      majors.value = []
+    }
+  } catch (error) {
+    console.error('加载系列表失败:', error)
+    alert('加载系列表失败，请重试')
+  } finally {
+    loadingOptions.value = false
+  }
+}
+
+// 加载专业列表
+const loadMajors = async (departmentId) => {
+  try {
+    loadingOptions.value = true
+    if (departmentId) {
+      const response = await api.getMajorsByDepartment(departmentId)
+      majors.value = response.majors
+      // 重置专业选择
+      userForm.majorId = ''
+    }
+  } catch (error) {
+    console.error('加载专业列表失败:', error)
+    alert('加载专业列表失败，请重试')
+  } finally {
+    loadingOptions.value = false
+  }
+}
+
+// 角色变化处理
+const handleRoleChange = () => {
+  // 重置学院、系和专业选择
+  userForm.facultyId = ''
+  userForm.departmentId = ''
+  userForm.majorId = ''
+  departments.value = []
+  majors.value = []
+}
+
+// 学院变化处理
+const handleFacultyChange = () => {
+  if (userForm.facultyId) {
+    loadDepartments(userForm.facultyId)
+  } else {
+    // 重置系和专业选择
+    userForm.departmentId = ''
+    userForm.majorId = ''
+    departments.value = []
+    majors.value = []
+  }
+}
+
+// 系变化处理
+const handleDepartmentChange = () => {
+  if (userForm.departmentId) {
+    loadMajors(userForm.departmentId)
+  } else {
+    // 重置专业选择
+    userForm.majorId = ''
+    majors.value = []
+  }
+}
+
 // 从后端API加载用户数据的函数
 const loadUsersFromAPI = async () => {
+  // 检查用户是否已登录
+  if (!authStore.isAuthenticated) {
+    return
+  }
+  
   try {
     isLoading.value = true
     const role = activeTab.value
@@ -369,9 +492,21 @@ const searchUsers = () => {
   loadUsersFromAPI()
 }
 
+const resetFilters = () => {
+  // 重置筛选条件
+  filters.keyword = ''
+  filters.faculty = 'all'
+  filters.status = 'all'
+  // 重新加载用户数据
+  searchUsers()
+}
+
 const toggleSelectAll = () => {
   if (selectAll.value) {
-    selectedUsers.value = paginatedUsers.value.map(user => user.id)
+    // 全选时排除当前登录用户
+    selectedUsers.value = paginatedUsers.value
+      .filter(user => user.id !== authStore.user.id)
+      .map(user => user.id)
   } else {
     selectedUsers.value = []
   }
@@ -381,19 +516,29 @@ const importUsers = () => {
   alert('用户导入功能开发中...')
 }
 
-const editUser = (user) => {
+const editUser = async (user) => {
   editingUser.value = user
   Object.assign(userForm, {
     id: user.id,
     role: user.role,
     username: user.username,
     name: user.name,
-    faculty: user.faculty,
-    major: user.major,
+    facultyId: user.faculty?.id || user.faculty,
+    departmentId: user.department?.id || user.department,
+    majorId: user.major?.id || user.major,
     roleName: user.roleName,
     status: user.status,
     password: '' // 重置密码字段
   })
+  
+  // 如果是学生用户，需要加载对应的系和专业列表
+  if (user.role === 'student' && user.facultyId) {
+    await loadDepartments(user.facultyId)
+    if (user.departmentId) {
+      await loadMajors(user.departmentId)
+    }
+  }
+  
   showAddUserModal.value = true
 }
 
@@ -407,18 +552,21 @@ const saveUser = async () => {
       role: userForm.role,
       username: username,
       name: userForm.name,
-      faculty: userForm.faculty,
+      facultyId: userForm.facultyId,
       status: userForm.status,
       ...(userForm.role === 'student' ? {
-        major: userForm.major
+        departmentId: userForm.departmentId,
+        majorId: userForm.majorId
       } : {
-        roleName: userForm.roleName
+        roleName: userForm.roleName || (userForm.role === 'teacher' ? '审核员' : '系统管理员')
       })
     }
     
-    // 如果提供了密码，则包含密码字段
+    // 如果提供了密码，则包含密码字段；如果是新用户且未提供密码，则使用默认密码
     if (userForm.password) {
       userData.password = userForm.password
+    } else if (!editingUser.value) {
+      userData.password = '123456'
     }
     
     let response
@@ -447,8 +595,8 @@ const saveUser = async () => {
       throw new Error(errorData.message || '操作失败')
     }
     
-    closeModal()
     alert(editingUser.value ? '用户信息更新成功' : '用户添加成功')
+    closeModal()
     loadUsersFromAPI() // 重新加载用户列表
   } catch (error) {
     console.error('保存用户失败:', error)
@@ -770,6 +918,16 @@ watchEffect(() => {
   width: 180px;
   min-width: 180px;
   text-align: center;
+}
+
+/* 当前登录徽章样式 */
+.current-login-badge {
+  background-color: #007bff;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
 }
 </style>
 

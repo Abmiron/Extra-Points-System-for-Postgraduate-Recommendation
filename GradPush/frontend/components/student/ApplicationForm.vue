@@ -498,8 +498,8 @@ const formData = reactive({
   // 添加用户信息
   studentId: authStore.user?.studentId || '',
   name: authStore.userName,
-  department: authStore.user?.department || '',
-  major: authStore.user?.major || '',
+  departmentId: authStore.user?.departmentId || '',
+  majorId: authStore.user?.majorId || '',
   
   // 原有表单数据
   applicationType: 'academic',
@@ -761,8 +761,8 @@ const saveDraft = async () => {
       // 确保使用正确的字段名，与显示组件保持一致
       studentName,
       studentId,
-      department,
-      major,
+      departmentId: authStore.user?.departmentId || '',
+      majorId: authStore.user?.majorId || '',
       status: 'draft',
       appliedAt: new Date().toISOString()
     }
@@ -901,8 +901,8 @@ const submitForm = async () => {
       // 确保使用正确的字段名，与显示组件保持一致
       studentName,
       studentId,
-      department,
-      major,
+      departmentId: authStore.user?.departmentId || '',
+      majorId: authStore.user?.majorId || '',
       status: 'pending',
       appliedAt: new Date().toISOString()
     }
@@ -923,8 +923,8 @@ const submitForm = async () => {
         Object.assign(formData, {
           studentId: authStore.user?.studentId || '',
           name: authStore.userName,
-          department: authStore.user?.department || '',
-          major: authStore.user?.major || '',
+          departmentId: authStore.user?.departmentId || '',
+          majorId: authStore.user?.majorId || '',
           applicationType: 'academic',
           projectName: '',
           awardDate: '',

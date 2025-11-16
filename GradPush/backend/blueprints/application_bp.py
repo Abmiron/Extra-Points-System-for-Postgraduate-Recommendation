@@ -36,8 +36,8 @@ def get_applications():
     reviewed_by = request.args.get('reviewedBy')
     reviewed_start_date = request.args.get('reviewedStartDate')
     reviewed_end_date = request.args.get('reviewedEndDate')
-    department = request.args.get('department')
-    major = request.args.get('major')
+    department_id = request.args.get('departmentId')
+    major_id = request.args.get('majorId')
     
     # 构建查询
     query = Application.query
@@ -57,11 +57,11 @@ def get_applications():
     if reviewed_by:
         query = query.filter(Application.reviewed_by.like(f'%{reviewed_by}%'))
     
-    if department:
-        query = query.filter_by(department=department)
+    if department_id:
+        query = query.filter_by(department_id=department_id)
     
-    if major:
-        query = query.filter_by(major=major)
+    if major_id:
+        query = query.filter_by(major_id=major_id)
     
     # 审核时间筛选
     if reviewed_start_date:
@@ -109,8 +109,10 @@ def get_applications():
             'id': app.id,
             'studentId': app.student_id,
             'studentName': app.student_name,
-            'department': app.department,
-            'major': app.major,
+            'departmentId': app.department_id,
+            'department': app.department.name if app.department else None,
+            'majorId': app.major_id,
+            'major': app.major.name if app.major else None,
             'applicationType': app.application_type,
             'appliedAt': app.applied_at.isoformat() if app.applied_at else None,
             'selfScore': app.self_score,
@@ -175,8 +177,10 @@ def get_application(id):
         'id': app.id,
         'studentId': app.student_id,
         'studentName': app.student_name,
-        'department': app.department,
-        'major': app.major,
+        'departmentId': app.department_id,
+        'department': app.department.name,
+        'majorId': app.major_id,
+        'major': app.major.name,
         'applicationType': app.application_type,
         'appliedAt': app.applied_at.isoformat() if app.applied_at else None,
         'selfScore': app.self_score,
@@ -231,8 +235,8 @@ def create_application():
             'studentId': 'student_id',
             'studentName': 'student_name',
             'name': 'student_name',  # 兼容前端可能使用的name字段
-            'department': 'department',
-            'major': 'major',
+            'departmentId': 'department_id',
+            'majorId': 'major_id',
             'applicationType': 'application_type',
             'selfScore': 'self_score',
             'projectName': 'project_name',
@@ -326,8 +330,8 @@ def create_application():
         new_application = Application(
             student_id=data['student_id'],
             student_name=data['student_name'],
-            department=data['department'],
-            major=data['major'],
+            department_id=data['department_id'],
+            major_id=data['major_id'],
             application_type=data['application_type'],
             applied_at=datetime.utcnow(),
             self_score=data['self_score'],
@@ -363,8 +367,10 @@ def create_application():
             'id': new_application.id,
             'studentId': new_application.student_id,
             'studentName': new_application.student_name,
-            'department': new_application.department,
-            'major': new_application.major,
+            'departmentId': new_application.department_id,
+            'department': new_application.department.name,
+            'majorId': new_application.major_id,
+            'major': new_application.major.name,
             'applicationType': new_application.application_type,
             'appliedAt': new_application.applied_at.isoformat() if new_application.applied_at else None,
             'selfScore': new_application.self_score,
@@ -572,8 +578,8 @@ def delete_application(id):
 @application_bp.route('/applications/pending', methods=['GET'])
 def get_pending_applications():
     # 获取查询参数
-    department = request.args.get('department')
-    major = request.args.get('major')
+    department_id = request.args.get('departmentId')
+    major_id = request.args.get('majorId')
     application_type = request.args.get('applicationType')
     student_id = request.args.get('studentId')
     student_name = request.args.get('studentName')
@@ -581,11 +587,11 @@ def get_pending_applications():
     # 构建查询
     query = Application.query.filter_by(status='pending')
     
-    if department:
-        query = query.filter_by(department=department)
+    if department_id:
+        query = query.filter_by(department_id=department_id)
     
-    if major:
-        query = query.filter_by(major=major)
+    if major_id:
+        query = query.filter_by(major_id=major_id)
     
     if application_type:
         query = query.filter_by(application_type=application_type)
@@ -622,8 +628,10 @@ def get_pending_applications():
             'id': app.id,
             'studentId': app.student_id,
             'studentName': app.student_name,
-            'department': app.department,
-            'major': app.major,
+            'departmentId': app.department_id,
+            'department': app.department.name,
+            'majorId': app.major_id,
+            'major': app.major.name,
             'applicationType': app.application_type,
             'appliedAt': app.applied_at.isoformat() if app.applied_at else None,
             'selfScore': app.self_score,
@@ -750,18 +758,18 @@ def health_check():
 def get_students_ranking():
     try:
         # 获取查询参数
-        department = request.args.get('department')
-        major = request.args.get('major')
+        department_id = request.args.get('departmentId')
+        major_id = request.args.get('majorId')
     
         # 构建查询条件 - 优先使用StudentEvaluation模型
         query = StudentEvaluation.query
     
         # 应用筛选条件
-        if department and department != 'all':
-            query = query.filter_by(department=department)
-    
-        if major and major != 'all':
-            query = query.filter_by(major=major)
+        if department_id and department_id != 'all':
+            query = query.filter_by(department_id=department_id)
+
+        if major_id and major_id != 'all':
+            query = query.filter_by(major_id=major_id)
     
         # 获取所有符合条件的学生总评数据
         student_evaluations = query.all()
@@ -775,8 +783,10 @@ def get_students_ranking():
             student_stats[student_id] = {
                 'student_id': evaluation.student_id,
                 'student_name': evaluation.student_name,
-                'department': evaluation.department,
-                'major': evaluation.major,
+                'departmentId': evaluation.department_id,
+                'department': evaluation.department.name,
+                'majorId': evaluation.major_id,
+                'major': evaluation.major.name,
                 'gender': evaluation.gender,
                 'cet4_score': evaluation.cet4_score,
                 'cet6_score': evaluation.cet6_score,
@@ -837,11 +847,11 @@ def get_students_ranking():
             app_query = Application.query.filter_by(status='approved')
             
             # 应用筛选条件
-            if department and department != 'all':
-                app_query = app_query.filter_by(department=department)
+            if department_id and department_id != 'all':
+                app_query = app_query.filter_by(department_id=department_id)
             
-            if major and major != 'all':
-                app_query = app_query.filter_by(major=major)
+            if major_id and major_id != 'all':
+                app_query = app_query.filter_by(major_id=major_id)
             
             # 获取所有符合条件的申请
             applications = app_query.all()
@@ -853,8 +863,10 @@ def get_students_ranking():
                     student_stats[student_id] = {
                         'student_id': app.student_id,
                         'student_name': app.student_name,
-                        'department': app.department,
-                        'major': app.major,
+                        'departmentId': app.department_id,
+                        'department': app.department.name,
+                        'majorId': app.major_id,
+                        'major': app.major.name,
                         'specialty_score': 0.0,
                         'comprehensive_score': 0.0,
                         'total_score': 0.0,

@@ -41,8 +41,8 @@ const currentPageComponent = computed(() => pageComponents[currentPage.value])
 
 const userInfo = computed(() => ({
   name: authStore.userName,
-  faculty: authStore.user?.faculty || '信息学院',
-  major: authStore.user?.major || '计算机科学与技术',
+  faculty: authStore.user?.faculty?.name || '信息学院',
+  major: authStore.user?.major?.name || '计算机科学与技术',
   studentId: authStore.user?.studentId || ''
 }))
 

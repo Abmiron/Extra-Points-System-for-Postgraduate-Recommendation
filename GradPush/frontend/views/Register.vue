@@ -39,9 +39,9 @@
             <!-- 学院选择 -->
             <div class="input-group">
               <font-awesome-icon :icon="['fas', 'university']" class="input-icon" />
-              <select v-model="registerForm.faculty" required @change="handleFacultyChange">
+              <select v-model="registerForm.facultyId" required @change="handleFacultyChange">
                 <option value="">请选择学院</option>
-                <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.name">
+                <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
                   {{ faculty.name }}
                 </option>
               </select>
@@ -50,9 +50,9 @@
             <!-- 系选择（仅学生显示） -->
             <div class="input-group" v-if="registerForm.role === 'student'">
               <font-awesome-icon :icon="['fas', 'building']" class="input-icon" />
-              <select v-model="registerForm.department" required @change="handleDepartmentChange">
+              <select v-model="registerForm.departmentId" required @change="handleDepartmentChange">
                 <option value="">请选择系</option>
-                <option v-for="department in departments" :key="department.id" :value="department.name">
+                <option v-for="department in departments" :key="department.id" :value="department.id">
                   {{ department.name }}
                 </option>
               </select>
@@ -61,9 +61,9 @@
             <!-- 专业选择（仅学生显示） -->
             <div class="input-group" v-if="registerForm.role === 'student'">
               <font-awesome-icon :icon="['fas', 'graduation-cap']" class="input-icon" />
-              <select v-model="registerForm.major" required>
+              <select v-model="registerForm.majorId" required>
                 <option value="">请选择专业</option>
-                <option v-for="major in majors" :key="major.id" :value="major.name">
+                <option v-for="major in majors" :key="major.id" :value="major.id">
                   {{ major.name }}
                 </option>
               </select>
@@ -124,9 +124,9 @@ const registerForm = reactive({
   password: '',
   confirmPassword: '',
   role: '',
-  faculty: '',
-  department: '',
-  major: ''
+  facultyId: '',
+  departmentId: '',
+  majorId: ''
 })
 
 // 下拉选项数据
@@ -136,15 +136,15 @@ const majors = ref([])
 
 // 表单验证
 const isFormValid = computed(() => {
-  const { username, name, password, confirmPassword, role, faculty, department, major } = registerForm
+  const { username, name, password, confirmPassword, role, facultyId, departmentId, majorId } = registerForm
   
   // 基本字段验证
-  if (!username || !name || !password || !confirmPassword || !role || !faculty) {
+  if (!username || !name || !password || !confirmPassword || !role || !facultyId) {
     return false
   }
   
   // 学生需要验证系和专业
-  if (role === 'student' && (!department || !major)) {
+  if (role === 'student' && (!departmentId || !majorId)) {
     return false
   }
   
@@ -181,17 +181,15 @@ const loadFaculties = async () => {
 }
 
 // 加载系列表
-const loadDepartments = async (facultyName) => {
+const loadDepartments = async (facultyId) => {
   try {
     loadingOptions.value = true
-    // 找到选中的学院ID
-    const selectedFaculty = faculties.value.find(f => f.name === facultyName)
-    if (selectedFaculty) {
-      const response = await api.getDepartmentsByFaculty(selectedFaculty.id)
+    if (facultyId) {
+      const response = await api.getDepartmentsByFaculty(facultyId)
       departments.value = response.departments
       // 重置系和专业选择
-      registerForm.department = ''
-      registerForm.major = ''
+      registerForm.departmentId = ''
+      registerForm.majorId = ''
       majors.value = []
     }
   } catch (error) {
@@ -203,16 +201,14 @@ const loadDepartments = async (facultyName) => {
 }
 
 // 加载专业列表
-const loadMajors = async (departmentName) => {
+const loadMajors = async (departmentId) => {
   try {
     loadingOptions.value = true
-    // 找到选中的系ID
-    const selectedDepartment = departments.value.find(d => d.name === departmentName)
-    if (selectedDepartment) {
-      const response = await api.getMajorsByDepartment(selectedDepartment.id)
+    if (departmentId) {
+      const response = await api.getMajorsByDepartment(departmentId)
       majors.value = response.majors
       // 重置专业选择
-      registerForm.major = ''
+      registerForm.majorId = ''
     }
   } catch (error) {
     console.error('加载专业列表失败:', error)
@@ -225,21 +221,21 @@ const loadMajors = async (departmentName) => {
 // 角色变化处理
 const handleRoleChange = () => {
   // 重置学院、系和专业选择
-  registerForm.faculty = ''
-  registerForm.department = ''
-  registerForm.major = ''
+  registerForm.facultyId = ''
+  registerForm.departmentId = ''
+  registerForm.majorId = ''
   departments.value = []
   majors.value = []
 }
 
 // 学院变化处理
 const handleFacultyChange = () => {
-  if (registerForm.faculty) {
-    loadDepartments(registerForm.faculty)
+  if (registerForm.facultyId) {
+    loadDepartments(registerForm.facultyId)
   } else {
     // 重置系和专业选择
-    registerForm.department = ''
-    registerForm.major = ''
+    registerForm.departmentId = ''
+    registerForm.majorId = ''
     departments.value = []
     majors.value = []
   }
@@ -247,11 +243,11 @@ const handleFacultyChange = () => {
 
 // 系变化处理
 const handleDepartmentChange = () => {
-  if (registerForm.department) {
-    loadMajors(registerForm.department)
+  if (registerForm.departmentId) {
+    loadMajors(registerForm.departmentId)
   } else {
     // 重置专业选择
-    registerForm.major = ''
+    registerForm.majorId = ''
     majors.value = []
   }
 }
@@ -278,15 +274,15 @@ const handleRegister = async () => {
     alert('请选择角色')
     return
   }
-  if (!registerForm.faculty) {
+  if (!registerForm.facultyId) {
     alert('请选择学院')
     return
   }
-  if (registerForm.role === 'student' && !registerForm.department) {
+  if (registerForm.role === 'student' && !registerForm.departmentId) {
     alert('请选择系')
     return
   }
-  if (registerForm.role === 'student' && !registerForm.major) {
+  if (registerForm.role === 'student' && !registerForm.majorId) {
     alert('请选择专业')
     return
   }
@@ -310,9 +306,9 @@ const handleRegister = async () => {
       name: registerForm.name,
       password: registerForm.password,
       role: registerForm.role,
-      faculty: registerForm.faculty,
-      department: registerForm.department,
-      major: registerForm.major
+      facultyId: registerForm.facultyId,
+      departmentId: registerForm.departmentId,
+      majorId: registerForm.majorId
     })
     
     // 注册成功后跳转到登录页面

@@ -43,11 +43,21 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">学院</label>
-            <input type="text" class="form-control" v-model="profile.faculty" :disabled="!isEditing" required>
+            <select class="form-control" v-model="profile.facultyId" :disabled="!isEditing" required>
+              <option value="" disabled>请选择学院</option>
+              <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
+                {{ faculty.name }}
+              </option>
+            </select>
           </div>
           <div class="form-group">
             <label class="form-label">专业</label>
-            <input type="text" class="form-control" v-model="profile.major" :disabled="!isEditing" required>
+            <select class="form-control" v-model="profile.majorId" :disabled="!isEditing" required>
+              <option value="" disabled>请选择专业</option>
+              <option v-for="major in majors" :key="major.id" :value="major.id">
+                {{ major.name }}
+              </option>
+            </select>
           </div>
         </div>
 
@@ -143,13 +153,21 @@ const originalProfile = ref({})
 const profile = reactive({
   name: '',
   studentId: '',
-  faculty: '',
-  department: '',
-  major: '',
+  facultyId: '',
+  facultyName: '',
+  departmentId: '',
+  departmentName: '',
+  majorId: '',
+  majorName: '',
   email: '',
   phone: '',
   avatar: ''
 })
+
+// 学院和专业列表
+const faculties = ref([])
+const departments = ref([])
+const majors = ref([])
 
 // 计算头像URL，确保包含完整的服务器地址前缀
 const getAvatarUrl = computed(() => {
@@ -228,6 +246,26 @@ const handleAvatarChange = async (event) => {
   }
 }
 
+// 加载学院列表
+const loadFaculties = async () => {
+  try {
+    const response = await api.getFaculties()
+    faculties.value = response.faculties
+  } catch (error) {
+    console.error('加载学院列表失败:', error)
+  }
+}
+
+// 加载专业列表
+const loadMajors = async () => {
+  try {
+    const response = await api.getMajors()
+    majors.value = response.majors
+  } catch (error) {
+    console.error('加载专业列表失败:', error)
+  }
+}
+
 const saveProfile = async () => {
   saving.value = true
   try {
@@ -235,8 +273,8 @@ const saveProfile = async () => {
     const updateData = {
       username: authStore.user.username,
       name: profile.name,
-      faculty: profile.faculty,
-      major: profile.major,
+      facultyId: profile.facultyId,
+      majorId: profile.majorId,
       email: profile.email,
       phone: profile.phone
     }
@@ -308,14 +346,19 @@ const closePasswordModal = () => {
 }
 
 // 生命周期
-onMounted(() => {
+onMounted(async () => {
+  // 加载学院和专业列表
+  await Promise.all([loadFaculties(), loadMajors()])
+  
   // 从auth store获取当前用户信息
   if (authStore.user) {
       Object.assign(profile, {
         name: authStore.user.name || '',
         studentId: authStore.user.studentId || authStore.user.username || '',
-        faculty: authStore.user.faculty || '',
-        major: authStore.user.major || '',
+        facultyId: authStore.user.facultyId || '',
+        facultyName: authStore.user.faculty || '',
+        majorId: authStore.user.majorId || '',
+        majorName: authStore.user.major || '',
         email: authStore.user.email || '',
         phone: authStore.user.phone || '',
         avatar: authStore.user.avatar || ''
