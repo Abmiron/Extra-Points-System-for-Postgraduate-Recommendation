@@ -231,19 +231,25 @@ export const useApplicationsStore = defineStore('applications', () => {
         status,
         reviewComment,
         finalScore,
-        reviewedAt: new Date().toISOString(),
         reviewedBy
       }
       
-      await apiRequest(`/applications/${applicationId}`, {
-        method: 'PUT',
+      // 使用审核接口而不是通用更新接口，以触发自动评分逻辑
+      await apiRequest(`/applications/${applicationId}/review`, {
+        method: 'POST',
         body: JSON.stringify(updatedData)
       })
       
       // 更新本地状态
       const application = applications.value.find(app => app.id === applicationId)
       if (application) {
-        Object.assign(application, updatedData)
+        Object.assign(application, {
+          status,
+          reviewComment,
+          finalScore,
+          reviewedAt: new Date().toISOString(),
+          reviewedBy
+        })
       }
       
       return true

@@ -56,18 +56,22 @@
       <div class="table-container">
         <table class="application-table">
           <thead>
-            <tr>
-              <th>规则名称</th>
-              <th>类型</th>
-              <th>子类型</th>
-              <th>级别</th>
-              <th>等级</th>
-              <th>分值</th>
-              <th>状态</th>
-              <th>创建时间</th>
-              <th>操作</th>
-            </tr>
-          </thead>
+              <tr>
+                <th>规则名称</th>
+                <th>类型</th>
+                <th>子类型</th>
+                <th>级别</th>
+                <th>等级</th>
+                <th>基础分值</th>
+                <th>作者排序比例</th>
+                <th>最大分数</th>
+                <th>最大数量</th>
+                <th>规则类型</th>
+                <th>状态</th>
+                <th>创建时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
           <tbody>
             <tr v-for="rule in paginatedRules" :key="rule.id">
               <td>{{ rule.name }}</td>
@@ -76,6 +80,14 @@
               <td>{{ getLevelText(rule.level) }}</td>
               <td>{{ getGradeText(rule.grade) }}</td>
               <td>{{ rule.score }}</td>
+              <td>{{ rule.author_rank_ratio ? (rule.author_rank_ratio * 100).toFixed(0) + '%' : '-' }}</td>
+              <td>{{ rule.max_score || '-' }}</td>
+              <td>{{ rule.max_count || '-' }}</td>
+              <td>
+                <span :class="`status-badge status-${rule.is_special ? 'special' : 'normal'}`">
+                  {{ rule.is_special ? '特殊' : '普通' }}
+                </span>
+              </td>
               <td>
                 <span :class="`status-badge status-${rule.status === 'active' ? 'approved' : 'rejected'}`">
                   {{ rule.status === 'active' ? '启用' : '禁用' }}
@@ -307,6 +319,45 @@
               <input type="number" class="form-control" v-model="ruleForm.author_rank" min="1" placeholder="请输入作者排序（数字）">
             </div>
             
+            <!-- 作者排序比例（科研成果和区分排名的学业竞赛显示） -->
+            <div class="form-group" v-if="(ruleForm.type === 'academic' && (ruleForm.sub_type === 'research' || (ruleForm.sub_type === 'competition' && ruleForm.author_rank_type === 'ranked')))">
+              <label class="form-label">作者排序比例 (%)</label>
+              <input type="number" class="form-control" v-model="ruleForm.author_rank_ratio" min="0" max="100" step="1" placeholder="请输入比例（如80%填写80）">
+            </div>
+            
+            <!-- 最大分数限制（可选） -->
+            <div class="form-group">
+              <label class="form-label">最大分数限制</label>
+              <input type="number" class="form-control" v-model="ruleForm.max_score" step="0.1" min="0" placeholder="请输入最大分数限制（留空表示无限制）">
+            </div>
+            
+            <!-- 最大项目数量限制（可选） -->
+            <div class="form-group">
+              <label class="form-label">最大项目数量限制</label>
+              <input type="number" class="form-control" v-model="ruleForm.max_count" min="1" placeholder="请输入最大项目数量（留空表示无限制）">
+            </div>
+            
+            <!-- 特殊规则标记 -->
+            <div class="form-group">
+              <label class="form-label">特殊规则</label>
+              <div class="radio-cards compact">
+                <div class="radio-card small" :class="{ active: ruleForm.is_special === true }" 
+                  @click.stop="ruleForm.is_special = true">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'check']" />
+                  </div>
+                  <span>是</span>
+                </div>
+                <div class="radio-card small" :class="{ active: ruleForm.is_special === false }" 
+                  @click.stop="ruleForm.is_special = false">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'times']" />
+                  </div>
+                  <span>否</span>
+                </div>
+              </div>
+            </div>
+            
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">分值</label>
@@ -362,7 +413,11 @@ const ruleForm = reactive({
   team_role: '',  // 团队角色：队长/队员
   author_rank_type: 'unranked',  // 作者排序类型：区分排名/ranked、不区分排名/unranked
   author_rank: null,  // 作者排序：数字，仅当区分排名时填写
-  score: 0,
+  author_rank_ratio: null,  // 作者排序比例：如80%填写0.8
+  score: 0,  // 基础分值
+  max_score: null,  // 最大分数限制
+  max_count: null,  // 最大项目数量限制
+  is_special: false,  // 是否为特殊规则
   status: 'active',
   description: ''
 })
@@ -496,7 +551,11 @@ const editRule = (rule) => {
   ruleForm.team_role = rule.team_role || '' // 设置团队角色
   ruleForm.author_rank_type = rule.author_rank_type || 'unranked' // 设置作者排序类型
   ruleForm.author_rank = rule.author_rank || null // 设置作者排序
+  ruleForm.author_rank_ratio = rule.author_rank_ratio ? rule.author_rank_ratio * 100 : null // 从数据库读取的是小数，转换为百分比显示
   ruleForm.score = rule.score
+  ruleForm.max_score = rule.max_score || null
+  ruleForm.max_count = rule.max_count || null
+  ruleForm.is_special = rule.is_special || false
   ruleForm.status = rule.status
   ruleForm.description = rule.description || ''
   showAddRuleModal.value = true
@@ -546,13 +605,20 @@ const saveRule = async () => {
       ruleForm.research_type = ''
     }
     
+    // 准备要发送的数据，处理作者排序比例
+    const ruleData = { ...ruleForm }
+    // 将百分比转换为小数
+    if (ruleData.author_rank_ratio !== null) {
+      ruleData.author_rank_ratio = parseFloat(ruleData.author_rank_ratio) / 100
+    }
+    
     if (editingRule.value) {
       // 更新规则
-      await api.updateRule(editingRule.value.id, ruleForm)
+      await api.updateRule(editingRule.value.id, ruleData)
       alert('规则更新成功')
     } else {
       // 添加新规则
-      await api.createRule(ruleForm)
+      await api.createRule(ruleData)
       alert('规则添加成功')
     }
 
@@ -802,6 +868,17 @@ onMounted(() => {
 /* 删除按钮样式 */
 .delete-btn {
   color: #dc3545; /* 红色表示危险操作 */
+}
+
+/* 特殊规则状态标签样式 */
+.status-badge.status-special {
+  background-color: #ffc107; /* 黄色表示特殊规则 */
+  color: #212529;
+}
+
+.status-badge.status-normal {
+  background-color: #17a2b8; /* 青色表示普通规则 */
+  color: white;
 }
 
 .delete-btn:hover {

@@ -62,8 +62,12 @@ def get_rules():
             'team_role': rule.team_role,
             'author_rank_type': rule.author_rank_type,
             'author_rank': rule.author_rank,
+            'author_rank_ratio': rule.author_rank_ratio,
             'research_type': rule.research_type,
             'score': rule.score,
+            'max_score': rule.max_score,
+            'max_count': rule.max_count,
+            'is_special': rule.is_special,
             'status': rule.status,
             'description': rule.description,
             'createdAt': rule.created_at.isoformat() if rule.created_at else None,
@@ -90,8 +94,12 @@ def get_rule(rule_id):
         'team_role': rule.team_role,
         'author_rank_type': rule.author_rank_type,
         'author_rank': rule.author_rank,
+        'author_rank_ratio': rule.author_rank_ratio,
         'research_type': rule.research_type,
         'score': rule.score,
+        'max_score': rule.max_score,
+        'max_count': rule.max_count,
+        'is_special': rule.is_special,
         'status': rule.status,
         'description': rule.description,
         'createdAt': rule.created_at.isoformat() if rule.created_at else None,
@@ -124,8 +132,12 @@ def create_rule():
             team_role=data.get('team_role'),
             author_rank_type=data.get('author_rank_type', 'unranked'),
             author_rank=data.get('author_rank'),
+            author_rank_ratio=data.get('author_rank_ratio'),
             research_type=data.get('research_type'),
             score=data['score'],
+            max_score=data.get('max_score'),
+            max_count=data.get('max_count'),
+            is_special=data.get('is_special', False),
             status=data.get('status', 'active'),
             description=data.get('description')
         )
@@ -145,7 +157,11 @@ def create_rule():
             'team_role': new_rule.team_role,
             'author_rank_type': new_rule.author_rank_type,
             'author_rank': new_rule.author_rank,
+            'author_rank_ratio': new_rule.author_rank_ratio,
             'score': new_rule.score,
+            'max_score': new_rule.max_score,
+            'max_count': new_rule.max_count,
+            'is_special': new_rule.is_special,
             'status': new_rule.status,
             'description': new_rule.description,
             'createdAt': new_rule.created_at.isoformat() if new_rule.created_at else None,
@@ -184,10 +200,18 @@ def update_rule(rule_id):
             rule.author_rank_type = data['author_rank_type']
         if 'author_rank' in data:
             rule.author_rank = data['author_rank']
+        if 'author_rank_ratio' in data:
+            rule.author_rank_ratio = data['author_rank_ratio']
         if 'research_type' in data:
             rule.research_type = data['research_type']
         if 'score' in data:
             rule.score = data['score']
+        if 'max_score' in data:
+            rule.max_score = data['max_score']
+        if 'max_count' in data:
+            rule.max_count = data['max_count']
+        if 'is_special' in data:
+            rule.is_special = data['is_special']
         if 'status' in data:
             rule.status = data['status']
         if 'description' in data:
@@ -207,7 +231,11 @@ def update_rule(rule_id):
             'team_role': rule.team_role,
             'author_rank_type': rule.author_rank_type,
             'author_rank': rule.author_rank,
+            'author_rank_ratio': rule.author_rank_ratio,
             'score': rule.score,
+            'max_score': rule.max_score,
+            'max_count': rule.max_count,
+            'is_special': rule.is_special,
             'status': rule.status,
             'description': rule.description,
             'createdAt': rule.created_at.isoformat() if rule.created_at else None,

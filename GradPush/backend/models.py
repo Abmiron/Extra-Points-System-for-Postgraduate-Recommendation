@@ -200,8 +200,12 @@ class Rule(db.Model):
     team_role = db.Column(db.String(50), nullable=True)  # 团队角色: captain(队长), member(队员)
     author_rank_type = db.Column(db.String(50), default='unranked')  # 作者排序类型: ranked(区分排名), unranked(不区分排名)
     author_rank = db.Column(db.Integer, nullable=True)  # 作者排序: 数字，仅当区分排名时填写
+    author_rank_ratio = db.Column(db.Float, nullable=True)  # 作者排序比例: 如80%填写0.8
     research_type = db.Column(db.String(50), nullable=True)  # 科研成果类型: thesis(学术论文), patent(发明专利)
-    score = db.Column(db.Float, nullable=False)  # 分值
+    score = db.Column(db.Float, nullable=False)  # 基础分值
+    max_score = db.Column(db.Float, nullable=True)  # 最大分数限制（如创新创业训练最多加2分）
+    max_count = db.Column(db.Integer, nullable=True)  # 最大项目数量限制（如学业竞赛不超过3项）
+    is_special = db.Column(db.Boolean, default=False)  # 是否为特殊规则（如Nature/Science论文）
     status = db.Column(db.String(20), default='active')  # 状态: active, disabled
     description = db.Column(db.Text, nullable=True)  # 规则描述
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 创建时间

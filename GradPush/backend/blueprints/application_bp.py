@@ -13,7 +13,7 @@
 """
 
 from flask import Blueprint, request, jsonify, abort, current_app
-from models import Application, Student, StudentEvaluation, AcademicSpecialtyDetail, ComprehensivePerformanceDetail
+from models import Application, Student, StudentEvaluation, AcademicSpecialtyDetail, ComprehensivePerformanceDetail, Rule
 from datetime import datetime
 import json
 import os
@@ -434,7 +434,105 @@ def review_application(id):
     data = request.get_json()
     
     app.status = data['status']
-    app.final_score = data.get('finalScore')
+    
+    # 自动计算最终分数（仅适用于学术专长申请）
+    if app.application_type == 'academic' and app.status == 'approved':
+        matched_rule = None
+        
+        # 1. 首先检查是否有匹配的特殊规则
+        special_rule_query = Rule.query.filter_by(
+            type='academic',
+            sub_type=app.academic_type,
+            is_special=True,
+            status='active'
+        )
+        
+        if app.academic_type == 'research':
+            special_rule_query = special_rule_query.filter_by(research_type=app.research_type)
+        elif app.academic_type == 'competition':
+            special_rule_query = special_rule_query.filter_by(
+                level=app.award_level,
+                grade=app.award_grade,
+                category=app.award_category
+            )
+        elif app.academic_type == 'innovation':
+            special_rule_query = special_rule_query.filter_by(level=app.innovation_level)
+        
+        matched_rule = special_rule_query.first()
+        
+        # 2. 如果没有特殊规则，查找普通规则
+        if not matched_rule:
+            regular_rule_query = Rule.query.filter_by(
+                type='academic',
+                sub_type=app.academic_type,
+                is_special=False,
+                status='active'
+            )
+            
+            if app.academic_type == 'research':
+                regular_rule_query = regular_rule_query.filter_by(research_type=app.research_type)
+            elif app.academic_type == 'competition':
+                regular_rule_query = regular_rule_query.filter_by(
+                    level=app.award_level,
+                    grade=app.award_grade,
+                    category=app.award_category
+                )
+            elif app.academic_type == 'innovation':
+                regular_rule_query = regular_rule_query.filter_by(level=app.innovation_level)
+            
+            matched_rule = regular_rule_query.first()
+        
+        if matched_rule:
+            # 3. 检查最大项目数量限制
+            max_count_exceeded = False
+            if matched_rule.max_count:
+                # 统计该学生已通过的同类型项目数量（排除当前项目）
+                approved_count = Application.query.filter(
+                    Application.student_id == app.student_id,
+                    Application.application_type == 'academic',
+                    Application.academic_type == app.academic_type,
+                    Application.status == 'approved',
+                    Application.id != app.id  # 排除当前正在审核的项目
+                ).count()
+                
+                if approved_count >= matched_rule.max_count:
+                    max_count_exceeded = True
+            
+            if max_count_exceeded:
+                # 超过最大项目数量限制，不给予加分
+                app.final_score = 0
+            else:
+                # 计算基础分数
+                final_score = matched_rule.score
+                
+                # 应用作者排序比例（如果适用）
+                if app.author_rank_type == 'ranked' and app.author_order:
+                    # 根据作者排序位置应用不同比例
+                    if app.author_order == 1:
+                        # 第一作者，使用规则中的比例
+                        if matched_rule.author_rank_ratio:
+                            final_score *= matched_rule.author_rank_ratio
+                    else:
+                        # 非第一作者，分数递减
+                        # 这里可以根据实际需求调整递减规则
+                        final_score *= (1 - (app.author_order - 1) * 0.1)
+                        
+                        # 最低不低于原分数的30%
+                        final_score = max(final_score, matched_rule.score * 0.3)
+                
+                # 应用最大分数限制（如果有）
+                if matched_rule.max_score:
+                    final_score = min(final_score, matched_rule.max_score)
+                
+                # 设置最终分数
+                app.final_score = final_score
+        else:
+            # 如果没有匹配的规则，使用手动输入的分数
+            app.final_score = data.get('finalScore')
+    else:
+        # 非学术专长申请或未通过，使用手动输入的分数
+        app.final_score = data.get('finalScore')
+    
     app.review_comment = data.get('reviewComment')
     app.reviewed_at = datetime.utcnow()
     app.reviewed_by = data.get('reviewedBy')
