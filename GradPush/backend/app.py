@@ -15,8 +15,8 @@ from extensions import db
 # 创建应用实例
 app = Flask(__name__)
 
-# 配置CORS
-CORS(app, resources={"/*": {"origins": "*"}})
+# 配置CORS，支持跨域请求
+CORS(app, origins="*", supports_credentials=True, allow_headers=["Content-Type", "Authorization", "X-Requested-With"], methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 # 加载配置
 app.config.from_object('config.Config')

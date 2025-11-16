@@ -8,7 +8,8 @@
 主要模型：
 - User: 用户信息模型，存储用户账号、密码、角色等信息
 - Application: 申请信息模型，存储推免加分申请的相关数据
-- Student: 学生信息模型，存储学生基本信息和学业成绩
+- Student: 学生信息模型，合并了学生基本信息和总评成绩
+- PerformanceDetail: 合并了学术专长和综合表现详情
 - Rule: 加分规则模型，存储推免加分的规则定义
 - Faculty: 学院信息模型，存储学院信息
 - Department: 系信息模型，存储系信息
@@ -72,10 +73,6 @@ class User(db.Model):
     faculty_id = db.Column(db.Integer, db.ForeignKey('faculty.id'), nullable=True)
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=True)
     major_id = db.Column(db.Integer, db.ForeignKey('major.id'), nullable=True)
-    # 关系
-    faculty = db.relationship('Faculty', backref=db.backref('users', lazy=True))
-    department = db.relationship('Department', backref=db.backref('users', lazy=True))
-    major = db.relationship('Major', backref=db.backref('users', lazy=True))
     # 保留原有字段用于兼容旧数据（可在后续版本中移除）
     student_id = db.Column(db.String(20), nullable=True)
     email = db.Column(db.String(120), nullable=True)
@@ -102,14 +99,10 @@ class Application(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.String(20), db.ForeignKey('student.student_id'), nullable=False)
     student_name = db.Column(db.String(100), nullable=False)
-    # 关系
-    student = db.relationship('Student', backref=db.backref('applications', lazy=True))
-    # 使用外键关联系和专业
+    # 使用外键关联学院、系和专业
+    faculty_id = db.Column(db.Integer, db.ForeignKey('faculty.id'), nullable=False)
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False)
     major_id = db.Column(db.Integer, db.ForeignKey('major.id'), nullable=False)
-    # 关系
-    department = db.relationship('Department', backref=db.backref('applications', lazy=True))
-    major = db.relationship('Major', backref=db.backref('applications', lazy=True))
     application_type = db.Column(db.String(50), nullable=False)  # academic, comprehensive
     applied_at = db.Column(db.DateTime, default=datetime.utcnow)
     self_score = db.Column(db.Float, nullable=False)
@@ -148,7 +141,6 @@ class Application(db.Model):
     
     # 规则关联
     rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=True)
-    rule = db.relationship('Rule', backref=db.backref('applications', lazy=True))
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -156,11 +148,12 @@ class Application(db.Model):
     def __repr__(self):
         return f'<Application {self.id}>'
 
-# 学术专长详情模型
-class AcademicSpecialtyDetail(db.Model):
+# 合并学术专长详情和综合表现详情为统一的表现详情模型
+class PerformanceDetail(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.String(20), db.ForeignKey('student.student_id'), nullable=False)
     rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=True)  # 关联评分规则
+    type = db.Column(db.String(50), nullable=False)  # performance_type: academic, comprehensive
     project_name = db.Column(db.String(200), nullable=False)  # 项目名称
     award_date = db.Column(db.Date, nullable=False)  # 获奖时间
     award_level = db.Column(db.String(50), nullable=True)  # 奖项级别
@@ -172,54 +165,31 @@ class AcademicSpecialtyDetail(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # 关系
-    student = db.relationship('Student', backref=db.backref('academic_specialty_details', lazy=True))
-    rule = db.relationship('Rule', backref=db.backref('academic_specialty_details', lazy=True))
+    # 外键关联已定义，不使用ORM关系
     
     def __repr__(self):
-        return f'<AcademicSpecialtyDetail {self.id}>'
+        return f'<PerformanceDetail {self.id} ({self.type})>'
 
-# 综合表现详情模型
-class ComprehensivePerformanceDetail(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.String(20), db.ForeignKey('student.student_id'), nullable=False)
-    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=True)  # 关联评分规则
-    project_name = db.Column(db.String(200), nullable=False)  # 项目名称
-    award_date = db.Column(db.Date, nullable=False)  # 获奖时间
-    award_level = db.Column(db.String(50), nullable=True)  # 奖项级别
-    award_type = db.Column(db.String(50), nullable=True)  # 个人或集体奖项
-    author_order = db.Column(db.String(20), nullable=True)  # 集体奖项中第几作者/参赛者
-    self_score = db.Column(db.Float, nullable=False)  # 自评加分
-    score_basis = db.Column(db.Text, nullable=True)  # 加分依据
-    approved_score = db.Column(db.Float, nullable=True)  # 学院核定加分
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # 关系
-    student = db.relationship('Student', backref=db.backref('comprehensive_performance_details', lazy=True))
-    rule = db.relationship('Rule', backref=db.backref('comprehensive_performance_details', lazy=True))
-    
-    def __repr__(self):
-        return f'<ComprehensivePerformanceDetail {self.id}>'
-
-# 学生总评模型
-class StudentEvaluation(db.Model):
+# 合并学生模型和学生总评模型
+class Student(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.String(20), unique=True, nullable=False)  # 学号
     student_name = db.Column(db.String(100), nullable=False)  # 姓名
-    # 使用外键关联系和专业
+    gender = db.Column(db.String(10), nullable=True)  # 性别
+    # 外键关联学院、系和专业
+    faculty_id = db.Column(db.Integer, db.ForeignKey('faculty.id'), nullable=True)  # 学院ID
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False)  # 系ID
     major_id = db.Column(db.Integer, db.ForeignKey('major.id'), nullable=False)  # 专业ID
     # 关系
-    department = db.relationship('Department', backref=db.backref('student_evaluations', lazy=True))
-    major = db.relationship('Major', backref=db.backref('student_evaluations', lazy=True))
-    gender = db.Column(db.String(10), nullable=True)  # 性别
+    faculty = db.relationship('Faculty', backref=db.backref('students', lazy=True))
+    department = db.relationship('Department', backref=db.backref('students', lazy=True))
+    major = db.relationship('Major', backref=db.backref('students', lazy=True))
     cet4_score = db.Column(db.Integer, nullable=True)  # CET4成绩
     cet6_score = db.Column(db.Integer, nullable=True)  # CET6成绩
     
     # 学业综合成绩
     gpa = db.Column(db.Float, nullable=True)  # 推免绩点(满分4分)
-    academic_score = db.Column(db.Float, nullable=True)  # 换算后的成绩(满分100分)
+    academic_score = db.Column(db.Float, nullable=True)  # 换算后的学业成绩(满分100分)
     academic_weighted = db.Column(db.Float, nullable=True)  # 学业综合成绩（80%）
     
     # 学术专长成绩（占总分12%）
@@ -234,31 +204,6 @@ class StudentEvaluation(db.Model):
     major_ranking = db.Column(db.Integer, nullable=True)  # 专业成绩排名
     total_students = db.Column(db.Integer, nullable=True)  # 排名人数
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    def __repr__(self):
-        return f'<StudentEvaluation {self.student_name} ({self.student_id})>'
-
-# 学生模型
-class Student(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.String(20), unique=True, nullable=False)  # 学号
-    student_name = db.Column(db.String(100), nullable=False)  # 姓名
-    gender = db.Column(db.String(10), nullable=True)  # 性别
-    # 使用外键关联系和专业
-    department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False)  # 系ID
-    major_id = db.Column(db.Integer, db.ForeignKey('major.id'), nullable=False)  # 专业ID
-    # 关系
-    department = db.relationship('Department', backref=db.backref('students', lazy=True))
-    major = db.relationship('Major', backref=db.backref('students', lazy=True))
-    cet4_score = db.Column(db.Integer, nullable=True)  # CET4成绩
-    cet6_score = db.Column(db.Integer, nullable=True)  # CET6成绩
-    gpa = db.Column(db.Float, nullable=True)  # 推免绩点(满分4分)
-    academic_score = db.Column(db.Float, nullable=True)  # 换算后的学业成绩(满分100分)
-    academic_weighted = db.Column(db.Float, nullable=True)  # 学业综合成绩（80%）
-    ranking = db.Column(db.Integer, nullable=True)  # 专业成绩排名
-    total_students = db.Column(db.Integer, nullable=True)  # 排名人数
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

@@ -17,21 +17,11 @@
       </div>
       <div class="filter-group">
         <span class="filter-label">所在系:</span>
-        <select v-model="filters.department" @change="searchApplications">
-          <option value="all">全部</option>
-          <option value="cs">计算机科学系</option>
-          <option value="se">软件工程系</option>
-          <option value="ai">人工智能系</option>
-        </select>
+        <input type="text" class="form-control small" v-model="filters.department" placeholder="输入所在系名称">
       </div>
       <div class="filter-group">
         <span class="filter-label">专业:</span>
-        <select v-model="filters.major" @change="searchApplications">
-          <option value="all">全部</option>
-          <option value="cs">计算机科学与技术</option>
-          <option value="se">软件工程</option>
-          <option value="ai">人工智能</option>
-        </select>
+        <input type="text" class="form-control small" v-model="filters.major" placeholder="输入专业名称">
       </div>
       <div class="filter-group">
         <span class="filter-label">申请类型:</span>
@@ -305,8 +295,8 @@ const reviewDetailModalVisible = ref(false)
 const filters = reactive({
   studentName: '',
   studentId: '',
-  department: 'all',
-  major: 'all',
+  department: '',
+  major: '',
   applicationType: 'all',
   status: 'all',
   reviewedBy: '',
@@ -325,8 +315,8 @@ const filteredApplications = computed(() => {
   let filtered = applications.value.filter(app => {
     const nameMatch = !filters.studentName || app.studentName.includes(filters.studentName)
     const idMatch = !filters.studentId || app.studentId.includes(filters.studentId)
-    const departmentMatch = filters.department === 'all' || app.department === filters.department
-    const majorMatch = filters.major === 'all' || app.major === filters.major
+    const departmentMatch = !filters.department || app.department?.includes(filters.department)
+    const majorMatch = !filters.major || app.major?.includes(filters.major)
     const typeMatch = filters.applicationType === 'all' || app.applicationType === filters.applicationType
     const statusMatch = filters.status === 'all' || app.status === filters.status
     const reviewedByMatch = !filters.reviewedBy || app.reviewedBy?.includes(filters.reviewedBy)
@@ -430,8 +420,8 @@ const resetFilters = () => {
   Object.assign(filters, {
     studentName: '',
     studentId: '',
-    department: 'all',
-    major: 'all',
+    department: '',
+    major: '',
     applicationType: 'all',
     status: 'all',
     reviewedBy: '',

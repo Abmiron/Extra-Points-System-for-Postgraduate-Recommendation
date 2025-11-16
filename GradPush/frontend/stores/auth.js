@@ -150,16 +150,27 @@ export const useAuthStore = defineStore('auth', () => {
     const savedUser = localStorage.getItem('user')
     if (savedUser) {
       const userData = JSON.parse(savedUser)
-      user.value = userData
-      role.value = userData.role
-      isAuthenticated.value = true
       
-      // 初始化后尝试从API获取最新的用户信息
-      try {
-        await getCurrentUser()
-      } catch (error) {
-        console.error('初始化时获取用户信息失败:', error)
-        // 失败时继续使用localStorage中的数据
+      // 验证用户数据是否有效，防止username为"student"等错误值
+      if (userData.username && userData.username !== 'student') {
+        user.value = userData
+        role.value = userData.role
+        isAuthenticated.value = true
+        
+        // 初始化后尝试从API获取最新的用户信息
+        try {
+          await getCurrentUser()
+        } catch (error) {
+          console.error('初始化时获取用户信息失败:', error)
+          // 失败时继续使用localStorage中的数据
+        }
+      } else {
+        // 如果用户数据无效，清除localStorage并重置状态
+        localStorage.removeItem('user')
+        user.value = null
+        role.value = null
+        isAuthenticated.value = false
+        console.log('检测到无效的用户数据，已清除')
       }
     }
   }

@@ -115,12 +115,18 @@ def get_departments():
         departments = Department.query.all()
     
     result = []
+    # 获取所有相关学院信息以避免N+1查询问题
+    faculty_ids = {dept.faculty_id for dept in departments}
+    faculties = Faculty.query.filter(Faculty.id.in_(faculty_ids)).all()
+    faculty_dict = {f.id: f.name for f in faculties}
+    
+    result = []
     for department in departments:
         result.append({
             'id': department.id,
             'name': department.name,
             'faculty_id': department.faculty_id,
-            'faculty_name': department.faculty.name,
+            'faculty_name': faculty_dict.get(department.faculty_id, '未知学院'),
             'description': department.description,
             'created_at': department.created_at.isoformat(),
             'updated_at': department.updated_at.isoformat()
@@ -224,14 +230,26 @@ def get_majors():
         majors = Major.query.all()
     
     result = []
+    # 获取所有相关系和学院信息以避免N+1查询问题
+    department_ids = {maj.department_id for maj in majors}
+    departments = Department.query.filter(Department.id.in_(department_ids)).all()
+    department_dict = {d.id: d.name for d in departments}
+    
+    faculty_ids = {d.faculty_id for d in departments}
+    faculties = Faculty.query.filter(Faculty.id.in_(faculty_ids)).all()
+    faculty_dict = {f.id: f.name for f in faculties}
+    faculty_id_map = {d.id: d.faculty_id for d in departments}
+    
+    result = []
     for major in majors:
+        dept_id = major.department_id
         result.append({
             'id': major.id,
             'name': major.name,
-            'department_id': major.department_id,
-            'department_name': major.department.name,
-            'faculty_id': major.department.faculty_id,
-            'faculty_name': major.department.faculty.name,
+            'department_id': dept_id,
+            'department_name': department_dict.get(dept_id, '未知系'),
+            'faculty_id': faculty_id_map.get(dept_id, 0),
+            'faculty_name': faculty_dict.get(faculty_id_map.get(dept_id), '未知学院'),
             'description': major.description,
             'created_at': major.created_at.isoformat(),
             'updated_at': major.updated_at.isoformat()

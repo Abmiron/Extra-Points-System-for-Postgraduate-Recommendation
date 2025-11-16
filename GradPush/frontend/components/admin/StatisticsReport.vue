@@ -583,7 +583,6 @@ const generateReport = () => {
 // 重新加载数据
 const refreshData = () => {
   fetchStudentsRanking()
-  pagination.value.currentPage = 1
 }
 
 

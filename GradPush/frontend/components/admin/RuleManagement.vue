@@ -12,6 +12,10 @@
     <!-- 筛选区域 -->
     <div class="filters">
       <div class="filter-group">
+        <span class="filter-label">规则名称:</span>
+        <input type="text" class="form-control" v-model="filters.name" placeholder="请输入规则名称">
+      </div>
+      <div class="filter-group">
         <span class="filter-label">规则类型:</span>
         <select class="form-control" v-model="filters.type" @change="handleFilterTypeChange">
           <option value="all">全部</option>
@@ -48,7 +52,7 @@
           <option value="disabled">禁用</option>
         </select>
       </div>
-      <button class="btn" @click="searchRules">搜索</button>
+      <button class="btn btn-outline" @click="resetFilters">清空筛选</button>
     </div>
 
     <!-- 规则表格 -->
@@ -387,7 +391,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import api from '../../utils/api'
 
 const showAddRuleModal = ref(false)
@@ -396,6 +400,7 @@ const currentPage = ref(1)
 const pageSize = 10
 
 const filters = reactive({
+  name: '',
   type: 'all',
   subType: 'all',
   status: 'all'
@@ -428,11 +433,12 @@ const rules = ref([])
 // 计算属性
 const filteredRules = computed(() => {
   let filtered = rules.value.filter(rule => {
+    const nameMatch = !filters.name || rule.name.includes(filters.name)
     const typeMatch = filters.type === 'all' || rule.type === filters.type
     const subTypeMatch = filters.subType === 'all' || rule.sub_type === filters.subType
     const statusMatch = filters.status === 'all' || rule.status === filters.status
 
-    return typeMatch && subTypeMatch && statusMatch
+    return nameMatch && typeMatch && subTypeMatch && statusMatch
   })
 
   return filtered
@@ -566,11 +572,24 @@ const handleRuleTypeChange = () => {
   ruleForm.grade = ''
 }
 
-// 搜索规则
-const searchRules = () => {
+// 重置筛选条件
+const resetFilters = () => {
+  filters.name = ''
+  filters.type = 'all'
+  filters.subType = 'all'
+  filters.status = 'all'
   currentPage.value = 1
-  loadRules()
 }
+
+// 监听筛选条件变化，自动搜索
+watch(
+  () => ({ ...filters }),
+  () => {
+    currentPage.value = 1
+    loadRules()
+  },
+  { deep: true }
+)
 
 const editRule = (rule) => {
   editingRule.value = rule

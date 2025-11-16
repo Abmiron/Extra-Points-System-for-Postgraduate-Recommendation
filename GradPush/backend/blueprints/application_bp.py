@@ -13,7 +13,7 @@
 """
 
 from flask import Blueprint, request, jsonify, abort, current_app
-from models import Application, Student, StudentEvaluation, AcademicSpecialtyDetail, ComprehensivePerformanceDetail, Rule
+from models import Application, Student, PerformanceDetail, Rule
 from datetime import datetime
 import json
 import os
@@ -38,6 +38,8 @@ def get_applications():
     reviewed_end_date = request.args.get('reviewedEndDate')
     department_id = request.args.get('departmentId')
     major_id = request.args.get('majorId')
+    department_name = request.args.get('department')
+    major_name = request.args.get('major')
     
     # 构建查询
     query = Application.query
@@ -59,9 +61,25 @@ def get_applications():
     
     if department_id:
         query = query.filter_by(department_id=department_id)
+    elif department_name:
+        # 按系名称筛选（支持部分匹配）
+        from models import Department
+        # 先根据名称获取所有匹配的系ID
+        departments = Department.query.filter(Department.name.like(f'%{department_name}%')).all()
+        if departments:
+            department_ids = [dept.id for dept in departments]
+            query = query.filter(Application.department_id.in_(department_ids))
     
     if major_id:
         query = query.filter_by(major_id=major_id)
+    elif major_name:
+        # 按专业名称筛选（支持部分匹配）
+        from models import Major
+        # 先根据名称获取所有匹配的专业ID
+        majors = Major.query.filter(Major.name.like(f'%{major_name}%')).all()
+        if majors:
+            major_ids = [major.id for major in majors]
+            query = query.filter(Application.major_id.in_(major_ids))
     
     # 审核时间筛选
     if reviewed_start_date:
@@ -85,6 +103,17 @@ def get_applications():
     
     applications = query.all()
     app_list = []
+    
+    # 获取所有相关系和专业信息以避免N+1查询问题
+    from models import Department, Major
+    
+    department_ids = {app.department_id for app in applications}
+    departments = Department.query.filter(Department.id.in_(department_ids)).all()
+    department_dict = {d.id: d.name for d in departments}
+    
+    major_ids = {app.major_id for app in applications}
+    majors = Major.query.filter(Major.id.in_(major_ids)).all()
+    major_dict = {m.id: m.name for m in majors}
     
     for app in applications:
         # 转换文件路径格式
@@ -110,9 +139,9 @@ def get_applications():
             'studentId': app.student_id,
             'studentName': app.student_name,
             'departmentId': app.department_id,
-            'department': app.department.name if app.department else None,
+            'department': department_dict.get(app.department_id, '未知系'),
             'majorId': app.major_id,
-            'major': app.major.name if app.major else None,
+            'major': major_dict.get(app.major_id, '未知专业'),
             'applicationType': app.application_type,
             'appliedAt': app.applied_at.isoformat() if app.applied_at else None,
             'selfScore': app.self_score,
@@ -173,14 +202,35 @@ def get_application(id):
                             processed_file['path'] = f'/uploads/files/{filename}'
             processed_files.append(processed_file)
     
+    # 获取相关系、专业和规则信息
+    from models import Department, Major, Rule
+    
+    # 安全获取系和专业名称
+    department = Department.query.get(app.department_id) if app.department_id else None
+    department_name = department.name if department else '未知系'
+    
+    major = Major.query.get(app.major_id) if app.major_id else None
+    major_name = major.name if major else '未知专业'
+    
+    # 获取规则信息
+    rule_info = None
+    if app.rule_id:
+        rule = Rule.query.get(app.rule_id)
+        if rule:
+            rule_info = {
+                'id': rule.id,
+                'name': rule.name,
+                'score': rule.score
+            }
+    
     app_data = {
         'id': app.id,
         'studentId': app.student_id,
         'studentName': app.student_name,
         'departmentId': app.department_id,
-        'department': app.department.name,
+        'department': department_name,
         'majorId': app.major_id,
-        'major': app.major.name,
+        'major': major_name,
         'applicationType': app.application_type,
         'appliedAt': app.applied_at.isoformat() if app.applied_at else None,
         'selfScore': app.self_score,
@@ -211,11 +261,7 @@ def get_application(id):
         'teamRole': app.team_role,
         # 规则相关字段
         'ruleId': app.rule_id,
-        'rule': {
-            'id': app.rule.id,
-            'name': app.rule.name,
-            'score': app.rule.score
-        } if app.rule else None
+        'rule': rule_info
     }
     
     return jsonify(app_data), 200
@@ -605,6 +651,17 @@ def get_pending_applications():
     applications = query.all()
     app_list = []
     
+    # 获取所有相关系和专业信息以避免N+1查询问题
+    from models import Department, Major
+    
+    department_ids = {app.department_id for app in applications}
+    departments = Department.query.filter(Department.id.in_(department_ids)).all()
+    department_dict = {d.id: d.name for d in departments}
+    
+    major_ids = {app.major_id for app in applications}
+    majors = Major.query.filter(Major.id.in_(major_ids)).all()
+    major_dict = {m.id: m.name for m in majors}
+    
     for app in applications:
         # 转换文件路径格式
         processed_files = []
@@ -629,9 +686,9 @@ def get_pending_applications():
             'studentId': app.student_id,
             'studentName': app.student_name,
             'departmentId': app.department_id,
-            'department': app.department.name,
+            'department': department_dict.get(app.department_id, '未知系'),
             'majorId': app.major_id,
-            'major': app.major.name,
+            'major': major_dict.get(app.major_id, '未知专业'),
             'applicationType': app.application_type,
             'appliedAt': app.applied_at.isoformat() if app.applied_at else None,
             'selfScore': app.self_score,
@@ -761,8 +818,8 @@ def get_students_ranking():
         department_id = request.args.get('departmentId')
         major_id = request.args.get('majorId')
     
-        # 构建查询条件 - 优先使用StudentEvaluation模型
-        query = StudentEvaluation.query
+        # 构建查询条件 - 使用合并后的Student模型
+        query = Student.query
     
         # 应用筛选条件
         if department_id and department_id != 'all':
@@ -771,43 +828,45 @@ def get_students_ranking():
         if major_id and major_id != 'all':
             query = query.filter_by(major_id=major_id)
     
-        # 获取所有符合条件的学生总评数据
-        student_evaluations = query.all()
+        # 获取所有符合条件的学生数据
+        students = query.all()
     
         # 按学生ID分组统计
         student_stats = {}
     
-        # 先从StudentEvaluation模型获取基本数据
-        for evaluation in student_evaluations:
-            student_id = evaluation.student_id
+        # 从Student模型获取基本数据
+        for student in students:
+            student_id = student.id
             student_stats[student_id] = {
-                'student_id': evaluation.student_id,
-                'student_name': evaluation.student_name,
-                'departmentId': evaluation.department_id,
-                'department': evaluation.department.name,
-                'majorId': evaluation.major_id,
-                'major': evaluation.major.name,
-                'gender': evaluation.gender,
-                'cet4_score': evaluation.cet4_score,
-                'cet6_score': evaluation.cet6_score,
-                'gpa': evaluation.gpa,
-                'academic_score': evaluation.academic_score,
-                'academic_weighted': evaluation.academic_weighted,
-                'academic_specialty_total': evaluation.academic_specialty_total,
-                'comprehensive_performance_total': evaluation.comprehensive_performance_total,
-                'total_score': evaluation.total_score,
-                'major_ranking': evaluation.major_ranking,
-                'major_total_students': evaluation.total_students,
-                'specialty_score': evaluation.academic_specialty_total or 0.0,
-                'comprehensive_score': evaluation.comprehensive_performance_total or 0.0,
-                'total_comprehensive_score': evaluation.total_score or 0.0,
-                'final_comprehensive_score': evaluation.comprehensive_score or 0.0,
+                'student_id': student.id,
+                'student_name': student.name,
+                'departmentId': student.department_id,
+                'department': student.department.name,
+                'majorId': student.major_id,
+                'major': student.major.name,
+                'facultyId': student.faculty_id,  # 添加学院ID
+                'faculty': student.faculty.name,  # 添加学院名称
+                'gender': student.gender,
+                'cet4_score': student.cet4_score,
+                'cet6_score': student.cet6_score,
+                'gpa': student.gpa,
+                'academic_score': student.academic_score,
+                'academic_weighted': student.academic_weighted,
+                'academic_specialty_total': student.academic_specialty_total,
+                'comprehensive_performance_total': student.comprehensive_performance_total,
+                'total_score': student.total_score,
+                'major_ranking': student.major_ranking,
+                'major_total_students': student.total_students,
+                'specialty_score': student.academic_specialty_total or 0.0,
+                'comprehensive_score': student.comprehensive_performance_total or 0.0,
+                'total_comprehensive_score': student.total_score or 0.0,
+                'final_comprehensive_score': student.comprehensive_score or 0.0,
                 'sequence': 0
             }
     
-        # 获取学术专长详情
+        # 获取学术专长详情 - 使用PerformanceDetail模型，type='academic'
         for student_id in student_stats:
-            academic_details = AcademicSpecialtyDetail.query.filter_by(student_id=student_id).all()
+            academic_details = PerformanceDetail.query.filter_by(student_id=student_id, type='academic').all()
             academic_items = []
             for detail in academic_details:
                 academic_items.append({
@@ -823,9 +882,9 @@ def get_students_ranking():
                 })
             student_stats[student_id]['academic_items'] = academic_items
     
-        # 获取综合表现详情
+        # 获取综合表现详情 - 使用PerformanceDetail模型，type='comprehensive'
         for student_id in student_stats:
-            comprehensive_details = ComprehensivePerformanceDetail.query.filter_by(student_id=student_id).all()
+            comprehensive_details = PerformanceDetail.query.filter_by(student_id=student_id, type='comprehensive').all()
             comprehensive_items = []
             for detail in comprehensive_details:
                 comprehensive_items.append({
@@ -841,8 +900,8 @@ def get_students_ranking():
                 })
             student_stats[student_id]['comprehensive_items'] = comprehensive_items
     
-        # 如果StudentEvaluation没有数据，回退到Application模型并生成模拟数据
-        if not student_evaluations:
+        # 如果Student模型没有数据，回退到Application模型并生成模拟数据
+        if not students:
             # 构建查询条件
             app_query = Application.query.filter_by(status='approved')
             

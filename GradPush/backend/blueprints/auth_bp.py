@@ -8,14 +8,25 @@
 - 密码重置
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, make_response
 from models import User
 from datetime import datetime
 
-# 创建蓝图实例
+# 创建蓝图
 auth_bp = Blueprint('auth', __name__, url_prefix='/api')
 
-# 登录接口
+# 登录接口 - OPTIONS请求处理
+@auth_bp.route('/login', methods=['OPTIONS'])
+def login_options():
+    response = make_response()
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    response.headers.add('Access-Control-Max-Age', '3600')
+    return response
+
+# 登录接口 - POST请求处理
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -26,19 +37,41 @@ def login():
     user = User.query.filter_by(username=username).first()
     
     if not user:
-        return jsonify({'message': '用户不存在'}), 401
+        response = make_response(jsonify({'message': '用户不存在'}), 401)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
     
     if user.status == 'disabled':
-        return jsonify({'message': '账户已被禁用'}), 401
+        response = make_response(jsonify({'message': '账户已被禁用'}), 401)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
     
     # 验证密码
     if not user.check_password(password):
-        return jsonify({'message': '密码错误'}), 401
+        response = make_response(jsonify({'message': '密码错误'}), 401)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
     
     # 更新最后登录时间
     user.last_login = datetime.utcnow()
-    from app import db
+    from extensions import db
     db.session.commit()
+    
+    # 获取学院、系和专业名称
+    from models import Faculty, Department, Major
+    
+    # 安全获取关联对象的名称
+    faculty = Faculty.query.get(user.faculty_id) if user.faculty_id else None
+    faculty_name = faculty.name if faculty else ''
+    
+    department = Department.query.get(user.department_id) if user.department_id else None
+    department_name = department.name if department else ''
+    
+    major = Major.query.get(user.major_id) if user.major_id else None
+    major_name = major.name if major else ''
     
     # 返回用户信息（不包含密码）
     user_data = {
@@ -47,11 +80,11 @@ def login():
         'name': user.name,
         'role': user.role,
         'avatar': user.avatar,
-        'faculty': user.faculty.name if user.faculty else '',
+        'faculty': faculty_name,
         'facultyId': user.faculty_id,
-        'department': user.department.name if user.department else '',
+        'department': department_name,
         'departmentId': user.department_id,
-        'major': user.major.name if user.major else '',
+        'major': major_name,
         'majorId': user.major_id,
         'studentId': user.student_id,
         'email': user.email,
@@ -60,7 +93,11 @@ def login():
         'lastLogin': user.last_login.isoformat() if user.last_login else None
     }
     
-    return jsonify({'user': user_data, 'message': '登录成功'}), 200
+    # 创建响应并添加CORS头
+    response = make_response(jsonify({'user': user_data, 'message': '登录成功'}), 200)
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 # 注册接口
 @auth_bp.route('/register', methods=['POST'])
@@ -101,7 +138,7 @@ def register():
     elif data['role'] == 'teacher':
         new_user.role_name = '审核员'  # 默认值
     
-    from app import db
+    from extensions import db
     db.session.add(new_user)
     db.session.commit()
     
@@ -123,7 +160,7 @@ def reset_password():
     # 设置新密码
     user.set_password(new_password)
     
-    from app import db
+    from extensions import db
     db.session.commit()
     
     return jsonify({'message': '密码重置成功'}), 200

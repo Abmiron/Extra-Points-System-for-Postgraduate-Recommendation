@@ -12,7 +12,7 @@
 """
 
 from flask import Blueprint, request, jsonify
-from models import User
+from models import User, Faculty, Department, Major
 import os
 import uuid
 from werkzeug.utils import secure_filename
@@ -30,6 +30,37 @@ def get_user(username):
     if not user:
         return jsonify({'message': '用户不存在'}), 404
     
+    return _get_user_data(user)
+
+# 获取当前学生用户信息接口（为了解决前端调用/api/user/student的问题）
+@user_bp.route('/user/student', methods=['GET'])
+def get_student_user():
+    # 从请求头获取用户名（实际项目中应该从JWT token获取）
+    # 这里简化处理，从请求参数或请求体中获取username
+    username = request.args.get('username') or request.json.get('username') if request.json else None
+    
+    if not username:
+        return jsonify({'message': '缺少用户名参数'}), 400
+    
+    user = User.query.filter_by(username=username, role='student').first()
+    
+    if not user:
+        return jsonify({'message': '学生用户不存在'}), 404
+    
+    return _get_user_data(user)
+
+# 辅助函数：获取用户数据
+def _get_user_data(user):
+    # 安全获取学院、系和专业名称
+    faculty = Faculty.query.get(user.faculty_id) if user.faculty_id else None
+    faculty_name = faculty.name if faculty else ''
+    
+    department = Department.query.get(user.department_id) if user.department_id else None
+    department_name = department.name if department else ''
+    
+    major = Major.query.get(user.major_id) if user.major_id else None
+    major_name = major.name if major else ''
+    
     # 返回用户信息（不包含密码）
     user_data = {
         'id': user.id,
@@ -37,11 +68,11 @@ def get_user(username):
         'name': user.name,
         'role': user.role,
         'avatar': user.avatar,
-        'faculty': user.faculty.name if user.faculty else '',
+        'faculty': faculty_name,
         'facultyId': user.faculty_id,
-        'department': user.department.name if user.department else '',
+        'department': department_name,
         'departmentId': user.department_id,
-        'major': user.major.name if user.major else '',
+        'major': major_name,
         'majorId': user.major_id,
         'studentId': user.student_id,
         'email': user.email,
@@ -87,17 +118,22 @@ def get_all_users():
     
     user_list = []
     for user in users:
+        # 获取学院、系和专业名称
+        faculty_name = Faculty.query.get(user.faculty_id).name if user.faculty_id else ''
+        department_name = Department.query.get(user.department_id).name if user.department_id else ''
+        major_name = Major.query.get(user.major_id).name if user.major_id else ''
+        
         user_data = {
             'id': user.id,
             'username': user.username,
             'name': user.name,
             'role': user.role,
             'avatar': user.avatar,
-            'faculty': user.faculty.name if user.faculty else '',
+            'faculty': faculty_name,
             'facultyId': user.faculty_id,
-            'department': user.department.name if user.department else '',
+            'department': department_name,
             'departmentId': user.department_id,
-            'major': user.major.name if user.major else '',
+            'major': major_name,
             'majorId': user.major_id,
             'studentId': user.student_id,
             'email': user.email,
@@ -241,6 +277,11 @@ def update_profile():
     from app import db
     db.session.commit()
     
+    # 获取学院、系和专业名称
+    faculty_name = Faculty.query.get(user.faculty_id).name if user.faculty_id else ''
+    department_name = Department.query.get(user.department_id).name if user.department_id else ''
+    major_name = Major.query.get(user.major_id).name if user.major_id else ''
+    
     # 返回更新后的用户信息
     user_data = {
         'id': user.id,
@@ -248,11 +289,11 @@ def update_profile():
         'name': user.name,
         'role': user.role,
         'avatar': user.avatar,
-        'faculty': user.faculty.name if user.faculty else '',
+        'faculty': faculty_name,
         'facultyId': user.faculty_id,
-        'department': user.department.name if user.department else '',
+        'department': department_name,
         'departmentId': user.department_id,
-        'major': user.major.name if user.major else '',
+        'major': major_name,
         'majorId': user.major_id,
         'studentId': user.student_id,
         'email': user.email,
@@ -339,6 +380,11 @@ def upload_avatar():
         from app import db
         db.session.commit()
         
+        # 获取学院、系和专业名称
+        faculty_name = Faculty.query.get(user.faculty_id).name if user.faculty_id else ''
+        department_name = Department.query.get(user.department_id).name if user.department_id else ''
+        major_name = Major.query.get(user.major_id).name if user.major_id else ''
+        
         # 返回更新后的用户信息
         user_data = {
             'id': user.id,
@@ -346,11 +392,11 @@ def upload_avatar():
             'name': user.name,
             'role': user.role,
             'avatar': user.avatar,
-            'faculty': user.faculty.name if user.faculty else None,
+            'faculty': faculty_name,
             'facultyId': user.faculty_id,
-            'department': user.department.name if user.department else None,
+            'department': department_name,
             'departmentId': user.department_id,
-            'major': user.major.name if user.major else None,
+            'major': major_name,
             'majorId': user.major_id,
             'studentId': user.student_id,
             'email': user.email,

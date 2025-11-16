@@ -31,7 +31,7 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">姓名</label>
-            <input type="text" class="form-control" v-model="profile.name" :disabled="!isEditing" required>
+            <input type="text" class="form-control" v-model="profile.name" disabled required>
           </div>
           <div class="form-group">
             <label class="form-label">工号</label>
@@ -42,12 +42,7 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">学院</label>
-            <select class="form-control" v-model="profile.facultyId" :disabled="!isEditing" required>
-              <option value="" disabled>请选择学院</option>
-              <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
-                {{ faculty.name }}
-              </option>
-            </select>
+            <input type="text" class="form-control" v-model="profile.facultyName" disabled>
           </div>
           <div class="form-group">
             <label class="form-label">职称</label>
@@ -172,8 +167,7 @@ const profile = reactive({
   avatar: ''
 })
 
-// 学院列表
-const faculties = ref([])
+// 不再需要学院列表变量，因为已替换为文本显示
 
 // 计算头像URL，确保包含完整的服务器地址前缀
 const getAvatarUrl = computed(() => {
@@ -257,15 +251,7 @@ const handleAvatarChange = async (event) => {
   }
 }
 
-// 加载学院列表
-const loadFaculties = async () => {
-  try {
-    const response = await api.getFaculties()
-    faculties.value = response.faculties
-  } catch (error) {
-    console.error('加载学院列表失败:', error)
-  }
-}
+// 不再需要加载学院列表，因为已替换为文本显示
 
 const saveProfile = async () => {
   saving.value = true
@@ -274,8 +260,6 @@ const saveProfile = async () => {
     // 准备更新数据
     const updateData = {
       username: profile.teacherId, // 添加用户名参数
-      name: profile.name,
-      facultyId: profile.facultyId,
       title: profile.title,
       email: profile.email,
       phone: profile.phone,
@@ -351,9 +335,6 @@ const closePasswordModal = () => {
 
 // 生命周期
 onMounted(async () => {
-  // 加载学院列表
-  await loadFaculties()
-  
   // 从auth store获取当前用户信息
   if (authStore.user) {
     Object.assign(profile, {

@@ -33,6 +33,7 @@ def get_rules():
     rule_type = request.args.get('type')
     status = request.args.get('status')
     level = request.args.get('level')
+    name = request.args.get('name')
     
     # 构建查询
     query = Rule.query
@@ -45,6 +46,9 @@ def get_rules():
     
     if level:
         query = query.filter_by(level=level)
+    
+    if name:
+        query = query.filter(Rule.name.like(f'%{name}%'))
     
     rules = query.all()
     rule_list = []
