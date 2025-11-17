@@ -341,6 +341,12 @@ def match_rules():
         if data.get('performance_participation'):
             query = query.filter_by(participation_type=data['performance_participation'])
         
+        # 项目名称模糊匹配
+        if data.get('project_name'):
+            query = query.filter(Rule.name.like(f'%{data["project_name"]}%'))
+        elif data.get('projectName'):
+            query = query.filter(Rule.name.like(f'%{data["projectName"]}%'))
+        
         rules = query.all()
         
         # 转换为JSON格式返回

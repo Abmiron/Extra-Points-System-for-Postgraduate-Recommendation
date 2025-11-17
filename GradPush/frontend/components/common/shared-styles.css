@@ -259,10 +259,14 @@
   font-size: 20px;
   cursor: pointer;
   color: #666;
+  padding: 5px;
+  border-radius: 3px;
+  transition: all 0.2s;
 }
 
 .close-btn:hover {
   color: #333;
+  background-color: #f0f0f0;
 }
 
 .modal-body {
@@ -280,14 +284,60 @@
   flex: 1;
 }
 
+/* 响应式表单网格布局 */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
 .form-group {
   margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1; /* 让元素占据整个网格宽度 */
 }
 
 .form-label {
   display: block;
   margin-bottom: 8px;
   font-weight: 500;
+  color: #333;
+}
+
+/* 输入框图标样式 */
+.input-with-icon,
+.select-with-icon {
+  position: relative;
+}
+
+/* 选择框带按钮样式 */
+.select-with-button {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.select-with-button .select-with-icon {
+  flex-grow: 1;
+}
+
+.input-with-icon svg,
+.select-with-icon svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+  z-index: 2;
+}
+
+.input-with-icon .form-control,
+.select-with-icon .form-control {
+  padding-left: 35px;
 }
 
 .form-actions {
@@ -386,6 +436,30 @@
   background-color: white;
 }
 
+/* 水平单选卡片样式 */
+.radio-card.horizontal {
+  flex-direction: row;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.radio-card.small {
+  padding: 6px 10px;
+  font-size: 0.9rem;
+}
+
+/* 水平单选卡片的图标样式 */
+.radio-card.horizontal .radio-icon {
+  margin-right: 6px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .radio-card:hover {
   border-color: #003366;
   box-shadow: 0 2px 8px rgba(0, 51, 102, 0.1);
@@ -406,10 +480,14 @@
   box-shadow: 0 2px 8px rgba(0, 51, 102, 0.15);
 }
 
-.radio-icon {
+/* 垂直单选卡片的图标样式 */
+.radio-card:not(.horizontal) .radio-icon {
   font-size: 24px;
   margin-bottom: 8px;
   color: #003366;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .radio-card span {
@@ -425,6 +503,106 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 10px;
+}
+
+/* 文件上传区域 */
+.file-upload-area {
+  display: flex;
+  align-items: center;
+  border: 2px dashed #ddd;
+  border-radius: 6px;
+  padding: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fafafa;
+  margin-bottom: 12px;
+}
+
+.file-upload-area:hover {
+  border-color: #003366;
+  background: #f5f9ff;
+}
+
+.upload-icon {
+  font-size: 1.8rem;
+  color: #666;
+  margin-right: 12px;
+}
+
+/* 文件列表 */
+.file-list {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.file-list-header {
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+  font-weight: 500;
+  color: #333;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  background-color: white;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.file-item:last-child {
+  border-bottom: none;
+}
+
+.file-icon {
+  font-size: 1.2rem;
+  color: #666;
+  margin-right: 10px;
+  width: 20px;
+}
+
+.file-info {
+  flex: 1;
+}
+
+.file-name {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 2px;
+}
+
+.file-meta {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.file-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.file-action-btn {
+  background: none;
+  border: none;
+  padding: 5px;
+  cursor: pointer;
+  color: #666;
+  border-radius: 3px;
+  transition: all 0.2s;
+}
+
+.file-action-btn:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+/* 字符计数器 */
+.char-counter {
+  text-align: right;
+  font-size: 0.65rem;
+  color: #666;
 }
 
 .status-indicator {
@@ -445,6 +623,22 @@
 
 
 
+
+/* 表单部分标题样式 */
+.section-title {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+  font-size: 1rem;
+}
+
+.section-title svg {
+  margin-right: 8px;
+  color: #003366;
+  width: 16px;
+}
 
 /* 响应式设计 */
 @media (max-width: 768px) {
@@ -485,6 +679,26 @@
   .form-row {
     flex-direction: column;
     gap: 0;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  .radio-cards {
+    flex-direction: column;
+  }
+  
+  .file-upload-area {
+    flex-direction: column;
+    text-align: center;
+    padding: 12px;
+  }
+  
+  .upload-icon {
+    margin-right: 0;
+    margin-bottom: 8px;
   }
 
   .action-buttons {

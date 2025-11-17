@@ -6,30 +6,6 @@
 
     <div class="card application-card">
       <form @submit.prevent="submitForm" class="application-form">
-        <!-- 申请类型 -->
-        <div class="form-section">
-          <div class="section-title">
-            <font-awesome-icon :icon="['fas', 'tag']" />
-            <span>申请类型</span>
-          </div>
-          <div class="radio-cards compact">
-            <div class="radio-card" :class="{ active: formData.applicationType === 'academic' }"
-              @click.stop="formData.applicationType = 'academic'">
-              <div class="radio-icon">
-                <font-awesome-icon :icon="['fas', 'book']" />
-              </div>
-              <span>学术专长</span>
-            </div>
-            <div class="radio-card" :class="{ active: formData.applicationType === 'comprehensive' }"
-              @click.stop="formData.applicationType = 'comprehensive'">
-              <div class="radio-icon">
-                <font-awesome-icon :icon="['fas', 'trophy']" />
-              </div>
-              <span>综合表现</span>
-            </div>
-          </div>
-        </div>
-
         <!-- 基本信息（通用） -->
         <div class="form-section">
           <div class="section-title">
@@ -55,6 +31,59 @@
           </div>
         </div>
 
+        <!-- 规则选择 -->
+        <div class="form-section">
+          <div class="section-title">
+            <font-awesome-icon :icon="['fas', 'scroll']" />
+            <span>规则选择</span>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">选择适用规则 <span class="required">*</span></label>
+              <div class="select-with-button">
+                <div class="select-with-icon">
+                  <font-awesome-icon :icon="['fas', 'list-check']" />
+                  <select class="form-control" v-model="formData.ruleId" required @change="calculateEstimatedScore">
+                    <option value="">请选择规则</option>
+                    <option v-for="rule in availableRules" :key="rule.id" :value="rule.id">
+                      {{ rule.name }} (基础分数: {{ rule.score }})
+                    </option>
+                  </select>
+                </div>
+                <button type="button" class="btn btn-outline btn-small" @click="refreshRules">
+                  <font-awesome-icon :icon="['fas', 'sync-alt']" />
+                  刷新
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 申请类型 -->
+        <div class="form-section">
+          <div class="section-title">
+            <font-awesome-icon :icon="['fas', 'tag']" />
+            <span>申请类型</span>
+          </div>
+          <div class="radio-cards compact">
+            <div class="radio-card horizontal" :class="{ active: formData.applicationType === 'academic' }"
+              @click.stop="toggleRadioCard('applicationType', 'academic')">
+              <div class="radio-icon">
+                <font-awesome-icon :icon="['fas', 'book']" />
+              </div>
+              <span>学术专长</span>
+            </div>
+            <div class="radio-card horizontal" :class="{ active: formData.applicationType === 'comprehensive' }"
+              @click.stop="toggleRadioCard('applicationType', 'comprehensive')">
+              <div class="radio-icon">
+                <font-awesome-icon :icon="['fas', 'trophy']" />
+              </div>
+              <span>综合表现</span>
+            </div>
+          </div>
+        </div>
+
         <!-- 学术专长特有信息 -->
         <div class="form-section" v-if="formData.applicationType === 'academic'">
           <div class="section-title">
@@ -67,22 +96,22 @@
             <div class="form-group">
               <label class="form-label">学术类型 <span class="required">*</span></label>
               <div class="radio-cards">
-                <div class="radio-card" :class="{ active: formData.academicType === 'research' }"
-                  @click.stop="formData.academicType = 'research'">
+              <div class="radio-card horizontal" :class="{ active: formData.academicType === 'research' }"
+                  @click.stop="toggleRadioCard('academicType', 'research')">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'flask']" />
                   </div>
                   <span>科研成果</span>
                 </div>
-                <div class="radio-card" :class="{ active: formData.academicType === 'competition' }"
-                  @click.stop="formData.academicType = 'competition'">
+                <div class="radio-card horizontal" :class="{ active: formData.academicType === 'competition' }"
+                  @click.stop="toggleRadioCard('academicType', 'competition')">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'trophy']" />
                   </div>
                   <span>学业竞赛</span>
                 </div>
-                <div class="radio-card" :class="{ active: formData.academicType === 'innovation' }"
-                  @click.stop="formData.academicType = 'innovation'">
+                <div class="radio-card horizontal" :class="{ active: formData.academicType === 'innovation' }"
+                  @click.stop="toggleRadioCard('academicType', 'innovation')">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'lightbulb']" />
                   </div>
@@ -98,62 +127,106 @@
             <div class="form-grid">
               <div class="form-group">
                 <label class="form-label">奖项级别 <span class="required">*</span></label>
-                <div class="select-with-icon">
-                  <font-awesome-icon :icon="['fas', 'medal']" />
-                  <select class="form-control" v-model="formData.awardLevel" @change="handleLevelChange" required>
-                    <option value="">请选择奖项级别</option>
-                    <option value="national">国家级</option>
-                    <option value="provincial">省级</option>
-                  </select>
+                <div class="radio-cards">
+              <div class="radio-card horizontal" :class="{ active: formData.awardLevel === 'national' }" 
+                       @click.stop="toggleRadioCard('awardLevel', 'national'); if (formData.awardLevel === 'national') handleLevelChange()">
+                    <div class="radio-icon">
+                      <font-awesome-icon :icon="['fas', 'globe']" />
+                    </div>
+                    <span>国家级</span>
+                  </div>
+                  <div class="radio-card horizontal" :class="{ active: formData.awardLevel === 'provincial' }" 
+                       @click.stop="toggleRadioCard('awardLevel', 'provincial'); if (formData.awardLevel === 'provincial') handleLevelChange()">
+                    <div class="radio-icon">
+                      <font-awesome-icon :icon="['fas', 'map-marker-alt']" />
+                    </div>
+                    <span>省级</span>
+                  </div>
                 </div>
               </div>
               <!-- 其他学业竞赛字段... -->
               <div class="form-group">
                 <label class="form-label">奖项等级 <span class="required">*</span></label>
-                <div class="select-with-icon">
-                  <font-awesome-icon :icon="['fas', 'trophy']" />
-                  <select class="form-control" v-model="formData.awardGrade" required :disabled="!formData.awardLevel">
-                    <option value="">请选择奖项等级</option>
-                    <!-- 国家级奖项等级 -->
-                    <template v-if="formData.awardLevel === 'national'">
-                      <option value="firstOrHigher">一等奖及以上</option>
-                      <option value="second">二等奖</option>
-                      <option value="third">三等奖</option>
-                    </template>
-                    <!-- 省级奖项等级 -->
-                    <template v-if="formData.awardLevel === 'provincial'">
-                      <option value="firstOrHigher">一等奖及以上</option>
-                      <option value="second">二等奖</option>
-                    </template>
-                  </select>
+                <div class="radio-cards">
+                  <!-- 国家级奖项等级 -->
+                  <template v-if="formData.awardLevel === 'national'">
+                    <div class="radio-card horizontal" :class="{ active: formData.awardGrade === 'firstOrHigher' }" @click.stop="toggleRadioCard('awardGrade', 'firstOrHigher')">
+                      <div class="radio-icon">
+                        <font-awesome-icon :icon="['fas', 'medal']" />
+                      </div>
+                      <span>一等奖及以上</span>
+                    </div>
+                    <div class="radio-card horizontal" :class="{ active: formData.awardGrade === 'second' }" @click.stop="toggleRadioCard('awardGrade', 'second')">
+                      <div class="radio-icon">
+                        <font-awesome-icon :icon="['fas', 'medal']" />
+                      </div>
+                      <span>二等奖</span>
+                    </div>
+                    <div class="radio-card horizontal" :class="{ active: formData.awardGrade === 'third' }" @click.stop="toggleRadioCard('awardGrade', 'third')">
+                      <div class="radio-icon">
+                        <font-awesome-icon :icon="['fas', 'medal']" />
+                      </div>
+                      <span>三等奖</span>
+                    </div>
+                  </template>
+                  <!-- 省级奖项等级 -->
+                  <template v-if="formData.awardLevel === 'provincial'">
+                    <div class="radio-card horizontal" :class="{ active: formData.awardGrade === 'firstOrHigher' }" @click.stop="toggleRadioCard('awardGrade', 'firstOrHigher')">
+                      <div class="radio-icon">
+                        <font-awesome-icon :icon="['fas', 'medal']" />
+                      </div>
+                      <span>一等奖及以上</span>
+                    </div>
+                    <div class="radio-card horizontal" :class="{ active: formData.awardGrade === 'second' }" @click.stop="toggleRadioCard('awardGrade', 'second')">
+                      <div class="radio-icon">
+                        <font-awesome-icon :icon="['fas', 'medal']" />
+                      </div>
+                      <span>二等奖</span>
+                    </div>
+                  </template>
+                  <!-- 未选择奖项级别时的提示 -->
+                  <div class="radio-card horizontal" v-if="!formData.awardLevel" :class="{ disabled: true }">
+                    <span>请先选择奖项级别</span>
+                  </div>
                 </div>
               </div>
 
               <div class="form-group">
                 <label class="form-label">奖项类别 <span class="required">*</span></label>
-                <div class="select-with-icon">
-                  <font-awesome-icon :icon="['fas', 'tag']" />
-                  <select class="form-control" v-model="formData.awardCategory" required>
-                    <option value="">请选择奖项类别</option>
-                    <option value="A+类">A+类</option>
-                    <option value="A类">A类</option>
-                    <option value="A-类">A-类</option>
-                  </select>
+                <div class="radio-cards">
+              <div class="radio-card horizontal" :class="{ active: formData.awardCategory === 'A+类' }" @click.stop="toggleRadioCard('awardCategory', 'A+类')">
+                    <div class="radio-icon">
+                      <font-awesome-icon :icon="['fas', 'star']" />
+                    </div>
+                    <span>A+类</span>
+                  </div>
+                  <div class="radio-card horizontal" :class="{ active: formData.awardCategory === 'A类' }" @click.stop="toggleRadioCard('awardCategory', 'A类')">
+                    <div class="radio-icon">
+                      <font-awesome-icon :icon="['fas', 'star']" />
+                    </div>
+                    <span>A类</span>
+                  </div>
+                  <div class="radio-card horizontal" :class="{ active: formData.awardCategory === 'A-类' }" @click.stop="toggleRadioCard('awardCategory', 'A-类')">
+                    <div class="radio-icon">
+                      <font-awesome-icon :icon="['fas', 'star']" />
+                    </div>
+                    <span>A-类</span>
+                  </div>
                 </div>
               </div>
 
               <div class="form-group">
                 <label class="form-label">参与类型</label>
                 <div class="radio-cards compact">
-                  <div class="radio-card small" :class="{ active: formData.awardType === 'individual' }"
-                    @click="formData.awardType = 'individual'">
+              <div class="radio-card horizontal small" :class="{ active: formData.awardType === 'individual' }"
+                    @click.stop="toggleRadioCard('awardType', 'individual')">
                     <div class="radio-icon">
                       <font-awesome-icon :icon="['fas', 'user']" />
                     </div>
                     <span>个人</span>
                   </div>
-                  <div class="radio-card small" :class="{ active: formData.awardType === 'team' }"
-                    @click="formData.awardType = 'team'">
+                  <div class="radio-card horizontal small" :class="{ active: formData.awardType === 'team' }"
+                    @click.stop="toggleRadioCard('awardType', 'team')">
                     <div class="radio-icon">
                       <font-awesome-icon :icon="['fas', 'users']" />
                     </div>
@@ -166,15 +239,15 @@
                 <div class="form-group">
                   <label class="form-label">作者排序类型</label>
                   <div class="radio-cards compact">
-                    <div class="radio-card small" :class="{ active: formData.authorRankType === 'ranked' }"
-                      @click="formData.authorRankType = 'ranked'">
+              <div class="radio-card horizontal small" :class="{ active: formData.authorRankType === 'ranked' }"
+                      @click.stop="toggleRadioCard('authorRankType', 'ranked')">
                       <div class="radio-icon">
                         <font-awesome-icon :icon="['fas', 'list-ol']" />
                       </div>
                       <span>区分排名</span>
                     </div>
-                    <div class="radio-card small" :class="{ active: formData.authorRankType === 'unranked' }"
-                      @click="formData.authorRankType = 'unranked'">
+                    <div class="radio-card horizontal small" :class="{ active: formData.authorRankType === 'unranked' }"
+                      @click.stop="toggleRadioCard('authorRankType', 'unranked')">
                       <div class="radio-icon">
                         <font-awesome-icon :icon="['fas', 'users']" />
                       </div>
@@ -202,13 +275,19 @@
             <div class="form-grid">
               <div class="form-group">
                 <label class="form-label">成果类型 <span class="required">*</span></label>
-                <div class="select-with-icon">
-                  <font-awesome-icon :icon="['fas', 'file-alt']" />
-                  <select class="form-control" v-model="formData.researchType" required>
-                    <option value="">请选择成果类型</option>
-                    <option value="thesis">学术论文</option>
-                    <option value="patent">发明专利</option>
-                  </select>
+                <div class="radio-cards">
+              <div class="radio-card horizontal" :class="{ active: formData.researchType === 'thesis' }" @click.stop="toggleRadioCard('researchType', 'thesis')">
+                    <div class="radio-icon">
+                      <font-awesome-icon :icon="['fas', 'file-alt']" />
+                    </div>
+                    <span>学术论文</span>
+                  </div>
+                  <div class="radio-card horizontal" :class="{ active: formData.researchType === 'patent' }" @click.stop="toggleRadioCard('researchType', 'patent')">
+                    <div class="radio-icon">
+                      <font-awesome-icon :icon="['fas', 'file-invoice']" />
+                    </div>
+                    <span>发明专利</span>
+                  </div>
                 </div>
               </div>
 
@@ -222,14 +301,25 @@
             <div class="form-grid">
               <div class="form-group">
                 <label class="form-label">项目级别 <span class="required">*</span></label>
-                <div class="select-with-icon">
-                  <font-awesome-icon :icon="['fas', 'certificate']" />
-                  <select class="form-control" v-model="formData.innovationLevel" required>
-                    <option value="">请选择项目级别</option>
-                    <option value="national">国家级</option>
-                    <option value="provincial">省级</option>
-                    <option value="school">校级</option>
-                  </select>
+                <div class="radio-cards">
+              <div class="radio-card horizontal" :class="{ active: formData.innovationLevel === 'national' }" @click.stop="toggleRadioCard('innovationLevel', 'national')">
+                    <div class="radio-icon">
+                      <font-awesome-icon :icon="['fas', 'globe']" />
+                    </div>
+                    <span>国家级</span>
+                  </div>
+                  <div class="radio-card horizontal" :class="{ active: formData.innovationLevel === 'provincial' }" @click.stop="toggleRadioCard('innovationLevel', 'provincial')">
+                    <div class="radio-icon">
+                      <font-awesome-icon :icon="['fas', 'map-marker-alt']" />
+                    </div>
+                    <span>省级</span>
+                  </div>
+                  <div class="radio-card horizontal" :class="{ active: formData.innovationLevel === 'school' }" @click.stop="toggleRadioCard('innovationLevel', 'school')">
+                    <div class="radio-icon">
+                      <font-awesome-icon :icon="['fas', 'university']" />
+                    </div>
+                    <span>校级</span>
+                  </div>
                 </div>
               </div>
 
@@ -237,15 +327,15 @@
               <div class="form-group">
                 <label class="form-label">角色 <span class="required">*</span></label>
                 <div class="radio-cards compact">
-                  <div class="radio-card small" :class="{ active: formData.innovationRole === 'leader' }"
-                    @click="formData.innovationRole = 'leader'">
+              <div class="radio-card horizontal small" :class="{ active: formData.innovationRole === 'leader' }"
+                    @click.stop="toggleRadioCard('innovationRole', 'leader')">
                     <div class="radio-icon">
                       <font-awesome-icon :icon="['fas', 'flag']" />
                     </div>
                     <span>组长</span>
                   </div>
-                  <div class="radio-card small" :class="{ active: formData.innovationRole === 'member' }"
-                    @click="formData.innovationRole = 'member'">
+                  <div class="radio-card horizontal small" :class="{ active: formData.innovationRole === 'member' }"
+                    @click.stop="toggleRadioCard('innovationRole', 'member')">
                     <div class="radio-icon">
                       <font-awesome-icon :icon="['fas', 'user-friends']" />
                     </div>
@@ -267,47 +357,88 @@
             <span>综合表现信息</span>
           </div>
           <div class="form-grid">
-            <div class="form-group">
+            <div class="form-group full-width">
               <label class="form-label">表现类型 <span class="required">*</span></label>
-              <div class="select-with-icon">
-                <font-awesome-icon :icon="['fas', 'list-check']" />
-                <select class="form-control" v-model="formData.performanceType" required>
-                  <option value="">请选择表现类型</option>
-                  <option value="international_internship">国际组织实习</option>
-                  <option value="military_service">参军入伍服兵役</option>
-                  <option value="volunteer">志愿服务</option>
-                  <option value="social_work">社会工作</option>
-                  <option value="sports">体育比赛</option>
-                  <option value="honor_title">荣誉称号</option>
-                </select>
+              <div class="radio-cards">
+              <div class="radio-card horizontal" :class="{ active: formData.performanceType === 'international_internship' }" @click.stop="toggleRadioCard('performanceType', 'international_internship')">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'globe']" />
+                  </div>
+                  <span>国际组织实习</span>
+                </div>
+                <div class="radio-card horizontal" :class="{ active: formData.performanceType === 'military_service' }" @click.stop="toggleRadioCard('performanceType', 'military_service')">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'shield-alt']" />
+                  </div>
+                  <span>参军入伍服兵役</span>
+                </div>
+                <div class="radio-card horizontal" :class="{ active: formData.performanceType === 'volunteer' }" @click.stop="toggleRadioCard('performanceType', 'volunteer')">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'hands-helping']" />
+                  </div>
+                  <span>志愿服务</span>
+                </div>
+                <div class="radio-card horizontal" :class="{ active: formData.performanceType === 'social_work' }" @click.stop="toggleRadioCard('performanceType', 'social_work')">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'user-tie']" />
+                  </div>
+                  <span>社会工作</span>
+                </div>
+                <div class="radio-card horizontal" :class="{ active: formData.performanceType === 'sports' }" @click.stop="toggleRadioCard('performanceType', 'sports')">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'football-ball']" />
+                  </div>
+                  <span>体育比赛</span>
+                </div>
+                <div class="radio-card horizontal" :class="{ active: formData.performanceType === 'honor_title' }" @click.stop="toggleRadioCard('performanceType', 'honor_title')">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'medal']" />
+                  </div>
+                  <span>荣誉称号</span>
+                </div>
               </div>
             </div>
-
+          </div>
+          
+          <div class="form-grid">
             <div class="form-group">
               <label class="form-label">奖项级别 <span class="required">*</span></label>
-              <div class="select-with-icon">
-                <font-awesome-icon :icon="['fas', 'medal']" />
-                <select class="form-control" v-model="formData.performanceLevel" required>
-                  <option value="">请选择奖项级别</option>
-                  <option value="provincial">省级</option>
-                  <option value="school">校级</option>
-                  <option value="college">院级</option>
-                </select>
+              <div class="radio-cards">
+              <div class="radio-card horizontal" :class="{ active: formData.performanceLevel === 'provincial' }" @click.stop="toggleRadioCard('performanceLevel', 'provincial')">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'map-marker-alt']" />
+                  </div>
+                  <span>省级</span>
+                </div>
+                <div class="radio-card horizontal" :class="{ active: formData.performanceLevel === 'school' }" @click.stop="toggleRadioCard('performanceLevel', 'school')">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'university']" />
+                  </div>
+                  <span>校级</span>
+                </div>
+                <div class="radio-card horizontal" :class="{ active: formData.performanceLevel === 'college' }" @click.stop="toggleRadioCard('performanceLevel', 'college')">
+                  <div class="radio-icon">
+                    <font-awesome-icon :icon="['fas', 'building']" />
+                  </div>
+                  <span>院级</span>
+                </div>
               </div>
             </div>
-
+          </div>
+          
+          <div class="form-grid">
             <div class="form-group">
               <label class="form-label">参与类型 <span class="required">*</span></label>
               <div class="radio-cards compact">
-                <div class="radio-card small" :class="{ active: formData.performanceParticipation === 'individual' }"
-                  @click="formData.performanceParticipation = 'individual'">
+              <div class="radio-card horizontal small" :class="{ active: formData.performanceParticipation === 'individual' }"
+                  @click.stop="toggleRadioCard('performanceParticipation', 'individual')">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'user']" />
                   </div>
                   <span>个人</span>
                 </div>
-                <div class="radio-card small" :class="{ active: formData.performanceParticipation === 'team' }"
-                  @click="formData.performanceParticipation = 'team'">
+                <div class="radio-card horizontal small" :class="{ active: formData.performanceParticipation === 'team' }"
+                  @click.stop="toggleRadioCard('performanceParticipation', 'team')">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'users']" />
                   </div>
@@ -319,15 +450,15 @@
             <div class="form-group" v-if="formData.performanceParticipation === 'team'">
               <label class="form-label">角色 <span class="required">*</span></label>
               <div class="radio-cards compact">
-                <div class="radio-card small" :class="{ active: formData.teamRole === 'leader' }"
-                  @click="formData.teamRole = 'leader'">
+              <div class="radio-card horizontal small" :class="{ active: formData.teamRole === 'leader' }"
+                  @click.stop="toggleRadioCard('teamRole', 'leader')">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'flag']" />
                   </div>
                   <span>队长</span>
                 </div>
-                <div class="radio-card small" :class="{ active: formData.teamRole === 'member' }"
-                  @click="formData.teamRole = 'member'">
+                <div class="radio-card horizontal small" :class="{ active: formData.teamRole === 'member' }"
+                  @click.stop="toggleRadioCard('teamRole', 'member')">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'user-friends']" />
                   </div>
@@ -338,38 +469,7 @@
           </div>
         </div>
 
-        <!-- 规则选择 -->
-        <div class="form-section">
-          <div class="section-title">
-            <font-awesome-icon :icon="['fas', 'scroll']" />
-            <span>规则选择</span>
-          </div>
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label">选择适用规则 <span class="required">*</span></label>
-              <div class="select-with-icon">
-                <font-awesome-icon :icon="['fas', 'list-check']" />
-                <select class="form-control" v-model="formData.ruleId" required @change="calculateEstimatedScore">
-                  <option value="">请选择规则</option>
-                  <option v-for="rule in availableRules" :key="rule.id" :value="rule.id">
-                    {{ rule.name }} (基础分数: {{ rule.score }})
-                  </option>
-                </select>
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">预估分数</label>
-              <div class="input-with-icon">
-                <font-awesome-icon :icon="['fas', 'chart-line']" />
-                <input type="number" class="form-control" v-model="estimatedScore" step="0.1" min="0" readonly>
-              </div>
-            </div>
-          </div>
-          <button type="button" class="btn btn-secondary" @click="refreshRules">
-            <font-awesome-icon :icon="['fas', 'sync-alt']" />
-            刷新规则列表
-          </button>
-        </div>
+        
 
         <!-- 加分详情（通用） -->
         <div class="form-section">
@@ -384,6 +484,13 @@
                 <font-awesome-icon :icon="['fas', 'calculator']" />
                 <input type="number" class="form-control" v-model="formData.selfScore" step="0.1" min="0"
                   placeholder="请输入自评加分" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">预估分数</label>
+              <div class="input-with-icon">
+                <font-awesome-icon :icon="['fas', 'chart-line']" />
+                <input type="number" class="form-control" v-model="estimatedScore" step="0.1" min="0" readonly>
               </div>
             </div>
           </div>
@@ -538,6 +645,15 @@ const handleLevelChange = () => {
   formData.awardGrade = ''
 }
 
+// 处理radio-card的点击事件，支持取消选择
+const toggleRadioCard = (fieldName, value) => {
+  if (formData[fieldName] === value) {
+    formData[fieldName] = ''
+  } else {
+    formData[fieldName] = value
+  }
+}
+
 // 规则选择和预估分数计算相关
 import api from '../../utils/api'
 
@@ -555,7 +671,8 @@ watch([
   () => formData.teamRole,
   () => formData.performanceType,
   () => formData.performanceLevel,
-  () => formData.performanceParticipation
+  () => formData.performanceParticipation,
+  () => formData.projectName
 ], () => {
   fetchMatchingRules()
 }, { deep: true })
@@ -563,46 +680,27 @@ watch([
 // 获取匹配的规则
 const fetchMatchingRules = async () => {
   try {
-    // 构建匹配规则的请求参数
-    const matchParams = {
-      application_type: formData.applicationType,
-      academic_type: formData.academicType,
-      award_level: formData.awardLevel,
-      award_grade: formData.awardGrade,
-      award_category: formData.awardCategory,
-      award_type: formData.awardType,
-      team_role: formData.teamRole || formData.innovationRole,
-      // 综合表现相关字段
-      performance_type: formData.performanceType,
-      performance_level: formData.performanceLevel,
-      performance_participation: formData.performanceParticipation
+    // 始终获取所有规则，不进行类型过滤
+    const response = await api.getRules()
+    availableRules.value = response.rules
+    
+    // 调试日志：查看规则对象结构
+    console.log('All rules:', response.rules)
+    
+    // 如果当前选择的规则不在列表中，清除选择
+    if (formData.ruleId && !response.rules.some(rule => rule.id === formData.ruleId)) {
+      formData.ruleId = ''
     }
     
-    // 过滤掉空值
-    Object.keys(matchParams).forEach(key => {
-      if (!matchParams[key]) delete matchParams[key]
-    })
-    
-    // 只有当有足够的信息时才请求匹配规则
-    if (Object.keys(matchParams).length > 0) {
-      const rules = await api.matchRules(matchParams)
-      availableRules.value = rules
-      
-      // 如果当前选择的规则不在匹配列表中，清除选择
-      if (formData.ruleId && !rules.some(rule => rule.id === formData.ruleId)) {
-        formData.ruleId = ''
-      }
-      
-      // 如果只有一个匹配规则，自动选择
-      if (rules.length === 1 && !formData.ruleId) {
-        formData.ruleId = rules[0].id
-      }
-      
-      // 重新计算预估分数
-      calculateEstimatedScore()
+    // 如果只有一个规则，自动选择
+    if (response.rules.length === 1 && !formData.ruleId) {
+      formData.ruleId = response.rules[0].id
     }
+    
+    // 重新计算预估分数
+    calculateEstimatedScore()
   } catch (error) {
-    console.error('获取匹配规则失败:', error)
+    console.error('获取规则失败:', error)
   }
 }
 
@@ -641,6 +739,82 @@ const calculateEstimatedScore = () => {
   
   estimatedScore.value = parseFloat(score.toFixed(1))
 }
+
+// 监听规则选择变化，自动填充表单信息
+watch(() => formData.ruleId, async (newRuleId) => {
+  if (!newRuleId) return
+  
+  // 先尝试从availableRules中查找规则
+  let selectedRule = availableRules.value.find(rule => rule.id === newRuleId)
+  
+  // 如果在availableRules中找不到，尝试单独获取该规则的详细信息
+  if (!selectedRule) {
+    try {
+      selectedRule = await api.getRule(newRuleId)
+    } catch (error) {
+      console.error('获取规则详情失败:', error)
+      return
+    }
+  }
+  
+  if (!selectedRule) return
+  
+  console.log('Selected rule:', selectedRule)
+  
+  // 根据选择的规则自动填充表单信息
+  formData.applicationType = selectedRule.type
+  
+  if (selectedRule.type === 'academic') {
+    formData.academicType = selectedRule.sub_type
+    
+    // 根据不同学术子类型设置相应字段
+    if (selectedRule.sub_type === 'research' || selectedRule.sub_type === 'competition') {
+      formData.awardLevel = selectedRule.level
+      formData.awardGrade = selectedRule.grade
+      formData.awardCategory = selectedRule.category
+    } else if (selectedRule.sub_type === 'innovation') {
+      formData.innovationLevel = selectedRule.level
+    }
+    
+    // 根据规则设置参与类型（团队或个人）
+    formData.awardType = selectedRule.participation_type
+    
+    // 设置团队角色
+    if (selectedRule.participation_type === 'team') {
+      if (selectedRule.sub_type === 'innovation') {
+        formData.innovationRole = selectedRule.team_role
+      } else {
+        formData.teamRole = selectedRule.team_role
+      }
+    }
+    
+    // 设置科研成果类型
+    if (selectedRule.sub_type === 'research') {
+      // 将'research_type'映射为UI中使用的'papers'值
+      if (selectedRule.research_type === 'paper') {
+        formData.researchType = 'thesis' // 学术论文对应到'thesis'选项
+      } else {
+        formData.researchType = selectedRule.research_type
+      }
+    }
+    
+    // 设置作者排序相关
+    formData.authorRankType = selectedRule.author_rank_type
+    if (selectedRule.author_rank) {
+      formData.authorOrder = selectedRule.author_rank
+    }
+  } else if (selectedRule.type === 'comprehensive') {
+    formData.performanceType = selectedRule.sub_type
+    formData.performanceLevel = selectedRule.level
+    formData.performanceParticipation = selectedRule.participation_type
+    if (selectedRule.participation_type === 'team') {
+      formData.teamRole = selectedRule.team_role
+    }
+  }
+  
+  // 重新计算预估分数
+  calculateEstimatedScore()
+}, { immediate: true })
 
 // 刷新规则列表
 const refreshRules = () => {
@@ -978,9 +1152,9 @@ const submitForm = async () => {
   padding: 0;
 }
 
+/* 表单部分样式 */
 .form-section {
   padding: 10px 15px;
-  /* 减少垂直padding */
   border-bottom: 1px solid #f0f4f8;
 }
 
@@ -988,265 +1162,53 @@ const submitForm = async () => {
   border-bottom: none;
 }
 
-.section-title {
-  display: flex;
-  align-items: center;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 12px;
-  /* 减少底部间距 */
-  font-size: 1rem;
-}
-
-.section-title svg {
-  margin-right: 8px;
-  color: #003366;
-  width: 16px;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  /* 减少网格间距 */
-}
-
+/* 表单组微调 */
 .form-group {
-  display: flex;
-  flex-direction: column;
   margin-bottom: 3px;
 }
 
+/* 表单标签微调 */
 .form-label {
-  font-weight: 500;
-  color: #333;
   margin-bottom: 6px;
-  /* 减少标签底部间距 */
   font-size: 0.95rem;
 }
 
-/* 输入框图标样式 */
-.input-with-icon,
-.select-with-icon {
-  position: relative;
-}
+/* 激活状态的单选卡片样式 */
 
-.input-with-icon svg,
-.select-with-icon svg {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #666;
-  z-index: 2;
-}
-
-.input-with-icon .form-control,
-.select-with-icon .form-control {
-  padding-left: 35px;
-}
-
-/* 单选卡片样式 */
-.radio-cards {
-  display: flex;
-  gap: 8px;
-  /* 减少卡片间距 */
-}
-
-.radio-cards.compact {
-  gap: 6px;
-}
-
-.radio-card {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  /* 减少卡片内边距 */
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: white;
-}
-
-.radio-card.small {
-  padding: 6px 10px;
-  /* 减少小卡片内边距 */
-  font-size: 0.9rem;
-}
-
-.radio-card:hover {
-  border-color: #003366;
-}
-
+/* 激活状态的单选卡片样式 */
 .radio-card.active {
   border-color: #003366;
   background-color: #f0f7ff;
   color: #003366;
 }
 
-.radio-icon {
-  margin-right: 6px;
-  /* 减少图标右边距 */
-  color: #666;
-}
-
+/* 激活状态的单选卡片图标样式 */
 .radio-card.active .radio-icon {
   color: #003366;
 }
 
-/* 文件上传区域 */
-.file-upload-area {
-  display: flex;
-  align-items: center;
-  border: 2px dashed #ddd;
-  border-radius: 6px;
-  padding: 15px;
-  /* 减少内边距 */
-  cursor: pointer;
-  transition: all 0.2s;
-  background: #fafafa;
-  margin-bottom: 12px;
-  /* 减少底部间距 */
-}
-
-.file-upload-area:hover {
-  border-color: #003366;
-  background: #f5f9ff;
-}
-
-.upload-icon {
-  font-size: 1.8rem;
-  /* 稍微减小图标大小 */
-  color: #666;
-  margin-right: 12px;
-  /* 减少右边距 */
-}
-
+/* 文件上传文本样式 */
 .upload-text p {
   margin: 0;
   color: #333;
 }
 
-.help-text {
-  font-size: 0.85rem;
-  color: #666;
-  margin-top: 4px;
-  /* 减少顶部间距 */
-}
-
-/* 文件列表 */
-.file-list {
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.file-list-header {
-  padding: 8px 12px;
-  /* 减少内边距 */
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
-  font-weight: 500;
-  color: #333;
-}
-
-.file-item {
-  display: flex;
-  align-items: center;
-  padding: 10px 12px;
-  /* 减少内边距 */
-  background-color: white;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.file-item:last-child {
-  border-bottom: none;
-}
-
-.file-icon {
-  font-size: 1.2rem;
-  color: #666;
-  margin-right: 10px;
-  /* 减少右边距 */
-  width: 20px;
-}
-
-.file-info {
-  flex: 1;
-  padding-bottom: 10px;
-  ;
-}
-
-.file-name {
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 2px;
-}
-
-.file-meta {
-  font-size: 0.85rem;
-  color: #666;
-}
-
-.file-actions {
-  display: flex;
-  gap: 6px;
-  /* 减少操作按钮间距 */
-}
-
-.file-action-btn {
-  background: none;
-  border: none;
-  padding: 5px;
-  /* 减少内边距 */
-  cursor: pointer;
-  color: #666;
-  border-radius: 3px;
-  transition: all 0.2s;
-}
-
-.file-action-btn:hover {
-  background-color: #f0f0f0;
-  color: #333;
-}
-
-/* 字符计数器 */
-.char-counter {
-  text-align: right;
-  font-size: 0.65rem;
-  color: #666;
-}
-
-/* 操作按钮 */
+/* 表单操作按钮样式 */
 .form-actions {
   padding: 15px 20px;
-  /* 减少内边距 */
   background: #ffffff;
   border-top: 1px solid #ffffff;
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  /* 减少按钮间距 */
 }
 
-/* 模态框特有样式 */
+/* 模态框特有样式（覆盖共享样式） */
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
   background-color: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
 }
 
 .modal-content {
-  background: white;
-  border-radius: 8px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   width: 90vw;
   height: 90vh;
@@ -1254,45 +1216,21 @@ const submitForm = async () => {
   max-height: 800px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   padding: 15px 20px;
   border-bottom: 1px solid #f0f4f8;
-  background-color: #f8f9fa;
 }
 
 .modal-header h3 {
-  margin: 0;
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #333;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  color: #666;
-  padding: 5px;
-  border-radius: 3px;
-  transition: all 0.2s;
-}
-
-.close-btn:hover {
-  background-color: #f0f0f0;
-  color: #333;
 }
 
 .modal-body {
   flex: 1;
-  padding: 20px;
   overflow: auto;
   display: flex;
   justify-content: center;
@@ -1333,36 +1271,11 @@ const submitForm = async () => {
   font-size: 1.2rem;
 }
 
-
 /* 响应式调整 */
 @media (max-width: 768px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-    gap: 10px;
-    /* 移动端也减少间距 */
-  }
-
-  .radio-cards {
-    flex-direction: column;
-  }
-
-  .file-upload-area {
-    flex-direction: column;
-    text-align: center;
-    padding: 12px;
-    /* 移动端减少内边距 */
-  }
-
-  .upload-icon {
-    margin-right: 0;
-    margin-bottom: 8px;
-    /* 减少底部间距 */
-  }
-
   .form-actions {
     flex-direction: column;
     padding: 12px 15px;
-    /* 移动端减少内边距 */
   }
 
   .btn {
