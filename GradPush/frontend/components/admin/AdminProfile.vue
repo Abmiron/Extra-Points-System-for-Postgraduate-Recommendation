@@ -24,6 +24,13 @@
             <div class="avatar-tooltip">
               上传图片限制：JPG、PNG格式，大小不超过2MB
             </div>
+            <button 
+              class="btn btn-outline reset-avatar-btn" 
+              @click="resetAvatar" 
+              :disabled="uploadingAvatar"
+            >
+              <font-awesome-icon :icon="['fas', 'undo']" /> 恢复默认头像
+            </button>
             <input type="file" ref="avatarInput" @change="handleAvatarChange" accept="image/*" style="display: none;">
           </div>
         </div>
@@ -77,9 +84,9 @@
     <div class="card">
       <div class="card-title">安全设置</div>
       <div class="form-row">
-        <div class="form-group">
+        <div class="form-group password-group">
           <label class="form-label">修改密码</label>
-          <button class="btn btn-outline" @click="showChangePassword = true">
+          <button class="btn btn-outline password-btn" @click="showChangePassword = true">
             <font-awesome-icon :icon="['fas', 'key']" /> 修改密码
           </button>
         </div>
@@ -226,6 +233,32 @@ const handleAvatarChange = async (event) => {
     if (avatarInput.value) {
       avatarInput.value.value = ''
     }
+  }
+}
+
+const resetAvatar = async () => {
+  // 确认是否恢复默认头像
+  if (!confirm('确定要恢复默认头像吗？')) {
+    return
+  }
+  
+  uploadingAvatar.value = true
+  try {
+    // 调用恢复默认头像API
+    const response = await api.resetAvatar(authStore.user.username)
+    
+    // 更新用户信息
+    authStore.updateUserInfo(response.user)
+    
+    // 更新本地profile中的头像
+    profile.avatar = response.user.avatar
+    
+    alert('已恢复默认头像')
+  } catch (error) {
+    console.error('恢复默认头像失败:', error)
+    alert(`恢复默认头像失败: ${error.message || '请稍后重试'}`)
+  } finally {
+    uploadingAvatar.value = false
   }
 }
 
@@ -409,6 +442,13 @@ onMounted(() => {
   visibility: visible;
 }
 
+.reset-avatar-btn {
+  margin-top: 10px;
+  font-size: 14px;
+  padding: 5px 15px;
+  white-space: nowrap;
+}
+
 /* 组件特有样式 */
 /* 模态框底部按钮居中 */
 .modal-footer {
@@ -431,6 +471,19 @@ onMounted(() => {
 
 .form-row .form-group {
   flex: 1;
+}
+
+/* 修改密码按钮样式 */
+.password-group {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.password-btn {
+  width: auto;
+  white-space: nowrap;
 }
 
 .form-group {

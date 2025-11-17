@@ -29,6 +29,7 @@ import StatisticsReport from '../components/admin/StatisticsReport.vue'
 import SystemSettings from '../components/admin/SystemSettings.vue'
 import AdminProfile from '../components/admin/AdminProfile.vue'
 import FacultyManagement from '../components/admin/FacultyManagement.vue'
+import StudentManagement from '../components/admin/StudentManagement.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -39,6 +40,7 @@ const currentPage = ref('user-management')
 // 页面组件映射
 const pageComponents = {
   'user-management': UserManagement,
+  'student-management': StudentManagement,
   'data-management': DataManagement,
   'rule-management': RuleManagement,
   'faculty-management': FacultyManagement,

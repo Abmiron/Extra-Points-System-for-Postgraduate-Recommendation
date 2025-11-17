@@ -184,8 +184,13 @@
             <div class="compact-row">
               <div class="compact-group">
                 <label>核定加分</label>
-                <input type="number" class="form-control small" v-model="reviewData.finalScore" step="0.1" min="0"
-                  max="5" placeholder="0-5分">
+                <div class="score-input-container">
+                  <input type="number" class="form-control small" v-model="reviewData.finalScore" step="0.1" min="0"
+                    max="5" placeholder="0-5分">
+                  <span v-if="isScoreMismatch" class="score-mismatch-warning">
+                    预计分数和自评分数不一致，请仔细审核
+                  </span>
+                </div>
               </div>
             </div>
             <div class="compact-row">
@@ -228,7 +233,7 @@ const props = defineProps({
 const emit = defineEmits(['approve', 'reject', 'close'])
 
 const reviewData = reactive({
-  finalScore: props.application.finalScore || 0,
+  finalScore: props.application.finalScore || props.application.rule?.score || 0,
   approveComment: props.application.status === 'approved' ? props.application.reviewComment || '' : '',
   rejectComment: props.application.status === 'rejected' ? props.application.reviewComment || '' : ''
 })
@@ -236,7 +241,7 @@ const reviewData = reactive({
 // 监听application变化，更新reviewData
 watch(() => props.application, (newApplication) => {
   if (newApplication) {
-    reviewData.finalScore = newApplication.finalScore || 0
+    reviewData.finalScore = newApplication.finalScore || newApplication.rule?.score || 0
     reviewData.approveComment = newApplication.status === 'approved' ? newApplication.reviewComment || '' : ''
     reviewData.rejectComment = newApplication.status === 'rejected' ? newApplication.reviewComment || '' : ''
   }
@@ -259,6 +264,19 @@ const imageFiles = computed(() => {
 const hasImages = computed(() => imageFiles.value.length > 0)
 const hasFiles = computed(() => props.application.files && props.application.files.length > 0)
 const currentImage = computed(() => imageFiles.value[currentImageIndex.value] || null)
+const isScoreMismatch = computed(() => {
+  // 检查预计分数和自评分数是否存在且不一致
+  const ruleScore = props.application.rule?.score;
+  const selfScore = props.application.selfScore;
+  
+  // 确保两个分数都有值且可转换为数字
+  if (ruleScore !== undefined && ruleScore !== null && ruleScore !== '' &&
+      selfScore !== undefined && selfScore !== null && selfScore !== '') {
+    // 转换为浮点数进行比较
+    return parseFloat(ruleScore) !== parseFloat(selfScore);
+  }
+  return false;
+})
 
 // 方法
 const isImage = (file) => {
@@ -806,6 +824,21 @@ const rejectApplication = () => {
 
 .form-control.small {
   width: 100px;
+}
+
+.score-input-container {
+  position: relative;
+}
+
+.score-mismatch-warning {
+  display: block !important;
+  color: #dc3545 !important;
+  font-size: 12px !important;
+  margin-top: 4px !important;
+  padding: 2px 0 !important;
+  line-height: 1.2 !important;
+  font-weight: normal !important;
+  text-align: left !important;
 }
 
 .form-control.small-textarea {

@@ -42,6 +42,12 @@
         </div>
       </div>
       
+      <!-- 加载状态指示器 -->
+      <div v-if="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">加载中...</div>
+      </div>
+      
       <!-- 学院列表 -->
       <div class="table-container" style="padding: 0 20px 20px;">
         <table class="application-table">
@@ -105,6 +111,12 @@
         <div class="filter-group">
           <button class="btn btn-outline" @click="resetFilters">清空筛选</button>
         </div>
+      </div>
+      
+      <!-- 加载状态指示器 -->
+      <div v-if="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">加载中...</div>
       </div>
       
       <!-- 系列表 -->
@@ -181,6 +193,12 @@
         <div class="filter-group">
           <button class="btn btn-outline" @click="resetFilters">清空筛选</button>
         </div>
+      </div>
+      
+      <!-- 加载状态指示器 -->
+      <div v-if="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">加载中...</div>
       </div>
       
       <!-- 专业列表 -->
@@ -560,6 +578,7 @@ export default {
     const faculties = ref([])
     const departments = ref([])
     const majors = ref([])
+    const loading = ref(false)
     
     // 筛选条件
     const facultyFilter = ref('')
@@ -586,6 +605,7 @@ export default {
     
     // 加载数据
     const loadFaculties = async () => {
+      loading.value = true
       try {
         const response = await api.getFacultiesAdmin()
         faculties.value = response.faculties  // 后端返回 {'faculties': [...]} 格式
@@ -593,10 +613,13 @@ export default {
       } catch (error) {
         console.error('加载学院数据失败:', error)
         alert('加载学院数据失败')
+      } finally {
+        loading.value = false
       }
     }
     
     const loadDepartments = async () => {
+      loading.value = true
       try {
         const response = await api.getDepartmentsAdmin(selectedFacultyId.value)
         departments.value = response.departments  // 后端返回 {'departments': [...]} 格式
@@ -604,10 +627,13 @@ export default {
       } catch (error) {
         console.error('加载系数据失败:', error)
         alert('加载系数据失败')
+      } finally {
+        loading.value = false
       }
     }
     
     const loadMajors = async () => {
+      loading.value = true
       try {
         const response = await api.getMajorsAdmin(selectedDepartmentId.value, selectedFacultyId.value)
         majors.value = response.majors  // 后端返回 {'majors': [...]} 格式
@@ -615,6 +641,8 @@ export default {
       } catch (error) {
         console.error('加载专业数据失败:', error)
         alert('加载专业数据失败')
+      } finally {
+        loading.value = false
       }
     }
     
@@ -886,6 +914,7 @@ export default {
       faculties,
       departments,
       majors,
+      loading,
       facultyFilter,
       departmentFilter,
       majorFilter,
@@ -930,6 +959,41 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 @import '../common/shared-styles.css';
+
+/* 加载状态样式 */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.loading-spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-top: 10px;
+  color: #666;
+  font-size: 14px;
+}
 </style>

@@ -104,11 +104,11 @@
               </div>
               <div class="compact-group">
                 <label>所在系</label>
-                <span>{{ authStore.user?.department || application.department || 'N/A' }}</span>
+                <span>{{ (authStore.user?.department || application.department) ? getDepartmentText(authStore.user?.department || application.department) : 'N/A' }}</span>
               </div>
               <div class="compact-group">
                 <label>专业</label>
-                <span>{{ authStore.user?.major || application.major || 'N/A' }}</span>
+                <span>{{ (authStore.user?.major || application.major) ? getMajorText(authStore.user?.major || application.major) : 'N/A' }}</span>
               </div>
             </div>
           </div>
@@ -144,6 +144,14 @@
               <div class="compact-group">
                 <label>自评分数</label>
                 <span>{{ application.selfScore }}</span>
+              </div>
+              <div class="compact-group">
+                <label>选择规则</label>
+                <span>{{ application.rule?.name || (application.ruleId ? '规则ID: ' + application.ruleId : '未选择') }}</span>
+              </div>
+              <div class="compact-group">
+                <label>预计分数</label>
+                <span class="highlight-score">{{ application.rule?.score || 'N/A' }}</span>
               </div>
               <div class="compact-group">
                 <label>最终分数</label>

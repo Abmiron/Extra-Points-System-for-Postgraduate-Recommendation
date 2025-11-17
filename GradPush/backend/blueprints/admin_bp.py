@@ -8,12 +8,33 @@
 - 专业管理（增删改查）
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, make_response
 from models import Faculty, Department, Major, User
 from datetime import datetime
 
 # 创建蓝图实例
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
+
+# 添加CORS头的辅助函数
+def add_cors_headers(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    response.headers.add('Access-Control-Max-Age', '3600')
+    return response
+
+# OPTIONS请求处理
+@admin_bp.route('/<path:path>', methods=['OPTIONS'])
+def handle_options(path):
+    response = make_response()
+    return add_cors_headers(response)
+
+# 针对根路径的OPTIONS请求
+@admin_bp.route('/', methods=['OPTIONS'])
+def handle_root_options():
+    response = make_response()
+    return add_cors_headers(response)
 
 # 学院管理API
 
@@ -30,7 +51,8 @@ def get_faculties():
             'created_at': faculty.created_at.isoformat(),
             'updated_at': faculty.updated_at.isoformat()
         })
-    return jsonify({'faculties': result}), 200
+    response = make_response(jsonify({'faculties': result}), 200)
+    return add_cors_headers(response)
 
 # 创建学院
 @admin_bp.route('/faculties', methods=['POST'])
@@ -131,7 +153,8 @@ def get_departments():
             'created_at': department.created_at.isoformat(),
             'updated_at': department.updated_at.isoformat()
         })
-    return jsonify({'departments': result}), 200
+    response = make_response(jsonify({'departments': result}), 200)
+    return add_cors_headers(response)
 
 # 创建系
 @admin_bp.route('/departments', methods=['POST'])
@@ -254,7 +277,8 @@ def get_majors():
             'created_at': major.created_at.isoformat(),
             'updated_at': major.updated_at.isoformat()
         })
-    return jsonify({'majors': result}), 200
+    response = make_response(jsonify({'majors': result}), 200)
+    return add_cors_headers(response)
 
 # 创建专业
 @admin_bp.route('/majors', methods=['POST'])

@@ -9,10 +9,11 @@
 - 管理员更新用户信息
 - 管理员重置用户密码
 - 用户上传头像
+- 学生信息管理（增删改查）
 """
 
 from flask import Blueprint, request, jsonify
-from models import User, Faculty, Department, Major
+from models import User, Faculty, Department, Major, Student
 import os
 import uuid
 from werkzeug.utils import secure_filename
@@ -304,6 +305,56 @@ def update_profile():
     
     return jsonify({'user': user_data, 'message': '个人信息更新成功'}), 200
 
+# 恢复默认头像接口
+@user_bp.route('/user/avatar/reset', methods=['POST'])
+def reset_avatar():
+    # 从表单获取用户名
+    username = request.form.get('username')
+    
+    if not username:
+        return jsonify({'message': '缺少用户名参数'}), 400
+    
+    user = User.query.filter_by(username=username).first()
+    
+    if not user:
+        return jsonify({'message': '用户不存在'}), 404
+    
+    try:
+        # 将用户头像设置为空字符串，表示使用默认头像
+        user.avatar = ''
+        
+        from app import db
+        db.session.commit()
+        
+        # 获取学院、系和专业名称
+        faculty_name = Faculty.query.get(user.faculty_id).name if user.faculty_id else ''
+        department_name = Department.query.get(user.department_id).name if user.department_id else ''
+        major_name = Major.query.get(user.major_id).name if user.major_id else ''
+        
+        # 返回更新后的用户信息
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'name': user.name,
+            'role': user.role,
+            'avatar': user.avatar,
+            'faculty': faculty_name,
+            'facultyId': user.faculty_id,
+            'department': department_name,
+            'departmentId': user.department_id,
+            'major': major_name,
+            'majorId': user.major_id,
+            'studentId': user.student_id,
+            'email': user.email,
+            'phone': user.phone,
+            'roleName': user.role_name,
+            'lastLogin': user.last_login.isoformat() if user.last_login else None
+        }
+        
+        return jsonify({'user': user_data, 'message': '恢复默认头像成功'}), 200
+    except Exception as e:
+        return jsonify({'message': f'恢复默认头像失败: {str(e)}'}), 500
+
 # 用户上传头像接口
 @user_bp.route('/user/avatar', methods=['POST'])
 def upload_avatar():
@@ -436,3 +487,171 @@ def change_password():
     db.session.commit()
     
     return jsonify({'message': '密码修改成功'}), 200
+
+# 以下是学生管理相关接口
+# 获取所有学生信息接口
+@user_bp.route('/admin/students', methods=['GET'])
+def get_all_students():
+    # 获取请求参数
+    search = request.args.get('search')
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    
+    # 构建查询
+    query = Student.query
+    
+    # 根据search关键词搜索
+    if search:
+        query = query.filter((Student.student_name.like(f'%{search}%')) | (Student.student_id.like(f'%{search}%')))
+    
+    # 分页查询
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    students = pagination.items
+    
+    student_list = []
+    for student in students:
+        # 获取学院、系和专业名称
+        faculty_name = Faculty.query.get(student.faculty_id).name if student.faculty_id else ''
+        department_name = Department.query.get(student.department_id).name if student.department_id else ''
+        major_name = Major.query.get(student.major_id).name if student.major_id else ''
+        
+        student_data = {
+            'id': student.id,
+            'student_id': student.student_id,
+            'student_name': student.student_name,
+            'gender': student.gender,
+            'faculty': faculty_name,
+            'facultyId': student.faculty_id,
+            'department': department_name,
+            'departmentId': student.department_id,
+            'major': major_name,
+            'majorId': student.major_id,
+            'cet4_score': student.cet4_score,
+            'cet6_score': student.cet6_score,
+            'gpa': student.gpa,
+            'academic_score': student.academic_score
+        }
+        student_list.append(student_data)
+    
+    # 返回分页数据
+    return jsonify({
+        'students': student_list,
+        'total': pagination.total,
+        'pages': pagination.pages,
+        'current_page': pagination.page
+    }), 200
+
+# 获取单个学生信息接口
+@user_bp.route('/admin/students/<int:student_id>', methods=['GET'])
+def get_student(student_id):
+    student = Student.query.get(student_id)
+    
+    if not student:
+        return jsonify({'message': '学生不存在'}), 404
+    
+    # 获取学院、系和专业名称
+    faculty_name = Faculty.query.get(student.faculty_id).name if student.faculty_id else ''
+    department_name = Department.query.get(student.department_id).name if student.department_id else ''
+    major_name = Major.query.get(student.major_id).name if student.major_id else ''
+    
+    student_data = {
+        'id': student.id,
+        'student_id': student.student_id,
+        'student_name': student.student_name,
+        'gender': student.gender,
+        'faculty': faculty_name,
+        'facultyId': student.faculty_id,
+        'department': department_name,
+        'departmentId': student.department_id,
+        'major': major_name,
+        'majorId': student.major_id,
+        'cet4_score': student.cet4_score,
+        'cet6_score': student.cet6_score,
+        'gpa': student.gpa,
+        'academic_score': student.academic_score
+    }
+    
+    return jsonify({'student': student_data}), 200
+
+# 创建学生信息接口
+@user_bp.route('/admin/students', methods=['POST'])
+def create_student():
+    data = request.get_json()
+    
+    # 检查必要参数
+    if not data.get('student_id') or not data.get('student_name') or not data.get('department_id') or not data.get('major_id'):
+        return jsonify({'message': '缺少必要参数（学号、姓名、系ID、专业ID）'}), 400
+    
+    # 检查学号是否已存在
+    existing_student = Student.query.filter_by(student_id=data['student_id']).first()
+    if existing_student:
+        return jsonify({'message': '学号已存在'}), 400
+    
+    # 创建新学生
+    new_student = Student(
+        student_id=data['student_id'],
+        student_name=data['student_name'],
+        gender=data.get('gender'),
+        faculty_id=data.get('facultyId'),
+        department_id=data.get('department_id'),
+        major_id=data.get('major_id'),
+        cet4_score=data.get('cet4_score'),
+        cet6_score=data.get('cet6_score'),
+        gpa=data.get('gpa'),
+        academic_score=data.get('academic_score')
+    )
+    
+    from app import db
+    db.session.add(new_student)
+    db.session.commit()
+    
+    return jsonify({'message': '学生创建成功', 'student_id': new_student.id}), 201
+
+# 更新学生信息接口
+@user_bp.route('/admin/students/<int:student_id>', methods=['PUT'])
+def update_student(student_id):
+    student = Student.query.get(student_id)
+    
+    if not student:
+        return jsonify({'message': '学生不存在'}), 404
+    
+    data = request.get_json()
+    
+    # 更新学生信息
+    if 'student_name' in data:
+        student.student_name = data['student_name']
+    if 'gender' in data:
+        student.gender = data['gender']
+    if 'facultyId' in data:
+        student.faculty_id = data['facultyId']
+    if 'department_id' in data:
+        student.department_id = data['department_id']
+    if 'major_id' in data:
+        student.major_id = data['major_id']
+    if 'cet4_score' in data:
+        student.cet4_score = data['cet4_score']
+    if 'cet6_score' in data:
+        student.cet6_score = data['cet6_score']
+    if 'gpa' in data:
+        student.gpa = data['gpa']
+    if 'academic_score' in data:
+        student.academic_score = data['academic_score']
+    
+    from app import db
+    db.session.commit()
+    
+    return jsonify({'message': '学生信息更新成功'}), 200
+
+# 删除学生信息接口
+@user_bp.route('/admin/students/<int:student_id>', methods=['DELETE'])
+def delete_student(student_id):
+    student = Student.query.get(student_id)
+    
+    if not student:
+        return jsonify({'message': '学生不存在'}), 404
+    
+    from app import db
+    db.session.delete(student)
+    db.session.commit()
+    
+    return jsonify({'message': '学生删除成功'}), 200

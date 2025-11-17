@@ -287,7 +287,7 @@
 </style>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watchEffect } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import api from '../../utils/api'
 
@@ -339,7 +339,8 @@ onMounted(() => {
 const loadFaculties = async () => {
   try {
     loadingOptions.value = true
-    const response = await api.getFaculties()
+    // 使用管理员API端点获取学院数据
+    const response = await api.getFacultiesAdmin()
     faculties.value = response.faculties
   } catch (error) {
     console.error('加载学院列表失败:', error)
@@ -354,12 +355,17 @@ const loadDepartments = async (facultyId) => {
   try {
     loadingOptions.value = true
     if (facultyId) {
-      const response = await api.getDepartmentsByFaculty(facultyId)
+      // 使用管理员API端点获取系数据
+      const response = await api.getDepartmentsAdmin(facultyId)
       departments.value = response.departments
-      // 重置系和专业选择
-      userForm.departmentId = ''
-      userForm.majorId = ''
-      majors.value = []
+      // 保留当前的系和专业选择
+      // 如果当前选择的系不在新加载的列表中，则重置
+      const departmentExists = departments.value.some(dept => dept.id === userForm.departmentId)
+      if (!departmentExists) {
+        userForm.departmentId = ''
+        userForm.majorId = ''
+        majors.value = []
+      }
     }
   } catch (error) {
     console.error('加载系列表失败:', error)
@@ -374,10 +380,15 @@ const loadMajors = async (departmentId) => {
   try {
     loadingOptions.value = true
     if (departmentId) {
-      const response = await api.getMajorsByDepartment(departmentId)
+      // 使用管理员API端点获取专业数据
+      const response = await api.getMajorsAdmin(departmentId)
       majors.value = response.majors
-      // 重置专业选择
-      userForm.majorId = ''
+      // 保留当前的专业选择
+      // 如果当前选择的专业不在新加载的列表中，则重置
+      const majorExists = majors.value.some(major => major.id === userForm.majorId)
+      if (!majorExists) {
+        userForm.majorId = ''
+      }
     }
   } catch (error) {
     console.error('加载专业列表失败:', error)
@@ -518,24 +529,26 @@ const importUsers = () => {
 
 const editUser = async (user) => {
   editingUser.value = user
+  
+  // 初始化表单，直接使用用户对象中的ID字段
   Object.assign(userForm, {
     id: user.id,
     role: user.role,
     username: user.username,
     name: user.name,
-    facultyId: user.faculty?.id || user.faculty,
-    departmentId: user.department?.id || user.department,
-    majorId: user.major?.id || user.major,
+    facultyId: user.facultyId || '',
+    departmentId: user.departmentId || '',
+    majorId: user.majorId || '',
     roleName: user.roleName,
     status: user.status,
     password: '' // 重置密码字段
   })
   
   // 如果是学生用户，需要加载对应的系和专业列表
-  if (user.role === 'student' && user.facultyId) {
-    await loadDepartments(user.facultyId)
-    if (user.departmentId) {
-      await loadMajors(user.departmentId)
+  if (userForm.role === 'student' && userForm.facultyId) {
+    await loadDepartments(userForm.facultyId)
+    if (userForm.departmentId) {
+      await loadMajors(userForm.departmentId)
     }
   }
   
@@ -877,7 +890,7 @@ onMounted(() => {
 })
 
 // 监听activeTab变化
-watchEffect(() => {
+watch(activeTab, () => {
   activeTabChanged()
 })
 </script>

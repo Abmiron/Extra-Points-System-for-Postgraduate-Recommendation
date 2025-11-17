@@ -34,6 +34,11 @@
         </div>
         <!-- 主表格容器 -->
         <div class="table-container" ref="tableContainer">
+          <!-- 加载状态指示器 -->
+          <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">数据加载中...</div>
+          </div>
           <table class="application-table comprehensive-table" ref="dataTable">
             <thead>
               <tr>
@@ -217,9 +222,12 @@ const faculties = ref([])
 const studentsRanking = ref([])
 // 所有申请记录
 const allApplications = ref([])
+// 加载状态
+const loading = ref(false)
 
 // 加载学院列表
 const loadFaculties = async () => {
+  loading.value = true
   try {
     const response = await api.getFacultiesAdmin()
 
@@ -234,11 +242,14 @@ const loadFaculties = async () => {
       { id: 4, name: '经济管理学院' },
       { id: 5, name: '外国语学院' }
     ]
+  } finally {
+    loading.value = false
   }
 }
 
 // 从API获取学生排名数据
 const fetchStudentsRanking = async () => {
+  loading.value = true
   try {
     // 构建查询参数
     const queryParams = new URLSearchParams()
@@ -363,6 +374,8 @@ const fetchStudentsRanking = async () => {
   } catch (error) {
     console.error('获取学生排名失败:', error)
     studentsRanking.value = []
+  } finally {
+    loading.value = false
   }
 }
 
@@ -835,6 +848,8 @@ onMounted(async () => {
   padding-bottom: 10px;
   border-bottom: 1px solid #e9ecef;
 }
+
+
 </style>
 
 <style>

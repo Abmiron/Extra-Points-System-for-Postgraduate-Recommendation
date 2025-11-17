@@ -1,6 +1,7 @@
 // API请求工具
+import { useAuthStore } from '../stores/auth';
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = 'http://localhost:5001/api';
 
 // 封装API请求（支持JSON和文件上传）
 async function apiRequest(endpoint, method = 'GET', data = null, token = null) {
@@ -11,9 +12,12 @@ async function apiRequest(endpoint, method = 'GET', data = null, token = null) {
     headers: {},
   };
   
+  // 获取认证token，如果没有传入则从auth store获取
+  const authToken = token || useAuthStore()?.user?.token;
+  
   // 如果有token，添加到请求头
-  if (token) {
-    options.headers['Authorization'] = `Bearer ${token}`;
+  if (authToken) {
+    options.headers['Authorization'] = `Bearer ${authToken}`;
   }
   
   if (data) {
@@ -64,6 +68,11 @@ export default {
     formData.append('username', username);
     formData.append('avatar', avatarFile);
     return apiRequest('/user/avatar', 'POST', formData);
+  },
+  resetAvatar: (username) => {
+    const formData = new FormData();
+    formData.append('username', username);
+    return apiRequest('/user/avatar/reset', 'POST', formData);
   },
   changePassword: (data) => apiRequest('/user/change-password', 'POST', data),
   
@@ -131,5 +140,15 @@ export default {
   getMajorAdmin: (majorId) => apiRequest(`/admin/majors/${majorId}`),
   createMajorAdmin: (data) => apiRequest('/admin/majors', 'POST', data),
   updateMajorAdmin: (majorId, data) => apiRequest(`/admin/majors/${majorId}`, 'PUT', data),
-  deleteMajorAdmin: (majorId) => apiRequest(`/admin/majors/${majorId}`, 'DELETE')
+  deleteMajorAdmin: (majorId) => apiRequest(`/admin/majors/${majorId}`, 'DELETE'),
+  
+  // 学生管理相关API
+  getStudentsAdmin: (params = '') => {
+    const queryParams = params ? `?${params}` : '';
+    return apiRequest(`/admin/students${queryParams}`);
+  },
+  getStudentAdmin: (studentId) => apiRequest(`/admin/students/${studentId}`),
+  createStudentAdmin: (data) => apiRequest('/admin/students', 'POST', data),
+  updateStudentAdmin: (studentId, data) => apiRequest(`/admin/students/${studentId}`, 'PUT', data),
+  deleteStudentAdmin: (studentId) => apiRequest(`/admin/students/${studentId}`, 'DELETE')
 };

@@ -58,6 +58,11 @@
     <!-- 规则表格 -->
     <div class="card">
       <div class="table-container">
+        <!-- 加载状态指示器 -->
+        <div v-if="loading" class="loading-overlay">
+          <div class="loading-spinner"></div>
+          <div class="loading-text">加载中...</div>
+        </div>
         <table class="application-table">
           <thead>
               <tr>
@@ -398,6 +403,7 @@ const showAddRuleModal = ref(false)
 const editingRule = ref(null)
 const currentPage = ref(1)
 const pageSize = 10
+const loading = ref(false)
 
 const filters = reactive({
   name: '',
@@ -546,12 +552,15 @@ const formatDate = (dateString) => {
 
 // 加载规则数据
 const loadRules = async () => {
+  loading.value = true
   try {
     const response = await api.getRules(filters)
     rules.value = response.rules
   } catch (error) {
     console.error('加载规则失败:', error)
     alert('加载规则失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -949,6 +958,41 @@ onMounted(() => {
 <style scoped>
 /* 组件特有样式 - 如果没有特殊样式，可以留空 */
 /* 覆盖或补充共享样式 */
+/* 加载状态样式 */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  margin-top: 10px;
+  color: #007bff;
+  font-size: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .application-table th:last-child,
 .application-table td:last-child {
   width: 160px; /* 增加宽度以容纳删除按钮 */
