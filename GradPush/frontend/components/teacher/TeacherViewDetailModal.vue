@@ -150,7 +150,7 @@
                 <span>{{ application.rule?.name || (application.ruleId ? '规则ID: ' + application.ruleId : '未选择') }}</span>
               </div>
               <div class="compact-group">
-                <label>自动计算分数</label>
+                <label>预计分数</label>
                 <span class="highlight-score">{{ application.rule?.score || 'N/A' }}</span>
               </div>
               <div class="compact-group">

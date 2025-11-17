@@ -61,6 +61,7 @@
               <th>申请类型</th>
               <th>申请时间</th>
               <th>自评分数</th>
+              <th>选择规则</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -73,6 +74,7 @@
               <td>{{ getTypeText(application.applicationType) }}</td>
               <td>{{ formatDate(application.appliedAt) }}</td>
               <td>{{ application.selfScore }}</td>
+              <td>{{ application.rule?.name || '未选择' }}</td>
               <td>
                 <button class="btn-outline btn small-btn" @click="reviewApplication(application)">
                   <font-awesome-icon :icon="['fas', 'eye']" /> 审核
@@ -80,7 +82,7 @@
               </td>
             </tr>
             <tr v-if="paginatedApplications.length === 0">
-              <td colspan="8" class="no-data">暂无待审核申请</td>
+              <td colspan="9" class="no-data">暂无待审核申请</td>
             </tr>
           </tbody>
         </table>
@@ -252,11 +254,11 @@ const nextPage = () => {
 }
 
 const reviewApplication = (application) => {
-  console.log('点击审核按钮，申请信息:', application)
+  //console.log('点击审核按钮，申请信息:', application)
   selectedApplication.value = { ...application }
-  console.log('selectedApplication 已设置:', selectedApplication.value)
+  //console.log('selectedApplication 已设置:', selectedApplication.value)
   // 确保对象结构正确
-  console.log('selectedApplication 属性:', Object.keys(selectedApplication.value || {}))
+  //console.log('selectedApplication 属性:', Object.keys(selectedApplication.value || {}))
 }
 
 const handleApprove = async (applicationId, finalScore, comment) => {

@@ -100,15 +100,15 @@ class Application(db.Model):
     student_id = db.Column(db.String(20), db.ForeignKey('student.student_id'), nullable=False)
     student_name = db.Column(db.String(100), nullable=False)
     # 使用外键关联学院、系和专业
-    faculty_id = db.Column(db.Integer, db.ForeignKey('faculty.id'), nullable=False)
+    faculty_id = db.Column(db.Integer, db.ForeignKey('faculty.id'), nullable=True)
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False)
     major_id = db.Column(db.Integer, db.ForeignKey('major.id'), nullable=False)
     application_type = db.Column(db.String(50), nullable=False)  # academic, comprehensive
     applied_at = db.Column(db.DateTime, default=datetime.utcnow)
-    self_score = db.Column(db.Float, nullable=False)
+    self_score = db.Column(db.Float, nullable=True)
     status = db.Column(db.String(20), default='pending')  # pending, approved, rejected, draft
     project_name = db.Column(db.String(200), nullable=False)
-    award_date = db.Column(db.Date, nullable=False)
+    award_date = db.Column(db.Date, nullable=True)
     award_level = db.Column(db.String(50), nullable=True)  # national, provincial, municipal, school
     award_type = db.Column(db.String(50), nullable=True)  # individual, team
     description = db.Column(db.Text, nullable=True)
@@ -141,6 +141,11 @@ class Application(db.Model):
     
     # 规则关联
     rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=True)
+    
+    # 关系定义
+    faculty = db.relationship('Faculty', backref=db.backref('applications', lazy=True))
+    department = db.relationship('Department', backref=db.backref('applications', lazy=True))
+    major = db.relationship('Major', backref=db.backref('applications', lazy=True))
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

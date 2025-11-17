@@ -7,21 +7,10 @@
     <!-- 筛选区域 -->
     <div class="filters">
       <div class="filter-group">
-        <span class="filter-label">所在系:</span>
-        <select class="form-control" v-model="filters.department" @change="refreshData">
+        <span class="filter-label">所在学院:</span>
+        <select class="form-control" v-model="filters.faculty" @change="refreshData">
           <option value="all">全部</option>
-          <option value="cs">计算机科学系</option>
-          <option value="se">软件工程系</option>
-          <option value="ai">人工智能系</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <span class="filter-label">专业:</span>
-        <select class="form-control" v-model="filters.major" @change="refreshData">
-          <option value="all">全部</option>
-          <option value="cs">计算机科学与技术</option>
-          <option value="se">软件工程</option>
-          <option value="ai">人工智能</option>
+          <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">{{ faculty.name }}</option>
         </select>
       </div>
       <div class="filter-group">
@@ -38,162 +27,172 @@
     <!-- 成绩分布总表 -->
     <div class="card">
       <div class="card-title">学生成绩分布总表</div>
-      <div class="table-container">
-        <table class="application-table comprehensive-table">
-          <thead>
-            <tr>
-              <!-- A-H: 学生基本信息 -->
-              <th>序号</th>
-              <th>系</th>
-              <th>所在专业</th>
-              <th>学号</th>
-              <th>姓名</th>
-              <th>性别</th>
-              <th>CET4成绩</th>
-              <th>CET6成绩</th>
-              <!-- I-J: 学业综合成绩（占总分80%） -->
-              <th>推免绩点(满分4分)</th>
-              <th>换算后的成绩(满分100分)</th>
-              <!-- K-S: 学术专长成绩（占总分12%） -->
-              <th>学术专长项目</th>
-              <th>学术专长获奖时间</th>
-              <th>学术专长奖项级别</th>
-              <th>学术专长个人或集体</th>
-              <th>学术专长集体奖项排序</th>
-              <th>学术专长自评加分</th>
-              <th>学术专长加分依据</th>
-              <th>学术专长学院核定加分</th>
-              <th>学术专长学院核定总分</th>
-              <!-- T-AB: 综合表现加分（占总分8%） -->
-              <th>综合表现项目</th>
-              <th>综合表现获奖时间</th>
-              <th>综合表现奖项级别</th>
-              <th>综合表现个人或集体</th>
-              <th>综合表现集体奖项排序</th>
-              <th>综合表现自评加分</th>
-              <th>综合表现加分依据</th>
-              <th>综合表现学院核定加分</th>
-              <th>综合表现学院核定总分</th>
-              <!-- AC-AF: 总分与排名 -->
-              <th>考核综合成绩总分</th>
-              <th>综合成绩</th>
-              <th>专业成绩排名</th>
-              <th>排名人数</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(student, index) in filteredStudents" :key="`${student.studentId}-${index}`">
-              <!-- A-H: 学生基本信息 -->
-              <td v-if="student.isFirstRow">{{ student.sequence }}</td>
-              <td v-else></td>
-              <td v-if="student.isFirstRow">{{ getDepartmentText(student.department) }}</td>
-              <td v-else></td>
-              <td v-if="student.isFirstRow">{{ getMajorText(student.major) }}</td>
-              <td v-else></td>
-              <td v-if="student.isFirstRow">{{ student.studentId }}</td>
-              <td v-else></td>
-              <td v-if="student.isFirstRow">{{ student.studentName }}</td>
-              <td v-else></td>
-              <td v-if="student.isFirstRow">{{ student.gender }}</td>
-              <td v-else></td>
-              <td v-if="student.isFirstRow">{{ student.cet4Score }}</td>
-              <td v-else></td>
-              <td v-if="student.isFirstRow">{{ student.cet6Score }}</td>
-              <td v-else></td>
-              <!-- I-J: 学业综合成绩（占总分80%） -->
-              <td v-if="student.isFirstRow">{{ student.gpa ? student.gpa.toFixed(3) : 0 }}</td>
-              <td v-else></td>
-              <td v-if="student.isFirstRow">{{ student.academicScore ? student.academicScore.toFixed(2) : 0 }}</td>
-              <td v-else></td>
-              <!-- K-S: 学术专长成绩（占总分12%） -->
-              <td v-if="student.academicItem">
-               {{ student.academicItem.projectName }}
-              </td>
-              <td v-else></td>
-              <td v-if="student.academicItem">
-                {{ student.academicItem.awardTime }}
-              </td>
-              <td v-else></td>
-              <td v-if="student.academicItem">
-                {{ student.academicItem.awardLevel }}
-              </td>
-              <td v-else></td>
-              <td v-if="student.academicItem">
-                {{ student.academicItem.individualCollective }}
-              </td>
-              <td v-else></td>
-              <td v-if="student.academicItem">
-                {{ student.academicItem.authorOrder }}
-              </td>
-              <td v-else></td>
-              <td v-if="student.academicItem">
-                {{ student.academicItem.selfEvalScore ? student.academicItem.selfEvalScore.toFixed(2) : 0 }}
-              </td>
-              <td v-else></td>
-              <td v-if="student.academicItem">
-                {{ student.academicItem.scoreBasis }}
-              </td>
-              <td v-else></td>
-              <td v-if="student.academicItem">
-                {{ student.academicItem.collegeApprovedScore ? student.academicItem.collegeApprovedScore.toFixed(2) : 0 }}
-              </td>
-              <td v-else></td>
-              <td v-if="student.isFirstRow">
-                {{ student.specialtyScore ? student.specialtyScore.toFixed(2) : 0 }}
-              </td>
-              <td v-else></td>
-              <!-- T-AB: 综合表现加分（占总分8%） -->
-              <td v-if="student.comprehensiveItem">
-               {{ student.comprehensiveItem.projectName }}
-              </td>
-              <td v-else></td>
-              <td v-if="student.comprehensiveItem">
-                {{ student.comprehensiveItem.awardTime }}
-              </td>
-              <td v-else></td>
-              <td v-if="student.comprehensiveItem">
-                {{ student.comprehensiveItem.awardLevel }}
-              </td>
-              <td v-else></td>
-              <td v-if="student.comprehensiveItem">
-                {{ student.comprehensiveItem.individualCollective }}
-              </td>
-              <td v-else></td>
-              <td v-if="student.comprehensiveItem">
-                {{ student.comprehensiveItem.authorOrder }}
-              </td>
-              <td v-else></td>
-              <td v-if="student.comprehensiveItem">
-                {{ student.comprehensiveItem.selfEvalScore ? student.comprehensiveItem.selfEvalScore.toFixed(2) : 0 }}
-              </td>
-              <td v-else></td>
-              <td v-if="student.comprehensiveItem">
-                {{ student.comprehensiveItem.scoreBasis }}
-              </td>
-              <td v-else></td>
-              <td v-if="student.comprehensiveItem">
-                {{ student.comprehensiveItem.collegeApprovedScore ? student.comprehensiveItem.collegeApprovedScore.toFixed(2) : 0 }}
-              </td>
-              <td v-else></td>
-              <td v-if="student.isFirstRow">
-                {{ student.comprehensiveScore ? student.comprehensiveScore.toFixed(2) : 0 }}
-              </td>
-              <td v-else></td>
-              <!-- AC-AF: 总分与排名 -->
-              <td v-if="student.isFirstRow">{{ student.totalComprehensiveScore ? student.totalComprehensiveScore.toFixed(2) : 0 }}</td>
-              <td v-else></td>
-              <td v-if="student.isFirstRow">{{ student.finalScore ? student.finalScore.toFixed(2) : 0 }}</td>
-              <td v-else></td>
-              <td v-if="student.isFirstRow">{{ student.majorRanking }}</td>
-              <td v-else></td>
-              <td v-if="student.isFirstRow">{{ student.majorTotalStudents }}</td>
-              <td v-else></td>
-            </tr>
-            <tr v-if="filteredStudents.length === 0">
-              <td colspan="34" class="no-data">暂无数据</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="table-wrapper">
+        <!-- 顶部滚动条辅助容器 -->
+        <div class="top-scroll-container" ref="topScrollContainer">
+          <div class="top-scroll-content"></div>
+        </div>
+        <!-- 主表格容器 -->
+        <div class="table-container" ref="tableContainer">
+          <table class="application-table comprehensive-table" ref="dataTable">
+            <thead>
+              <tr>
+                <!-- A-H: 学生基本信息 -->
+                <th>序号</th>
+                <th>学院</th>
+                <th>系</th>
+                <th>专业</th>
+                <th>学号</th>
+                <th>姓名</th>
+                <th>性别</th>
+                <th>CET4成绩</th>
+                <th>CET6成绩</th>
+                <!-- I-J: 学业综合成绩（占总分80%） -->
+                <th>推免绩点(满分4分)</th>
+                <th>换算后的成绩(满分100分)</th>
+                <!-- K-S: 学术专长成绩（占总分12%） -->
+                <th>学术专长项目</th>
+                <th>学术专长获奖时间</th>
+                <th>学术专长奖项级别</th>
+                <th>学术专长个人或集体</th>
+                <th>学术专长集体奖项排序</th>
+                <th>学术专长自评加分</th>
+                <th>学术专长加分依据</th>
+                <th>学术专长学院核定加分</th>
+                <th>学术专长学院核定总分</th>
+                <!-- T-AB: 综合表现加分（占总分8%） -->
+                <th>综合表现项目</th>
+                <th>综合表现获奖时间</th>
+                <th>综合表现奖项级别</th>
+                <th>综合表现个人或集体</th>
+                <th>综合表现集体奖项排序</th>
+                <th>综合表现自评加分</th>
+                <th>综合表现加分依据</th>
+                <th>综合表现学院核定加分</th>
+                <th>综合表现学院核定总分</th>
+                <!-- AC-AF: 总分与排名 -->
+                <th>考核综合成绩总分</th>
+                <th>综合成绩</th>
+                <th>专业成绩排名</th>
+                <th>排名人数</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(student, index) in filteredStudents" :key="`${student.studentId}-${index}`" :class="{ 'student-group-start': student.isFirstRow }">
+                <!-- A-H: 学生基本信息 -->
+                <td v-if="student.isFirstRow">{{ student.sequence }}</td>
+                <td v-else></td>
+                <td v-if="student.isFirstRow">{{ getFacultyText(student.faculty_id) }}</td>
+                <td v-else></td>
+                <td v-if="student.isFirstRow">{{ student.department || '-' }}</td>
+                <td v-else></td>
+                <td v-if="student.isFirstRow">{{ student.major || '-' }}</td>
+                <td v-else></td>
+                <td v-if="student.isFirstRow">{{ student.studentId }}</td>
+                <td v-else></td>
+                <td v-if="student.isFirstRow">{{ student.studentName }}</td>
+                <td v-else></td>
+                <td v-if="student.isFirstRow">{{ student.gender }}</td>
+                <td v-else></td>
+                <td v-if="student.isFirstRow">{{ student.cet4Score }}</td>
+                <td v-else></td>
+                <td v-if="student.isFirstRow">{{ student.cet6Score }}</td>
+                <td v-else></td>
+                <!-- I-J: 学业综合成绩（占总分80%） -->
+                <td v-if="student.isFirstRow">{{ student.gpa ? student.gpa.toFixed(3) : 0 }}</td>
+                <td v-else></td>
+                <td v-if="student.isFirstRow">{{ student.academicScore ? student.academicScore.toFixed(2) : 0 }}</td>
+                <td v-else></td>
+                <!-- K-S: 学术专长成绩（占总分12%） -->
+                <td v-if="student.academicItem.projectName">
+                 {{ student.academicItem.projectName }}
+                </td>
+                <td v-else></td>
+                <td v-if="student.academicItem.projectName">
+                  {{ student.academicItem.awardTime }}
+                </td>
+                <td v-else></td>
+                <td v-if="student.academicItem.projectName">
+                  {{ student.academicItem.awardLevel }}
+                </td>
+                <td v-else></td>
+                <td v-if="student.academicItem.projectName">
+                  {{ student.academicItem.individualCollective }}
+                </td>
+                <td v-else></td>
+                <td v-if="student.academicItem.projectName">
+                  {{ student.academicItem.authorOrder }}
+                </td>
+                <td v-else></td>
+                <td v-if="student.academicItem.projectName">
+                  {{ student.academicItem.selfEvalScore ? student.academicItem.selfEvalScore.toFixed(2) : 0 }}
+                </td>
+                <td v-else></td>
+                <td v-if="student.academicItem.projectName">
+                  {{ student.academicItem.scoreBasis }}
+                </td>
+                <td v-else></td>
+                <td v-if="student.academicItem.projectName">
+                  {{ student.academicItem.collegeApprovedScore ? student.academicItem.collegeApprovedScore.toFixed(2) : 0 }}
+                </td>
+                <td v-else></td>
+                <td v-if="student.isFirstRow">
+                  {{ student.specialtyScore ? student.specialtyScore.toFixed(2) : 0 }}
+                </td>
+                <td v-else></td>
+                <!-- T-AB: 综合表现加分（占总分8%） -->
+                <td v-if="student.comprehensiveItem.projectName">
+                 {{ student.comprehensiveItem.projectName }}
+                </td>
+                <td v-else></td>
+                <td v-if="student.comprehensiveItem.projectName">
+                  {{ student.comprehensiveItem.awardTime }}
+                </td>
+                <td v-else></td>
+                <td v-if="student.comprehensiveItem.projectName">
+                  {{ student.comprehensiveItem.awardLevel }}
+                </td>
+                <td v-else></td>
+                <td v-if="student.comprehensiveItem.projectName">
+                  {{ student.comprehensiveItem.individualCollective }}
+                </td>
+                <td v-else></td>
+                <td v-if="student.comprehensiveItem.projectName">
+                  {{ student.comprehensiveItem.authorOrder }}
+                </td>
+                <td v-else></td>
+                <td v-if="student.comprehensiveItem.projectName">
+                  {{ student.comprehensiveItem.selfEvalScore ? student.comprehensiveItem.selfEvalScore.toFixed(2) : 0 }}
+                </td>
+                <td v-else></td>
+                <td v-if="student.comprehensiveItem.projectName">
+                  {{ student.comprehensiveItem.scoreBasis }}
+                </td>
+                <td v-else></td>
+                <td v-if="student.comprehensiveItem.projectName">
+                  {{ student.comprehensiveItem.collegeApprovedScore ? student.comprehensiveItem.collegeApprovedScore.toFixed(2) : 0 }}
+                </td>
+                <td v-else></td>
+                <td v-if="student.isFirstRow">
+                  {{ student.comprehensiveScore ? student.comprehensiveScore.toFixed(2) : 0 }}
+                </td>
+                <td v-else></td>
+                <!-- AC-AF: 总分与排名 -->
+                <td v-if="student.isFirstRow">{{ student.totalComprehensiveScore ? student.totalComprehensiveScore.toFixed(2) : 0 }}</td>
+                <td v-else></td>
+                <td v-if="student.isFirstRow">{{ student.finalScore ? student.finalScore.toFixed(2) : 0 }}</td>
+                <td v-else></td>
+                <td v-if="student.isFirstRow">{{ student.majorRanking }}</td>
+                <td v-else></td>
+                <td v-if="student.isFirstRow">{{ student.majorTotalStudents }}</td>
+                <td v-else></td>
+              </tr>
+              <tr v-if="filteredStudents.length === 0">
+                <td colspan="34" class="no-data">暂无数据</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -203,132 +202,115 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useApplicationsStore } from '../../stores/applications'
 import * as XLSX from 'xlsx'
+import api from '../../utils/api'
 
 
 const applicationsStore = useApplicationsStore()
 const filters = reactive({
-  department: 'all',
-  major: 'all',
+  faculty: 'all',
   academicYear: '2023'
 })
 
+// 学院列表
+const faculties = ref([])
 // 学生排名数据
 const studentsRanking = ref([])
 // 所有申请记录
 const allApplications = ref([])
 
+// 加载学院列表
+const loadFaculties = async () => {
+  try {
+    const response = await api.getFacultiesAdmin()
+
+    faculties.value = response.faculties || []
+  } catch (error) {
+    console.error('加载学院数据失败:', error)
+    // 添加默认学院数据作为备选
+    faculties.value = [
+      { id: 1, name: '计算机科学与技术学院' },
+      { id: 2, name: '电子工程学院' },
+      { id: 3, name: '机械工程学院' },
+      { id: 4, name: '经济管理学院' },
+      { id: 5, name: '外国语学院' }
+    ]
+  }
+}
+
 // 从API获取学生排名数据
 const fetchStudentsRanking = async () => {
   try {
-    // 获取所有申请记录
-    await applicationsStore.fetchApplications()
-    allApplications.value = applicationsStore.applications
-    
-    // 按学生分组整理数据
-    const studentMap = new Map()
-    
-    // 遍历所有申请记录，按学生ID分组
-    allApplications.value.forEach(application => {
-      const studentId = application.studentId
-      if (!studentMap.has(studentId)) {
-        studentMap.set(studentId, {
-          studentId: application.studentId,
-          studentName: application.studentName,
-          department: application.department,
-          major: application.major,
-          gender: application.gender || '',
-          cet4Score: 0,
-          cet6Score: 0,
-          gpa: 0,
-          academicScore: 0,
-          academicItems: [],
-          comprehensiveItems: [],
-          specialtyScore: 0,
-          comprehensiveScore: 0,
-          totalScore: 0,
-          finalComprehensiveScore: 0,
-          academicWeighted: 0,
-          sequence: 0,
-          finalScore: 0,
-          majorRanking: 0,
-          majorTotalStudents: 0
-        })
-      }
-      
-      const studentData = studentMap.get(studentId)
-      
-      // 根据申请类型添加到对应的项目列表
-      const item = {
-        projectName: application.projectName,
-        awardTime: application.awardDate,
-        awardLevel: application.awardLevel,
-        individualCollective: application.awardType === 'individual' ? '个人' : '团队',
-        authorOrder: application.authorOrder || '',
-        selfEvalScore: application.selfScore || 0,
-        scoreBasis: '',
-        collegeApprovedScore: application.finalScore || 0,
-        totalScore: application.finalScore || 0
-      }
-      
-      if (application.applicationType === 'academic') {
-        studentData.academicItems.push(item)
-        studentData.specialtyScore += item.totalScore
-      } else if (application.applicationType === 'comprehensive') {
-        studentData.comprehensiveItems.push(item)
-        studentData.comprehensiveScore += item.totalScore
-      }
-      
-      // 更新总分
-      studentData.totalScore = studentData.specialtyScore + studentData.comprehensiveScore
-    })
-    
-    // 转换为数组并按总分排序
-    let students = Array.from(studentMap.values())
-    
-    // 如果需要按系和专业筛选
-    if (filters.department !== 'all') {
-      students = students.filter(student => student.department === filters.department)
-    }
-    if (filters.major !== 'all') {
-      students = students.filter(student => student.major === filters.major)
+    // 构建查询参数
+    const queryParams = new URLSearchParams()
+    if (filters.faculty && filters.faculty !== 'all') {
+      queryParams.append('facultyId', filters.faculty)
     }
     
-    // 按总分降序排序
-    students.sort((a, b) => b.totalScore - a.totalScore)
-    
-    // 为每个学生添加排名
-    students.forEach((student, index) => {
-      student.sequence = index + 1
-      student.majorRanking = index + 1
-      student.majorTotalStudents = students.length
+    // 直接使用后端学生排名API
+    const responseData = await applicationsStore.fetchStudentsRanking({
+      faculty: filters.faculty,
+      department: filters.department,
+      major: filters.major
     })
     
     // 转换为表格行数据
     let formattedStudents = []
-    students.forEach(student => {
-      // 获取学术专长项目和综合表现项目的最大数量
-      const maxItemsCount = Math.max(student.academicItems.length, student.comprehensiveItems.length)
-      
-      // 循环创建行，让学术专长项目和综合表现项目按索引一一对应显示
-      for (let i = 0; i < maxItemsCount; i++) {
-        const row = {
-          ...student,
-          isFirstRow: i === 0, // 只有第一行显示基本信息
-          itemType: 'both', // 每一行都可能同时显示两种类型的项目
+    // 从响应中获取学生数组
+    const rankingData = responseData.students || []
+    rankingData.forEach(student => {
+        // 转换字段名称以匹配前端期望的格式
+        const formattedStudent = {
+          // 基本信息
+          studentId: student.student_id || student.studentId,
+          studentName: student.student_name || student.studentName,
+          departmentId: student.department_id || student.departmentId,
+          department: student.department,
+          majorId: student.major_id || student.majorId,
+          major: student.major,
+          facultyId: student.faculty_id || student.facultyId,
+          faculty: student.faculty,
+          gender: student.gender,
+          cet4Score: student.cet4_score || student.cet4Score,
+          cet6Score: student.cet6_score || student.cet6Score,
+          gpa: student.gpa,
+          academicScore: student.academic_score || student.academicScore,
+          academicWeighted: student.academic_weighted || student.academicWeighted,
+          majorRanking: student.major_ranking || student.majorRanking,
+          majorTotalStudents: student.major_total_students || student.majorTotalStudents,
+          sequence: student.sequence,
+          
+          // 分数信息
+          specialtyScore: student.specialty_score || student.specialtyScore,
+          comprehensiveScore: student.comprehensive_score || student.comprehensiveScore,
+          totalScore: student.total_score || student.totalScore,
+          totalComprehensiveScore: student.total_comprehensive_score || student.totalComprehensiveScore,
+          finalScore: student.final_score || student.finalScore,
+          finalComprehensiveScore: student.final_comprehensive_score || student.finalComprehensiveScore,
+          
+          // 项目信息（转换为驼峰命名）
+          academicItems: student.academic_items || student.academicItems || [],
+          comprehensiveItems: student.comprehensive_items || student.comprehensiveItems || []
+        }
+        
+        // 获取学术专长项目和综合表现项目的最大数量
+        const maxItemsCount = Math.max(formattedStudent.academicItems.length || 0, formattedStudent.comprehensiveItems.length || 0)
+        
+        // 循环创建行，让学术专长项目和综合表现项目按索引一一对应显示
+        for (let i = 0; i < Math.max(1, maxItemsCount); i++) { // 至少创建一行
           // 获取当前索引的学术专长项目，如果不存在则使用空对象
-          academicItem: student.academicItems[i] || {
-            projectName: '',
-            awardTime: '',
-            awardLevel: '',
-            individualCollective: '',
-            authorOrder: '',
-            selfEvalScore: 0,
-            scoreBasis: '',
-            collegeApprovedScore: 0,
-            totalScore: 0
-          },
-          // 获取当前索引的综合表现项目，如果不存在则使用空对象
-          comprehensiveItem: student.comprehensiveItems[i] || {
+          const rawAcademicItem = (formattedStudent.academicItems || [])[i]
+          // 转换学术专长项目的字段名（蛇形命名法转驼峰命名法）
+          const academicItem = rawAcademicItem ? {
+            projectName: rawAcademicItem.project_name || '',
+            awardTime: rawAcademicItem.award_time || '',
+            awardLevel: rawAcademicItem.award_level || '',
+            individualCollective: rawAcademicItem.individual_collective || '',
+            authorOrder: rawAcademicItem.author_order || '',
+            selfEvalScore: rawAcademicItem.self_eval_score || 0,
+            scoreBasis: rawAcademicItem.score_basis || '',
+            collegeApprovedScore: rawAcademicItem.college_approved_score || 0,
+            totalScore: rawAcademicItem.total_score || 0
+          } : {
             projectName: '',
             awardTime: '',
             awardLevel: '',
@@ -339,9 +321,42 @@ const fetchStudentsRanking = async () => {
             collegeApprovedScore: 0,
             totalScore: 0
           }
+          
+          // 获取当前索引的综合表现项目，如果不存在则使用空对象
+          const rawComprehensiveItem = (formattedStudent.comprehensiveItems || [])[i]
+          // 转换综合表现项目的字段名（蛇形命名法转驼峰命名法）
+          const comprehensiveItem = rawComprehensiveItem ? {
+            projectName: rawComprehensiveItem.project_name || '',
+            awardTime: rawComprehensiveItem.award_time || '',
+            awardLevel: rawComprehensiveItem.award_level || '',
+            individualCollective: rawComprehensiveItem.individual_collective || '',
+            authorOrder: rawComprehensiveItem.author_order || '',
+            selfEvalScore: rawComprehensiveItem.self_eval_score || 0,
+            scoreBasis: rawComprehensiveItem.score_basis || '',
+            collegeApprovedScore: rawComprehensiveItem.college_approved_score || 0,
+            totalScore: rawComprehensiveItem.total_score || 0
+          } : {
+            projectName: '',
+            awardTime: '',
+            awardLevel: '',
+            individualCollective: '',
+            authorOrder: '',
+            selfEvalScore: 0,
+            scoreBasis: '',
+            collegeApprovedScore: 0,
+            totalScore: 0
+          }
+          
+          const row = {
+            ...formattedStudent,
+            faculty_id: formattedStudent.facultyId, // 确保字段名一致
+            isFirstRow: i === 0, // 只有第一行显示基本信息
+            itemType: 'both', // 每一行都可能同时显示两种类型的项目
+            academicItem,
+            comprehensiveItem
+          }
+          formattedStudents.push(row)
         }
-        formattedStudents.push(row)
-      }
     })
     
     studentsRanking.value = formattedStudents
@@ -355,15 +370,36 @@ const fetchStudentsRanking = async () => {
 const filteredStudents = computed(() => {
   let students = studentsRanking.value
   
-  if (filters.department !== 'all') {
-    students = students.filter(student => student.department === filters.department)
+  if (filters.faculty !== 'all') {
+    const facultyId = parseInt(filters.faculty)
+    students = students.filter(student => student.faculty_id === facultyId)
   }
   
-  if (filters.major !== 'all') {
-    students = students.filter(student => student.major === filters.major)
-  }
+  // 按专业成绩排名显示
+  // 1. 首先将学生数据按学生ID分组
+  const studentGroups = new Map()
+  students.forEach(student => {
+    if (!studentGroups.has(student.studentId)) {
+      studentGroups.set(student.studentId, [])
+    }
+    studentGroups.get(student.studentId).push(student)
+  })
   
-  return students
+  // 2. 对学生组进行排序，按照专业排名从小到大
+  const sortedGroups = Array.from(studentGroups.values()).sort((groupA, groupB) => {
+    // 获取每个学生的第一行（包含排名信息）
+    const studentA = groupA.find(s => s.isFirstRow)
+    const studentB = groupB.find(s => s.isFirstRow)
+    
+    // 按专业排名排序
+    const rankingA = studentA ? (studentA.majorRanking || Infinity) : Infinity
+    const rankingB = studentB ? (studentB.majorRanking || Infinity) : Infinity
+    
+    return rankingA - rankingB
+  })
+  
+  // 3. 重新组合所有行数据
+  return sortedGroups.flat()
 })
 
 // 计算属性 - 总体统计信息
@@ -392,22 +428,26 @@ const totalStats = computed(() => {
 })
 
 // 方法
-const getDepartmentText = (department) => {
-  const departments = {
-    cs: '计算机科学系',
-    se: '软件工程系',
-    ai: '人工智能系'
-  }
-  return departments[department] || department
-}
+const getFacultyText = (facultyId) => {
 
-const getMajorText = (major) => {
-  const majors = {
-    cs: '计算机科学与技术',
-    se: '软件工程',
-    ai: '人工智能'
+  
+  // 处理'all'值
+  if (facultyId === 'all') {
+    return '所有学院'
   }
-  return majors[major] || major
+  
+  // 确保输入的facultyId是数字类型
+  const id = typeof facultyId === 'string' ? parseInt(facultyId) : facultyId
+  
+  // 检查id是否有效
+  if (isNaN(id)) {
+    return '未知学院'
+  }
+  
+  // 从学院列表中查找学院名称
+  const faculty = faculties.value.find(f => f.id === id)
+
+  return faculty ? faculty.name : '未知学院'
 }
 
 const generateReport = () => {
@@ -421,7 +461,7 @@ const generateReport = () => {
   
   // 添加表头
   const headers = [
-    '序号', '系', '所在专业', '学号', '姓名', '性别', 'CET4成绩', 'CET6成绩',
+    '序号', '学院', '学号', '姓名', '性别', 'CET4成绩', 'CET6成绩',
     '推免绩点(满分4分)', '换算后的成绩(满分100分)',
     '学术专长项目', '学术专长获奖时间', '学术专长奖项级别', '学术专长个人或集体',
     '学术专长集体奖项排序', '学术专长自评加分', '学术专长加分依据',
@@ -467,8 +507,7 @@ const generateReport = () => {
       // 基本信息（仅第一行显示）
       if (i === 0) {
         row.push(studentData.sequence);
-        row.push(getDepartmentText(studentData.department));
-        row.push(getMajorText(studentData.major));
+        row.push(getFacultyText(studentData.faculty_id));
         row.push(studentData.studentId);
         row.push(studentData.studentName);
         row.push(studentData.gender);
@@ -478,7 +517,7 @@ const generateReport = () => {
         row.push(studentData.academicScore ? studentData.academicScore.toFixed(2) : 0);
       } else {
         // 非第一行基本信息留空
-        for (let j = 0; j < 10; j++) {
+        for (let j = 0; j < 9; j++) {
           row.push('');
         }
       }
@@ -533,8 +572,7 @@ const generateReport = () => {
   // 设置列宽
   ws['!cols'] = [
     { wch: 6 },  // 序号
-    { wch: 12 }, // 系
-    { wch: 15 }, // 所在专业
+    { wch: 15 }, // 学院
     { wch: 15 }, // 学号
     { wch: 8 },  // 姓名
     { wch: 6 },  // 性别
@@ -570,7 +608,7 @@ const generateReport = () => {
   XLSX.utils.book_append_sheet(wb, ws, '学生成绩分布');
   
   // 生成文件名
-  const fileName = `统计报表_${filters.academicYear}学年_${getDepartmentText(filters.department)}_${getMajorText(filters.major)}_${new Date().toISOString().split('T')[0]}.xlsx`;
+  const fileName = `统计报表_${filters.academicYear}学年_${getFacultyText(filters.faculty)}_${new Date().toISOString().split('T')[0]}.xlsx`;
   
   // 导出文件
   XLSX.writeFile(wb, fileName);
@@ -583,23 +621,126 @@ const generateReport = () => {
 // 重新加载数据
 const refreshData = () => {
   fetchStudentsRanking()
-  pagination.value.currentPage = 1
 }
 
+// 监听筛选条件变化
+watch(filters, () => {
+  fetchStudentsRanking()
+}, { deep: true })
 
+// 监听学生排名数据变化，更新滚动条宽度
+watch(studentsRanking, () => {
+  setTimeout(() => {
+    updateTopScrollWidth()
+  }, 300)
+}, { deep: true })
+
+// 顶部滚动条引用
+const topScrollContainer = ref(null)
+const tableContainer = ref(null)
+const dataTable = ref(null)
+
+// 同步顶部滚动条
+const syncScroll = () => {
+  if (tableContainer.value && topScrollContainer.value) {
+    topScrollContainer.value.scrollLeft = tableContainer.value.scrollLeft
+  }
+}
+
+// 反向同步滚动
+const reverseSyncScroll = () => {
+  if (tableContainer.value && topScrollContainer.value) {
+    tableContainer.value.scrollLeft = topScrollContainer.value.scrollLeft
+  }
+}
+
+// 更新顶部滚动条宽度
+const updateTopScrollWidth = () => {
+  if (dataTable.value && topScrollContainer.value) {
+    const contentWidth = dataTable.value.offsetWidth
+    const topScrollContent = topScrollContainer.value.querySelector('.top-scroll-content')
+    if (topScrollContent) {
+      topScrollContent.style.width = `${contentWidth}px`
+      // 调试信息
+
+    }
+  }
+}
 
 // 生命周期
 onMounted(async () => {
+  await loadFaculties()
   await fetchStudentsRanking()
+  
+  // 等待DOM更新后再初始化滚动条
+  setTimeout(() => {
+    updateTopScrollWidth()
+    
+    // 添加滚动事件监听器
+    if (tableContainer.value) {
+      tableContainer.value.addEventListener('scroll', syncScroll)
+
+    }
+    if (topScrollContainer.value) {
+      topScrollContainer.value.addEventListener('scroll', reverseSyncScroll)
+
+    }
+    
+    // 监听窗口大小变化
+    window.addEventListener('resize', updateTopScrollWidth)
+    
+    // 强制触发一次滚动同步
+    if (tableContainer.value) {
+      tableContainer.value.scrollLeft = 0
+      syncScroll()
+    }
+  }, 500) // 增加延迟时间，确保表格数据完全加载
 })
 </script>
 
 <style scoped>
 /* 组件特有样式 */
+.table-wrapper {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+/* 顶部滚动条容器 */
+.top-scroll-container {
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+  height: 8px; /* 滚动条高度 */
+  margin-bottom: 4px;
+  opacity: 1;
+  background-color: #f1f1f1;
+}
+
+.top-scroll-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.top-scroll-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.top-scroll-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.top-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.top-scroll-content {
+  /* 这个宽度会被JavaScript动态设置为与表格宽度相同 */
+  height: 1px;
+}
+
 .table-container {
   overflow-x: auto;
   max-width: 100%;
-  margin-bottom: 20px;
 }
 
 .application-table {
@@ -652,6 +793,28 @@ onMounted(async () => {
 .comprehensive-table th:nth-child(17),
 .comprehensive-table td:nth-child(17) {
   min-width: 150px;
+}
+
+/* 学生组之间的分割线 */
+.application-table tbody tr.student-group-start td {
+  border-top: 3px solid #adb5bd;
+}
+
+/* 第一个学生组不添加顶部边框 */
+.application-table tbody tr:first-child.student-group-start td {
+  border-top: 1px solid #e9ecef;
+}
+
+/* 学术专长项目相关栏目的背景色 */
+.comprehensive-table th:nth-child(n+12):nth-child(-n+20),
+.comprehensive-table td:nth-child(n+12):nth-child(-n+20) {
+  background-color: rgba(222, 235, 247, 0.5); /* 浅蓝色背景 */
+}
+
+/* 综合表现项目相关栏目的背景色 */
+.comprehensive-table th:nth-child(n+21):nth-child(-n+29),
+.comprehensive-table td:nth-child(n+21):nth-child(-n+29) {
+  background-color: rgba(237, 247, 237, 0.5); /* 浅绿色背景 */
 }
 
 .comprehensive-table th:nth-child(26),

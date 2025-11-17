@@ -182,22 +182,22 @@ const loadStatistics = async () => {
     }
     
     // 调试：查看用户信息
-    console.log('当前用户:', authStore.user)
+    //console.log('当前用户:', authStore.user)
     
     // 使用正确的学生学号字段（studentId）而不是用户ID（id）
     const studentId = authStore.user.studentId || 'student'
-    console.log('使用的学生ID:', studentId)
+    //console.log('使用的学生ID:', studentId)
     
     // 获取学生的所有申请
-    console.log('开始获取申请记录...')
+    //console.log('开始获取申请记录...')
     await applicationsStore.fetchApplications({ studentId })
     applications.value = applicationsStore.applications
-    console.log('获取到的申请记录:', applications.value)
+    //console.log('获取到的申请记录:', applications.value)
     
     // 获取加分统计数据
-    console.log('开始获取加分统计数据...')
+    //console.log('开始获取加分统计数据...')
     const statsData = await applicationsStore.fetchStatistics(studentId)
-    console.log('获取到的加分统计数据:', statsData)
+    //console.log('获取到的加分统计数据:', statsData)
     
     // 更新统计信息
     // 注意：后端返回的是下划线命名，前端使用的是驼峰式命名

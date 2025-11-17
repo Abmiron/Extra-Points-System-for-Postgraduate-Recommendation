@@ -589,20 +589,25 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, onMounted } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useApplicationsStore } from '../../stores/applications'
 
 // 定义事件，用于通知父组件切换页面
 const emit = defineEmits(['switch-page'])
 
+// 接收编辑申请ID
+const props = defineProps(['editApplicationId'])
+
 const authStore = useAuthStore()
 const applicationsStore = useApplicationsStore()
 const fileInput = ref(null)
 const previewFileData = ref(null)
 
+// 表单数据
 const formData = reactive({
   // 添加用户信息
+  id: null, // 用于存储申请ID，编辑时使用
   studentId: authStore.user?.studentId || '',
   name: authStore.userName,
   departmentId: authStore.user?.departmentId || '',
@@ -660,6 +665,170 @@ import api from '../../utils/api'
 const availableRules = ref([])
 const estimatedScore = ref(0)
 
+// 加载编辑数据
+const loadEditData = async (applicationId) => {
+  // 如果没有ID或ID为空，重置为新表单
+  if (!applicationId) {
+    // 清空表单
+    Object.assign(formData, {
+      id: null,
+      studentId: authStore.user?.studentId || '',
+      name: authStore.userName,
+      departmentId: authStore.user?.departmentId || '',
+      majorId: authStore.user?.majorId || '',
+      applicationType: 'academic',
+      projectName: '',
+      awardDate: '',
+      academicType: '',
+      researchType: '',
+      innovationLevel: '',
+      innovationRole: '',
+      awardLevel: '',
+      awardGrade: '',
+      awardCategory: '',
+      awardType: 'individual',
+      authorRankType: 'ranked',
+      authorOrder: '',
+      performanceType: '',
+      performanceLevel: '',
+      performanceParticipation: 'individual',
+      teamRole: '',
+      ruleId: '',
+      selfScore: '',
+      description: '',
+      files: []
+    })
+    return
+  }
+  
+  try {
+    const application = await applicationsStore.fetchApplicationById(applicationId)
+    
+    // 将后端返回的下划线命名转换为前端的驼峰命名
+    const fieldMapping = {
+      'student_id': 'studentId',
+      'student_name': 'name',
+      'department_id': 'departmentId',
+      'major_id': 'majorId',
+      'application_type': 'applicationType',
+      'self_score': 'selfScore',
+      'project_name': 'projectName',
+      'award_date': 'awardDate',
+      'award_level': 'awardLevel',
+      'award_type': 'awardType',
+      'academic_type': 'academicType',
+      'research_type': 'researchType',
+      'innovation_level': 'innovationLevel',
+      'innovation_role': 'innovationRole',
+      'award_grade': 'awardGrade',
+      'award_category': 'awardCategory',
+      'author_rank_type': 'authorRankType',
+      'author_order': 'authorOrder',
+      'performance_type': 'performanceType',
+      'performance_level': 'performanceLevel',
+      'performance_participation': 'performanceParticipation',
+      'team_role': 'teamRole',
+      'rule_id': 'ruleId'
+    }
+    
+    // 清空表单
+    Object.assign(formData, {
+      id: null,
+      studentId: authStore.user?.studentId || '',
+      name: authStore.userName,
+      departmentId: authStore.user?.departmentId || '',
+      majorId: authStore.user?.majorId || '',
+      applicationType: 'academic',
+      projectName: '',
+      awardDate: '',
+      academicType: '',
+      researchType: '',
+      innovationLevel: '',
+      innovationRole: '',
+      awardLevel: '',
+      awardGrade: '',
+      awardCategory: '',
+      awardType: 'individual',
+      authorRankType: 'ranked',
+      authorOrder: '',
+      performanceType: '',
+      performanceLevel: '',
+      performanceParticipation: 'individual',
+      teamRole: '',
+      ruleId: '',
+      selfScore: '',
+      description: '',
+      files: []
+    })
+    
+    // 填充表单数据
+    for (const [key, value] of Object.entries(application)) {
+      const newKey = fieldMapping[key] || key
+      if (newKey in formData) {
+        formData[newKey] = value
+      }
+    }
+    
+    // 处理文件（如果有）
+    if (application.files && Array.isArray(application.files)) {
+      // 将后端返回的文件数据转换为前端可用的格式
+      formData.files = application.files.map(file => {
+        // 后端返回的文件通常包含id、name、path等字段
+        // 直接使用这些字段创建一个文件对象表示
+        return {
+          id: file.id,
+          name: file.name,
+          path: file.path,
+          size: file.size || 0,
+          // 标记这是后端返回的文件，不是浏览器File对象
+          isBackendFile: true
+        }
+      })
+    } else {
+      formData.files = []
+    }
+    
+  } catch (error) {
+    console.error('加载编辑数据失败:', error)
+    // 当加载失败（如404），重置为新表单
+    Object.assign(formData, {
+      id: null,
+      studentId: authStore.user?.studentId || '',
+      name: authStore.userName,
+      departmentId: authStore.user?.departmentId || '',
+      majorId: authStore.user?.majorId || '',
+      applicationType: 'academic',
+      projectName: '',
+      awardDate: '',
+      academicType: '',
+      researchType: '',
+      innovationLevel: '',
+      innovationRole: '',
+      awardLevel: '',
+      awardGrade: '',
+      awardCategory: '',
+      awardType: 'individual',
+      authorRankType: 'ranked',
+      authorOrder: '',
+      performanceType: '',
+      performanceLevel: '',
+      performanceParticipation: 'individual',
+      teamRole: '',
+      ruleId: '',
+      selfScore: '',
+      description: '',
+      files: []
+    })
+  }
+}
+
+// 监听编辑申请ID变化
+watch(() => props.editApplicationId, (newId) => {
+  if (newId) {
+    loadEditData(newId)
+  }
+}, { immediate: true })
+
 // 监听表单关键字段变化，自动匹配规则
 watch([
   () => formData.applicationType,
@@ -683,9 +852,6 @@ const fetchMatchingRules = async () => {
     // 始终获取所有规则，不进行类型过滤
     const response = await api.getRules()
     availableRules.value = response.rules
-    
-    // 调试日志：查看规则对象结构
-    console.log('All rules:', response.rules)
     
     // 如果当前选择的规则不在列表中，清除选择
     if (formData.ruleId && !response.rules.some(rule => rule.id === formData.ruleId)) {
@@ -758,8 +924,6 @@ watch(() => formData.ruleId, async (newRuleId) => {
   }
   
   if (!selectedRule) return
-  
-  console.log('Selected rule:', selectedRule)
   
   // 根据选择的规则自动填充表单信息
   formData.applicationType = selectedRule.type
@@ -887,17 +1051,46 @@ const removeFile = (index) => {
 }
 
 const previewFile = (file) => {
-  if (isImageFile(file.name)) {
-    const url = URL.createObjectURL(file)
+  // 检查是否是浏览器File对象（用于新上传的文件）
+  if (file instanceof File) {
+    if (isImageFile(file.name)) {
+      const url = URL.createObjectURL(file)
+      previewFileData.value = {
+        name: file.name,
+        url: url,
+        file: file,
+        size: file.size
+      }
+    } else {
+      previewFileData.value = {
+        name: file.name,
+        file: file,
+        size: file.size
+      }
+    }
+  } else {
+    // 从后端获取的文件对象，通常包含id、name、path等字段
+    // 对于后端图片文件，构建正确的预览URL
+    let url = null
+    if (isImageFile(file.name)) {
+      if (file.path) {
+        // 检查path是否已经是完整URL
+        if (file.path.startsWith('http://') || file.path.startsWith('https://')) {
+          url = file.path
+        } else {
+          // 添加服务器地址前缀
+          url = `http://localhost:5001${file.path}`
+        }
+      } else if (file.id) {
+        // 如果没有path字段，使用文件ID构建URL
+        url = `http://localhost:5001/uploads/files/${file.id}`
+      }
+    }
     previewFileData.value = {
       name: file.name,
       url: url,
-      file: file
-    }
-  } else {
-    previewFileData.value = {
-      name: file.name,
-      file: file
+      file: file,
+      size: file.size || 0
     }
   }
 }
@@ -910,14 +1103,45 @@ const closePreview = () => {
 }
 
 const downloadFile = (fileData) => {
-  const url = URL.createObjectURL(fileData.file)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = fileData.name
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  const file = fileData.file
+  
+  // 检查是否是浏览器File对象（用于新上传的文件）
+  if (file instanceof File) {
+    const url = URL.createObjectURL(file)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileData.name
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  } else {
+    // 从后端获取的文件对象，构建正确的下载URL
+    let downloadUrl = null
+    
+    if (file.path) {
+      // 检查path是否已经是完整URL
+      if (file.path.startsWith('http://') || file.path.startsWith('https://')) {
+        downloadUrl = file.path
+      } else {
+        // 添加服务器地址前缀
+        downloadUrl = `http://localhost:5001${file.path}`
+      }
+    } else if (file.id) {
+      // 如果没有path字段，使用文件ID构建URL
+      downloadUrl = `http://localhost:5001/uploads/files/${file.id}`
+    }
+    
+    // 创建一个隐藏的<a>标签来触发下载
+    if (downloadUrl) {
+      const a = document.createElement('a')
+      a.href = downloadUrl
+      a.download = fileData.name
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    }
+  }
 }
 
 // 修改保存草稿和提交表单的验证逻辑
@@ -926,8 +1150,6 @@ const saveDraft = async () => {
     // 从authStore获取实际的学生信息
     const studentName = authStore.user?.name || authStore.userName || '未知学生'
     const studentId = authStore.user?.studentId || '未知学号'
-    const department = authStore.user?.department || '未知系别'
-    const major = authStore.user?.major || '未知专业'
     
     // 准备草稿数据
     const draftData = {
@@ -941,12 +1163,18 @@ const saveDraft = async () => {
       appliedAt: new Date().toISOString()
     }
     
-    const success = await applicationsStore.addApplication(draftData)
+    let success
+    if (formData.id) {
+      // 更新现有申请
+      success = await applicationsStore.updateApplication(formData.id, draftData)
+    } else {
+      // 创建新申请
+      success = await applicationsStore.addApplication(draftData)
+    }
     
     if (success) {
       alert('草稿已保存')
-      // 通知父组件切换到申请历史页面
-      emit('switch-page', 'application-history')
+      // 保存成功后继续留在当前页面
     } else {
       alert('保存草稿失败，请稍后重试')
     }
@@ -1053,18 +1281,10 @@ const submitForm = async () => {
     // 从authStore获取实际的学生信息
     const studentName = authStore.user?.name || authStore.userName || '未知学生'
     const studentId = authStore.user?.studentId || '未知学号'
-    const department = authStore.user?.department || '未知系别'
-    const major = authStore.user?.major || '未知专业'
     
     console.log('=== 提交申请时的学生信息 ===')
     console.log('studentName:', studentName)
     console.log('studentId:', studentId)
-    console.log('department:', department)
-    console.log('major:', major)
-    
-    console.log('=== formData中的字段 ===')
-    console.log('formData.department:', formData.department)
-    console.log('formData.major:', formData.major)
 
     // 确保studentName字段存在（兼容后端期望）
     formData.studentName = formData.name || authStore.userName
@@ -1082,19 +1302,23 @@ const submitForm = async () => {
     }
   
     console.log('=== 最终发送的申请数据 ===')
-    console.log('包含department字段:', 'department' in applicationData)
-    console.log('包含major字段:', 'major' in applicationData)
-    console.log('department值:', applicationData.department)
-    console.log('major值:', applicationData.major)
 
     try {
-      const success = await applicationsStore.addApplication(applicationData)
+      let success
+      if (formData.id) {
+        // 更新现有申请
+        success = await applicationsStore.updateApplication(formData.id, applicationData)
+      } else {
+        // 创建新申请
+        success = await applicationsStore.addApplication(applicationData)
+      }
 
       if (success) {
         alert('申请已提交，等待审核中...')
 
         // 重置表单
         Object.assign(formData, {
+          id: null,
           studentId: authStore.user?.studentId || '',
           name: authStore.userName,
           departmentId: authStore.user?.departmentId || '',

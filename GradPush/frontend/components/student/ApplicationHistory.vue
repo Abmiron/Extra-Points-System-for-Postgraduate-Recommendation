@@ -88,9 +88,6 @@
         <table class="application-table">
           <thead>
             <tr>
-              <th @click="sortBy('id')" class="sortable">
-                申请ID <font-awesome-icon :icon="getSortIcon('id')" />
-              </th>
               <th @click="sortBy('applicationType')" class="sortable">
                 申请类型 <font-awesome-icon :icon="getSortIcon('applicationType')" />
               </th>
@@ -103,6 +100,9 @@
               <th @click="sortBy('selfScore')" class="sortable">
                 自评分数 <font-awesome-icon :icon="getSortIcon('selfScore')" />
               </th>
+              <th @click="sortBy('finalScore')" class="sortable">
+                核定分数 <font-awesome-icon :icon="getSortIcon('finalScore')" />
+              </th>
               <th @click="sortBy('appliedAt')" class="sortable">
                 申请时间 <font-awesome-icon :icon="getSortIcon('appliedAt')" />
               </th>
@@ -114,11 +114,11 @@
           </thead>
           <tbody>
             <tr v-for="application in paginatedApplications" :key="application.id">
-              <td>{{ application.id || 'N/A' }}</td>
               <td>{{ getApplicationTypeText(application.applicationType || application.type) }}</td>
               <td style="white-space: normal; max-width: 200px; word-break: break-word;">{{ application.eventName || application.projectName || '未命名' }}</td>
               <td>{{ getAwardLevelText(application.awardLevel) }}</td>
               <td>{{ application.selfScore || '-' }}</td>
+              <td>{{ application.finalScore || '-' }}</td>
               <td>{{ formatDate(application.appliedAt || application.createdAt) }}</td>
               <td>
                 <span :class="['status-badge', getStatusClass(application.status)]">
@@ -143,10 +143,10 @@
                     <font-awesome-icon :icon="['fas', 'edit']" />
                   </button>
                   <button 
-                    v-if="application.status === 'draft'" 
+                    v-if="application.status === 'draft' || application.status === 'pending'" 
                     class="btn btn-outline small-btn btn-delete" 
                     @click="deleteApplication(application)"
-                    title="删除草稿"
+                    title="删除申请"
                   >
                     <font-awesome-icon :icon="['fas', 'trash']" />
                   </button>
@@ -225,11 +225,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onActivated, watch } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useApplicationsStore } from '../../stores/applications'
-import { useRouter } from 'vue-router'
 import ApplicationDetailModal from './ApplicationDetailModal.vue'
+
+// 定义事件，用于通知父组件切换页面和编辑申请
+const emit = defineEmits(['switch-page', 'edit-application'])
 // 导入Font Awesome图标组件和样式（如果项目中已配置）
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
@@ -240,7 +242,6 @@ library.add(fas)
 
 const authStore = useAuthStore()
 const applicationsStore = useApplicationsStore()
-const router = useRouter()
 
 // 筛选条件
 const filters = ref({
@@ -471,11 +472,8 @@ const viewApplicationDetails = (application) => {
 
 // 编辑申请
 const editApplication = (application) => {
-  // 导航到编辑页面，传递申请ID
-  router.push({ 
-    path: '/student/application-form', 
-    query: { id: application.id, edit: true } 
-  })
+  // 通知父组件切换到申请表单页面并传递申请ID
+  emit('edit-application', application.id)
 }
 
 // 删除申请
@@ -533,9 +531,12 @@ watch(totalPages, (newTotal) => {
 
 onMounted(async () => {
   // 确保数据已加载
-  if (applicationsStore.applications.length === 0) {
-    await applicationsStore.fetchApplications()
-  }
+  await applicationsStore.fetchApplications()
+})
+
+onActivated(async () => {
+  // 每次组件被激活时自动刷新数据
+  await refreshData()
 })
 </script>
 

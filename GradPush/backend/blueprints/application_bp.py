@@ -104,8 +104,8 @@ def get_applications():
     applications = query.all()
     app_list = []
     
-    # 获取所有相关系和专业信息以避免N+1查询问题
-    from models import Department, Major
+    # 获取所有相关系、专业和规则信息以避免N+1查询问题
+    from models import Department, Major, Rule
     
     department_ids = {app.department_id for app in applications}
     departments = Department.query.filter(Department.id.in_(department_ids)).all()
@@ -115,15 +115,25 @@ def get_applications():
     majors = Major.query.filter(Major.id.in_(major_ids)).all()
     major_dict = {m.id: m.name for m in majors}
     
+    # 获取所有规则信息
+    rule_ids = {app.rule_id for app in applications if app.rule_id}
+    rules = Rule.query.filter(Rule.id.in_(rule_ids)).all()
+    rule_dict = {r.id: {'id': r.id, 'name': r.name, 'score': r.score} for r in rules}
+    
     for app in applications:
         # 转换文件路径格式
         processed_files = []
         if app.files:
             for file in app.files:
-                processed_file = file.copy() if isinstance(file, dict) else file
-                if isinstance(processed_file, dict) and 'path' in processed_file:
+                # 确保processed_file是字典类型以便处理
+                if isinstance(file, dict):
+                    processed_file = file.copy()
+                    # 保留原文件的size字段
+                    if 'size' in file:
+                        processed_file['size'] = file['size']
+                    
                     # 如果是本地绝对路径，转换为相对URL
-                    if os.path.isabs(processed_file['path']):
+                    if 'path' in processed_file and os.path.isabs(processed_file['path']):
                         # 从绝对路径中提取文件名和子文件夹
                         filename = os.path.basename(processed_file['path'])
                         # 判断文件应该属于哪个子文件夹
@@ -132,6 +142,13 @@ def get_applications():
                         else:
                             # 默认将其他文件归类到files文件夹
                             processed_file['path'] = f'/uploads/files/{filename}'
+                else:
+                    # 如果file不是字典类型，尝试将其转换为字典
+                    try:
+                        processed_file = dict(file)
+                    except:
+                        # 如果转换失败，使用默认空字典
+                        processed_file = {}
                 processed_files.append(processed_file)
         
         app_data = {
@@ -173,7 +190,10 @@ def get_applications():
             'performanceType': app.performance_type,
             'performanceLevel': app.performance_level,
             'performanceParticipation': app.performance_participation,
-            'teamRole': app.team_role
+            'teamRole': app.team_role,
+            # 规则相关字段
+            'ruleId': app.rule_id,
+            'rule': rule_dict.get(app.rule_id) if app.rule_id else None
         }
         app_list.append(app_data)
     
@@ -188,10 +208,15 @@ def get_application(id):
     processed_files = []
     if app.files:
         for file in app.files:
-            processed_file = file.copy() if isinstance(file, dict) else file
-            if isinstance(processed_file, dict) and 'path' in processed_file:
+            # 确保processed_file是字典类型以便处理
+            if isinstance(file, dict):
+                processed_file = file.copy()
+                # 保留原文件的size字段
+                if 'size' in file:
+                    processed_file['size'] = file['size']
+                
                 # 如果是本地绝对路径，转换为相对URL
-                if os.path.isabs(processed_file['path']):
+                if 'path' in processed_file and os.path.isabs(processed_file['path']):
                         # 从绝对路径中提取文件名和子文件夹
                         filename = os.path.basename(processed_file['path'])
                         # 判断文件应该属于哪个子文件夹
@@ -200,6 +225,13 @@ def get_application(id):
                         else:
                             # 默认将其他文件归类到files文件夹
                             processed_file['path'] = f'/uploads/files/{filename}'
+            else:
+                # 如果file不是字典类型，尝试将其转换为字典
+                try:
+                    processed_file = dict(file)
+                except:
+                    # 如果转换失败，使用默认空字典
+                    processed_file = {}
             processed_files.append(processed_file)
     
     # 获取相关系、专业和规则信息
@@ -329,19 +361,19 @@ def create_application():
         # 处理文件上传
         files = []
         if request.files:
-            # 导入app以访问配置
-            from app import app
+            # 导入Flask应用实例以访问配置
+            from app import app as flask_app
             
             # 创建上传目录（如果不存在）
-            if not os.path.exists(app.config['UPLOAD_FOLDER']):
-                os.makedirs(app.config['UPLOAD_FOLDER'])
+            if not os.path.exists(flask_app.config['UPLOAD_FOLDER']):
+                os.makedirs(flask_app.config['UPLOAD_FOLDER'])
             
             # 确保文件上传目录存在
-            if not os.path.exists(app.config['FILE_FOLDER']):
-                os.makedirs(app.config['FILE_FOLDER'])
+            if not os.path.exists(flask_app.config['FILE_FOLDER']):
+                os.makedirs(flask_app.config['FILE_FOLDER'])
             
             # 保存文件并记录信息
-            for key, file in request.files.items():
+            for file in request.files.getlist('files'):
                 if file and file.filename:
                     # 生成安全且保留中文的文件名
                     def generate_safe_filename(original_filename):
@@ -361,32 +393,40 @@ def create_application():
                     
                     # 使用自定义函数生成文件名
                     filename = generate_safe_filename(file.filename)
-                    filepath = os.path.join(app.config['FILE_FOLDER'], filename)
+                    filepath = os.path.join(flask_app.config['FILE_FOLDER'], filename)
                     file.save(filepath)
+                    
+                    # 获取实际文件大小（比file.content_length更可靠）
+                    actual_size = os.path.getsize(filepath)
                     
                     # 记录文件信息（存储相对URL而不是本地路径）
                     files.append({
                         'name': filename,
                         'path': f'/uploads/files/{filename}',
-                        'size': file.content_length,
+                        'size': actual_size,
                         'type': file.content_type
                     })
         
         from app import db
+        # 处理日期字段，允许为空
+        award_date_value = None
+        if data.get('award_date'):
+            award_date_value = datetime.fromisoformat(data['award_date']).date()
+        
         new_application = Application(
-            student_id=data['student_id'],
-            student_name=data['student_name'],
-            department_id=data['department_id'],
-            major_id=data['major_id'],
-            application_type=data['application_type'],
+            student_id=data.get('student_id'),
+            student_name=data.get('student_name'),
+            department_id=data.get('department_id'),
+            major_id=data.get('major_id'),
+            application_type=data.get('application_type'),
             applied_at=datetime.utcnow(),
-            self_score=data['self_score'],
+            self_score=data.get('self_score'),
             status=data.get('status', 'pending'),
-            project_name=data['project_name'],
-            award_date=datetime.fromisoformat(data['award_date']).date(),
+            project_name=data.get('project_name'),
+            award_date=award_date_value,
             award_level=data.get('award_level'),
             award_type=data.get('award_type'),
-            description=data['description'],
+            description=data.get('description'),
             files=files,
             rule_id=data.get('rule_id'),
             # 学术专长相关字段
@@ -451,79 +491,227 @@ def create_application():
 # 更新申请
 @application_bp.route('/applications/<int:id>', methods=['PUT'])
 def update_application(id):
-    app = Application.query.get_or_404(id)
-    data = request.get_json()
+    try:
+        application = Application.query.get_or_404(id)
+        
+        # 解析申请数据
+        if 'application' in request.form:
+            data = json.loads(request.form['application'])
+        else:
+            data = request.get_json()
     
-    # 更新基本信息
-    app.self_score = data.get('selfScore', app.self_score)
-    app.status = data.get('status', app.status)
-    app.final_score = data.get('finalScore', app.final_score)
-    app.review_comment = data.get('reviewComment', app.review_comment)
-    app.reviewed_at = datetime.fromisoformat(data['reviewedAt']) if 'reviewedAt' in data else app.reviewed_at
-    app.reviewed_by = data.get('reviewedBy', app.reviewed_by)
-    app.project_name = data.get('projectName', app.project_name)
-    app.award_date = datetime.fromisoformat(data['awardDate']).date() if 'awardDate' in data else app.award_date
-    app.award_level = data.get('awardLevel', app.award_level)
-    app.award_type = data.get('awardType', app.award_type)
-    app.description = data.get('description', app.description)
-    app.files = data.get('files', app.files)
-    
-    # 更新学术专长相关字段
-    app.academic_type = data.get('academicType', app.academic_type)
-    app.research_type = data.get('researchType', app.research_type)
-    app.innovation_level = data.get('innovationLevel', app.innovation_level)
-    app.innovation_role = data.get('innovationRole', app.innovation_role)
-    app.award_grade = data.get('awardGrade', app.award_grade)
-    app.award_category = data.get('awardCategory', app.award_category)
-    app.author_rank_type = data.get('authorRankType', app.author_rank_type)
-    app.author_order = data.get('authorOrder', app.author_order)
-    
-    # 更新综合表现相关字段
-    app.performance_type = data.get('performanceType', app.performance_type)
-    app.performance_level = data.get('performanceLevel', app.performance_level)
-    app.performance_participation = data.get('performanceParticipation', app.performance_participation)
-    app.team_role = data.get('teamRole', app.team_role)
-    
-    from app import db
-    db.session.commit()
-    
-    return jsonify({'message': '申请更新成功'}), 200
+        # 字段名转换：将前端的驼峰式命名转换为后端的下划线命名
+        field_mapping = {
+            'studentId': 'student_id',
+            'studentName': 'student_name',
+            'name': 'student_name',  # 兼容前端可能使用的name字段
+            'departmentId': 'department_id',
+            'majorId': 'major_id',
+            'applicationType': 'application_type',
+            'selfScore': 'self_score',
+            'projectName': 'project_name',
+            'awardDate': 'award_date',
+            'awardLevel': 'award_level',
+            'awardType': 'award_type',
+            'academicType': 'academic_type',
+            'researchType': 'research_type',
+            'innovationLevel': 'innovation_level',
+            'innovationRole': 'innovation_role',
+            'awardGrade': 'award_grade',
+            'awardCategory': 'award_category',
+            'authorRankType': 'author_rank_type',
+            'authorOrder': 'author_order',
+            'performanceType': 'performance_type',
+            'performanceLevel': 'performance_level',
+            'performanceParticipation': 'performance_participation',
+            'teamRole': 'team_role',
+            'ruleId': 'rule_id',
+            'finalScore': 'final_score',
+            'reviewComment': 'review_comment',
+            'reviewedAt': 'reviewed_at',
+            'reviewedBy': 'reviewed_by',
+            'appliedAt': 'applied_at',
+            'createdAt': 'created_at',
+            'updatedAt': 'updated_at'
+        }
+        
+        # 转换数据字段
+        transformed_data = {}  # 使用新的变量名，避免与原始data冲突
+        for key, value in data.items():
+            # 使用映射的字段名，如果没有映射则使用原字段名
+            new_key = field_mapping.get(key, key)
+            # 处理数值类型字段：将空字符串转换为None
+            numeric_fields = ['author_order', 'self_score', 'final_score', 'rule_id']
+            if new_key in numeric_fields and value == '':
+                transformed_data[new_key] = None
+            else:
+                transformed_data[new_key] = value
+        
+        # 使用转换后的数据
+        data = transformed_data
+        
+        # 处理文件上传
+        files = []
+        if request.files:
+            # 导入Flask应用实例以访问配置
+            from app import app as flask_app
+            
+            # 创建上传目录（如果不存在）
+            if not os.path.exists(flask_app.config['UPLOAD_FOLDER']):
+                os.makedirs(flask_app.config['UPLOAD_FOLDER'])
+            
+            # 确保文件上传目录存在
+            if not os.path.exists(flask_app.config['FILE_FOLDER']):
+                os.makedirs(flask_app.config['FILE_FOLDER'])
+            
+            # 保存文件并记录信息
+            for key, file in request.files.items():
+                if file and file.filename:
+                    # 生成安全且保留中文的文件名
+                    def generate_safe_filename(original_filename):
+                        """
+                        生成安全的文件名，保留中文等非ASCII字符，确保唯一性
+                        """
+                        # 分离文件名和扩展名
+                        name, ext = os.path.splitext(original_filename)
+                        # 生成唯一标识符
+                        unique_id = uuid.uuid4().hex[:8]
+                        # 使用时间戳和唯一ID确保文件名唯一性
+                        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+                        # 保留原始文件名，仅移除路径分隔符防止目录遍历
+                        safe_name = name.replace('/', '').replace('\\', '')
+                        # 构建最终文件名
+                        return f"{safe_name}_{timestamp}_{unique_id}{ext}"
+                    
+                    # 使用自定义函数生成文件名
+                    filename = generate_safe_filename(file.filename)
+                    filepath = os.path.join(flask_app.config['FILE_FOLDER'], filename)
+                    file.save(filepath)
+                    
+                    # 获取实际文件大小（比file.content_length更可靠）
+                    actual_size = os.path.getsize(filepath)
+                    
+                    # 记录文件信息（存储相对URL而不是本地路径）
+                    files.append({
+                        'name': filename,
+                        'path': f'/uploads/files/{filename}',
+                        'size': actual_size,
+                        'type': file.content_type
+                    })
+        
+        # 更新基本信息
+        application.self_score = data.get('self_score', application.self_score)
+        application.status = data.get('status', application.status)
+        application.final_score = data.get('final_score', application.final_score)
+        application.review_comment = data.get('review_comment', application.review_comment)
+        application.reviewed_at = datetime.fromisoformat(data['reviewed_at']) if 'reviewed_at' in data and isinstance(data['reviewed_at'], str) else application.reviewed_at
+        application.reviewed_by = data.get('reviewed_by', application.reviewed_by)
+        application.project_name = data.get('project_name', application.project_name)
+        application.award_date = datetime.fromisoformat(data['award_date']).date() if 'award_date' in data and isinstance(data['award_date'], str) else application.award_date
+        application.award_level = data.get('award_level', application.award_level)
+        application.award_type = data.get('award_type', application.award_type)
+        application.description = data.get('description', application.description)
+        application.student_id = data.get('student_id', application.student_id)
+        application.student_name = data.get('student_name', application.student_name)
+        application.department_id = data.get('department_id', application.department_id)
+        application.major_id = data.get('major_id', application.major_id)
+        application.application_type = data.get('application_type', application.application_type)
+        application.rule_id = data.get('rule_id', application.rule_id)
+        
+        # 只有当有新文件上传时才更新文件列表
+        if files:
+            application.files = files
+        elif 'files' in data:
+            # 保留原有文件的size字段
+            existing_files = application.files or []
+            new_files = data['files'] or []
+            
+            # 创建一个字典映射文件路径到size
+            file_size_map = {}
+            for file in existing_files:
+                if 'path' in file and 'size' in file:
+                    file_size_map[file['path']] = file['size']
+            
+            # 更新新文件列表中的size字段
+            updated_files = []
+            for file in new_files:
+                updated_file = file.copy()
+                if 'path' in updated_file and updated_file['path'] in file_size_map:
+                    updated_file['size'] = file_size_map[updated_file['path']]
+                updated_files.append(updated_file)
+            
+            application.files = updated_files
+        
+        # 更新学术专长相关字段
+        application.academic_type = data.get('academic_type', application.academic_type)
+        application.research_type = data.get('research_type', application.research_type)
+        application.innovation_level = data.get('innovation_level', application.innovation_level)
+        application.innovation_role = data.get('innovation_role', application.innovation_role)
+        application.award_grade = data.get('award_grade', application.award_grade)
+        application.award_category = data.get('award_category', application.award_category)
+        application.author_rank_type = data.get('author_rank_type', application.author_rank_type)
+        application.author_order = data.get('author_order', application.author_order)
+        
+        # 更新综合表现相关字段
+        application.performance_type = data.get('performance_type', application.performance_type)
+        application.performance_level = data.get('performance_level', application.performance_level)
+        application.performance_participation = data.get('performance_participation', application.performance_participation)
+        application.team_role = data.get('team_role', application.team_role)
+        
+        from app import db
+        db.session.commit()
+        
+        return jsonify({'message': '申请更新成功'}), 200
+    except Exception as e:
+        # 记录详细错误信息
+        traceback_str = traceback.format_exc()
+        print("更新申请时发生错误:")
+        print(str(e))
+        print("详细错误堆栈:")
+        print(traceback_str)
+        return jsonify({'error': '服务器内部错误', 'details': str(e), 'traceback': traceback_str}), 500
 
 # 审核申请
 @application_bp.route('/applications/<int:id>/review', methods=['POST'])
 def review_application(id):
-    app = Application.query.get_or_404(id)
+    application = Application.query.get_or_404(id)
     data = request.get_json()
     
-    app.status = data['status']
+    application.status = data['status']
     
-    # 自动计算最终分数（仅适用于学术专长申请）
-    if app.application_type == 'academic' and app.status == 'approved':
+    # 获取教师输入的分数，如果有的话优先使用
+    teacher_final_score = data.get('finalScore')
+    
+    # 如果教师输入了分数，直接使用教师输入的分数
+    if teacher_final_score is not None:
+        application.final_score = teacher_final_score
+    elif application.application_type == 'academic' and application.status == 'approved':
+        # 教师未输入分数，自动计算最终分数（仅适用于学术专长申请）
         matched_rule = None
         
         # 1. 首先检查学生是否已经选择了规则
-        if app.rule_id:
-            matched_rule = Rule.query.get(app.rule_id)
+        if application.rule_id:
+            matched_rule = Rule.query.get(application.rule_id)
         
         # 2. 如果学生没有选择规则，先检查是否有匹配的特殊规则
         if not matched_rule:
             special_rule_query = Rule.query.filter_by(
                 type='academic',
-                sub_type=app.academic_type,
+                sub_type=application.academic_type,
                 is_special=True,
                 status='active'
             )
             
-            if app.academic_type == 'research':
-                special_rule_query = special_rule_query.filter_by(research_type=app.research_type)
-            elif app.academic_type == 'competition':
+            if application.academic_type == 'research':
+                special_rule_query = special_rule_query.filter_by(research_type=application.research_type)
+            elif application.academic_type == 'competition':
                 special_rule_query = special_rule_query.filter_by(
-                    level=app.award_level,
-                    grade=app.award_grade,
-                    category=app.award_category
+                    level=application.award_level,
+                    grade=application.award_grade,
+                    category=application.award_category
                 )
-            elif app.academic_type == 'innovation':
-                special_rule_query = special_rule_query.filter_by(level=app.innovation_level)
+            elif application.academic_type == 'innovation':
+                special_rule_query = special_rule_query.filter_by(level=application.innovation_level)
             
             matched_rule = special_rule_query.first()
         
@@ -531,21 +719,21 @@ def review_application(id):
         if not matched_rule:
             regular_rule_query = Rule.query.filter_by(
                 type='academic',
-                sub_type=app.academic_type,
+                sub_type=application.academic_type,
                 is_special=False,
                 status='active'
             )
             
-            if app.academic_type == 'research':
-                regular_rule_query = regular_rule_query.filter_by(research_type=app.research_type)
-            elif app.academic_type == 'competition':
+            if application.academic_type == 'research':
+                regular_rule_query = regular_rule_query.filter_by(research_type=application.research_type)
+            elif application.academic_type == 'competition':
                 regular_rule_query = regular_rule_query.filter_by(
-                    level=app.award_level,
-                    grade=app.award_grade,
-                    category=app.award_category
+                    level=application.award_level,
+                    grade=application.award_grade,
+                    category=application.award_category
                 )
-            elif app.academic_type == 'innovation':
-                regular_rule_query = regular_rule_query.filter_by(level=app.innovation_level)
+            elif application.academic_type == 'innovation':
+                regular_rule_query = regular_rule_query.filter_by(level=application.innovation_level)
             
             matched_rule = regular_rule_query.first()
         
@@ -555,11 +743,11 @@ def review_application(id):
             if matched_rule.max_count:
                 # 统计该学生已通过的同类型项目数量（排除当前项目）
                 approved_count = Application.query.filter(
-                    Application.student_id == app.student_id,
+                    Application.student_id == application.student_id,
                     Application.application_type == 'academic',
-                    Application.academic_type == app.academic_type,
+                    Application.academic_type == application.academic_type,
                     Application.status == 'approved',
-                    Application.id != app.id  # 排除当前正在审核的项目
+                    Application.id != application.id  # 排除当前正在审核的项目
                 ).count()
                 
                 if approved_count >= matched_rule.max_count:
@@ -567,22 +755,22 @@ def review_application(id):
             
             if max_count_exceeded:
                 # 超过最大项目数量限制，不给予加分
-                app.final_score = 0
+                application.final_score = 0
             else:
                 # 计算基础分数
                 final_score = matched_rule.score
                 
                 # 应用作者排序比例（如果适用）
-                if app.author_rank_type == 'ranked' and app.author_order:
+                if application.author_rank_type == 'ranked' and application.author_order:
                     # 根据作者排序位置应用不同比例
-                    if app.author_order == 1:
+                    if application.author_order == 1:
                         # 第一作者，使用规则中的比例
                         if matched_rule.author_rank_ratio:
                             final_score *= matched_rule.author_rank_ratio
                     else:
                         # 非第一作者，分数递减
                         # 这里可以根据实际需求调整递减规则
-                        final_score *= (1 - (app.author_order - 1) * 0.1)
+                        final_score *= (1 - (application.author_order - 1) * 0.1)
                         
                         # 最低不低于原分数的30%
                         final_score = max(final_score, matched_rule.score * 0.3)
@@ -592,17 +780,17 @@ def review_application(id):
                     final_score = min(final_score, matched_rule.max_score)
                 
                 # 设置最终分数
-                app.final_score = final_score
+                application.final_score = final_score
         else:
-            # 如果没有匹配的规则，使用手动输入的分数
-            app.final_score = data.get('finalScore')
+            # 如果没有匹配的规则，设置为0分
+            application.final_score = 0
     else:
-        # 非学术专长申请或未通过，使用手动输入的分数
-        app.final_score = data.get('finalScore')
+        # 非学术专长申请或未通过，教师未输入分数，设置为0分
+        application.final_score = 0
     
-    app.review_comment = data.get('reviewComment')
-    app.reviewed_at = datetime.utcnow()
-    app.reviewed_by = data.get('reviewedBy')
+    application.review_comment = data.get('reviewComment')
+    application.reviewed_at = datetime.utcnow()
+    application.reviewed_by = data.get('reviewedBy')
     
     from app import db
     db.session.commit()
@@ -612,10 +800,10 @@ def review_application(id):
 # 删除申请
 @application_bp.route('/applications/<int:id>', methods=['DELETE'])
 def delete_application(id):
-    app = Application.query.get_or_404(id)
+    application = Application.query.get_or_404(id)
     
     from app import db
-    db.session.delete(app)
+    db.session.delete(application)
     db.session.commit()
     
     return jsonify({'message': '申请删除成功'}), 200
@@ -651,8 +839,8 @@ def get_pending_applications():
     applications = query.all()
     app_list = []
     
-    # 获取所有相关系和专业信息以避免N+1查询问题
-    from models import Department, Major
+    # 获取所有相关系、专业和规则信息以避免N+1查询问题
+    from models import Department, Major, Rule
     
     department_ids = {app.department_id for app in applications}
     departments = Department.query.filter(Department.id.in_(department_ids)).all()
@@ -661,6 +849,11 @@ def get_pending_applications():
     major_ids = {app.major_id for app in applications}
     majors = Major.query.filter(Major.id.in_(major_ids)).all()
     major_dict = {m.id: m.name for m in majors}
+    
+    # 批量获取规则信息
+    rule_ids = {app.rule_id for app in applications if app.rule_id}
+    rules = Rule.query.filter(Rule.id.in_(rule_ids)).all() if rule_ids else []
+    rule_dict = {rule.id: {'id': rule.id, 'name': rule.name, 'score': rule.score} for rule in rules}
     
     for app in applications:
         # 转换文件路径格式
@@ -699,6 +892,9 @@ def get_pending_applications():
             'awardType': app.award_type,
             'description': app.description,
             'files': processed_files,
+            # 规则信息
+            'ruleId': app.rule_id,
+            'rule': rule_dict.get(app.rule_id) if app.rule_id else None,
             # 学术专长相关字段
             'academicType': app.academic_type,
             'researchType': app.research_type,

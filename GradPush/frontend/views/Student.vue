@@ -6,7 +6,12 @@
       <Sidebar :active-page="currentPage" @page-change="switchPage" :user-info="userInfo" user-type="student" />
 
       <main class="main-content">
-        <component :is="currentPageComponent" />
+        <component 
+          :is="currentPageComponent" 
+          @switch-page="switchPage"
+          @edit-application="handleEditApplication"
+          :edit-application-id="editApplicationId"
+        />
       </main>
     </div>
   </div>
@@ -29,6 +34,7 @@ const authStore = useAuthStore()
 const applicationsStore = useApplicationsStore()
 
 const currentPage = ref('application-form')
+const editApplicationId = ref(null)
 
 const pageComponents = {
   'application-form': ApplicationForm,
@@ -46,8 +52,14 @@ const userInfo = computed(() => ({
   studentId: authStore.user?.studentId || ''
 }))
 
+// 切换页面
 const switchPage = (page) => {
   currentPage.value = page
+  
+  // 当切换到申请表单页面时，默认重置编辑ID
+  if (page === 'application-form') {
+    editApplicationId.value = null
+  }
 }
 
 // 切换到申请表单页面
@@ -58,6 +70,12 @@ const switchToApplicationForm = () => {
 // 切换到个人信息页面
 const goToProfile = () => {
   currentPage.value = 'profile'
+}
+
+// 处理编辑申请
+const handleEditApplication = (applicationId) => {
+  editApplicationId.value = applicationId
+  currentPage.value = 'application-form'
 }
 
 // 权限验证和数据加载

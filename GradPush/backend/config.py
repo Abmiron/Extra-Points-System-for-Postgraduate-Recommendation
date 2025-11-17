@@ -21,4 +21,4 @@ class Config:
     UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
     AVATAR_FOLDER = os.path.join(UPLOAD_FOLDER, 'avatars')
     FILE_FOLDER = os.path.join(UPLOAD_FOLDER, 'files')
-    MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # 10MB
+    MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100MB，支持多文件上传

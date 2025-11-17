@@ -149,9 +149,18 @@ export const useApplicationsStore = defineStore('applications', () => {
       
       // 将非文件字段添加到FormData
       const applicationData = { ...application }
-      // 移除files字段，单独处理
-      const files = applicationData.files || []
-      delete applicationData.files
+      // 处理files字段，只保留后端需要的信息
+      if (applicationData.files) {
+        applicationData.files = applicationData.files.map(file => {
+          // 只保留后端需要的字段，不包含File实例
+          if (file.isBackendFile) {
+            return { id: file.id, name: file.name, path: file.path, size: file.size }
+          }
+          return { name: file.name }
+        })
+      }
+      // 保存原始files数组用于单独处理File实例
+      const files = application.files || []
       
       // 字段名转换：将前端的驼峰式命名转换为后端的下划线命名
       const fieldMapping = {
@@ -197,9 +206,12 @@ export const useApplicationsStore = defineStore('applications', () => {
       // 将转换后的application数据作为JSON字符串添加到FormData
       formData.append('application', JSON.stringify(transformedData))
       
-      // 添加文件到FormData
-      files.forEach((file, index) => {
-        formData.append(`files[${index}]`, file)
+      // 添加文件到FormData - 只添加新上传的浏览器File对象
+      // 从后端加载的文件（非File实例）不会被添加，后端会保留这些文件
+      files.forEach((file) => {
+        if (file instanceof File) {
+          formData.append('files', file)
+        }
       })
       
       // 发送请求
@@ -304,31 +316,80 @@ export const useApplicationsStore = defineStore('applications', () => {
     error.value = null
     
     try {
+      // 创建FormData对象来处理文件上传
+      const formData = new FormData()
+      
+      // 将非文件字段添加到FormData
+      const data = { ...applicationData }
+      // 处理files字段，只保留后端需要的信息
+      if (data.files) {
+        data.files = data.files.map(file => {
+          // 只保留后端需要的字段，不包含File实例
+          if (file.isBackendFile) {
+            return { id: file.id, name: file.name, path: file.path, size: file.size }
+          }
+          return { name: file.name }
+        })
+      }
+      // 保存原始files数组用于单独处理File实例
+      const files = applicationData.files || []
+      
       // 字段名转换：将前端的驼峰式命名转换为后端的下划线命名
       const fieldMapping = {
         'studentId': 'student_id',
         'studentName': 'student_name',
-        'gender': 'gender',
-        'grade': 'grade',
+        'name': 'student_name', // 兼容前端使用name字段的情况
         'department': 'department',
         'major': 'major',
         'applicationType': 'application_type',
-        'projectName': 'project_name',
         'selfScore': 'self_score',
+        'projectName': 'project_name',
+        'awardDate': 'award_date',
+        'awardLevel': 'award_level',
+        'awardType': 'award_type',
+        'academicType': 'academic_type',
+        'researchType': 'research_type',
+        'innovationLevel': 'innovation_level',
+        'innovationRole': 'innovation_role',
+        'awardGrade': 'award_grade',
+        'awardCategory': 'award_category',
+        'authorRankType': 'author_rank_type',
+        'authorOrder': 'author_order',
+        'performanceType': 'performance_type',
+        'performanceLevel': 'performance_level',
+        'performanceParticipation': 'performance_participation',
+        'teamRole': 'team_role',
         'finalScore': 'final_score',
-        'reviewComment': 'review_comment'
+        'reviewComment': 'review_comment',
+        'reviewedAt': 'reviewed_at',
+        'reviewedBy': 'reviewed_by',
+        'appliedAt': 'applied_at',
+        'createdAt': 'created_at',
+        'updatedAt': 'updated_at'
       }
       
       // 转换数据字段
       const transformedData = {};
-      for (const [key, value] of Object.entries(applicationData)) {
+      for (const [key, value] of Object.entries(data)) {
         const newKey = fieldMapping[key] || key;
         transformedData[newKey] = value;
       }
       
+      // 将转换后的application数据作为JSON字符串添加到FormData
+      formData.append('application', JSON.stringify(transformedData))
+      
+      // 添加文件到FormData - 只添加新上传的浏览器File对象
+      // 从后端加载的文件（非File实例）不会被添加，后端会保留这些文件
+      files.forEach((file, index) => {
+        if (file instanceof File) {
+          formData.append(`files[${index}]`, file)
+        }
+      })
+      
+      // 发送请求
       await apiRequest(`/applications/${applicationId}`, {
         method: 'PUT',
-        body: JSON.stringify(transformedData)
+        body: formData
       })
       
       // 更新本地状态
