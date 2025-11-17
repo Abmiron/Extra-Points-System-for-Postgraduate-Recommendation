@@ -22,7 +22,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span>学院管理</span>
           <button class="btn btn-outline" @click="showAddFacultyModal = true">
-            <i class="fas fa-plus"></i> 添加学院
+            <font-awesome-icon icon="fa-solid fa-plus" /> 添加学院
           </button>
         </div>
       </div>
@@ -65,10 +65,10 @@
               <td>
                 <div class="action-buttons">
                   <button class="btn-outline btn small-btn" @click="editFaculty(faculty)" title="编辑">
-                    <i class="fas fa-edit"></i>
+                    <font-awesome-icon icon="fa-solid fa-edit" />
                   </button>
                   <button class="btn-outline btn small-btn delete-btn" @click="deleteFaculty(faculty.id)" title="删除">
-                    <i class="fas fa-trash"></i>
+                    <font-awesome-icon icon="fa-solid fa-trash" />
                   </button>
                 </div>
               </td>
@@ -84,7 +84,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span>系管理</span>
           <button class="btn btn-outline" @click="showAddDepartmentModal = true">
-            <i class="fas fa-plus"></i> 添加系
+            <font-awesome-icon icon="fa-solid fa-plus" /> 添加系
           </button>
         </div>
       </div>
@@ -138,10 +138,10 @@
               <td>
                 <div class="action-buttons">
                   <button class="btn-outline btn small-btn" @click="editDepartment(department)" title="编辑">
-                    <i class="fas fa-edit"></i>
+                    <font-awesome-icon icon="fa-solid fa-edit" />
                   </button>
                   <button class="btn-outline btn small-btn delete-btn" @click="deleteDepartment(department.id)" title="删除">
-                    <i class="fas fa-trash"></i>
+                    <font-awesome-icon icon="fa-solid fa-trash" />
                   </button>
                 </div>
               </td>
@@ -157,7 +157,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span>专业管理</span>
           <button class="btn btn-outline" @click="showAddMajorModal = true">
-            <i class="fas fa-plus"></i> 添加专业
+            <font-awesome-icon icon="fa-solid fa-plus" /> 添加专业
           </button>
         </div>
       </div>
@@ -220,10 +220,10 @@
               <td>
                 <div class="action-buttons">
                   <button class="btn-outline btn small-btn" @click="editMajor(major)" title="编辑">
-                    <i class="fas fa-edit"></i>
+                    <font-awesome-icon icon="fa-solid fa-edit" />
                   </button>
                   <button class="btn-outline btn small-btn delete-btn" @click="deleteMajor(major.id)" title="删除">
-                    <i class="fas fa-trash"></i>
+                    <font-awesome-icon icon="fa-solid fa-trash" />
                   </button>
                 </div>
               </td>

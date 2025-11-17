@@ -1018,15 +1018,30 @@ def get_students_ranking():
         # 构建查询条件 - 使用合并后的Student模型
         query = Student.query
     
-        # 应用筛选条件
+        # 应用筛选条件 - 添加类型检查和转换
         if faculty_id and faculty_id != 'all':
-            query = query.filter_by(faculty_id=faculty_id)
+            try:
+                faculty_id = int(faculty_id)
+                query = query.filter_by(faculty_id=faculty_id)
+            except ValueError:
+                # 如果参数不是有效整数，忽略该筛选条件
+                pass
 
         if department_id and department_id != 'all':
-            query = query.filter_by(department_id=department_id)
+            try:
+                department_id = int(department_id)
+                query = query.filter_by(department_id=department_id)
+            except ValueError:
+                # 如果参数不是有效整数，忽略该筛选条件
+                pass
 
         if major_id and major_id != 'all':
-            query = query.filter_by(major_id=major_id)
+            try:
+                major_id = int(major_id)
+                query = query.filter_by(major_id=major_id)
+            except ValueError:
+                # 如果参数不是有效整数，忽略该筛选条件
+                pass
     
         # 获取所有符合条件的学生数据
         students = query.all()
@@ -1115,10 +1130,20 @@ def get_students_ranking():
             
             # 应用筛选条件
             if department_id and department_id != 'all':
-                app_query = app_query.filter_by(department_id=department_id)
+                try:
+                    department_id = int(department_id)
+                    app_query = app_query.filter_by(department_id=department_id)
+                except ValueError:
+                    # 如果参数不是有效整数，忽略该筛选条件
+                    pass
             
             if major_id and major_id != 'all':
-                app_query = app_query.filter_by(major_id=major_id)
+                try:
+                    major_id = int(major_id)
+                    app_query = app_query.filter_by(major_id=major_id)
+                except ValueError:
+                    # 如果参数不是有效整数，忽略该筛选条件
+                    pass
             
             # 获取所有符合条件的申请
             applications = app_query.all()
@@ -1204,8 +1229,15 @@ def get_students_ranking():
                 # AC-AF: 总分与排名
                 stats['total_comprehensive_score'] = stats['specialty_score'] + stats['comprehensive_score']  # AC: 考核综合成绩总分
                 stats['final_score'] = stats['academic_weighted'] + stats['total_comprehensive_score']  # AD: 综合成绩
-                stats['major_ranking'] = int(student_id[-2:]) % 20 + 1  # AE: 专业成绩排名
-                stats['major_total_students'] = 100 + int(student_id[-1:]) * 20  # AF: 排名人数
+                # 处理专业排名和排名人数，确保student_id的最后两位是数字
+                try:
+                    stats['major_ranking'] = int(student_id[-2:]) % 20 + 1  # AE: 专业成绩排名
+                except ValueError:
+                    stats['major_ranking'] = 1
+                try:
+                    stats['major_total_students'] = 100 + int(student_id[-1:]) * 20  # AF: 排名人数
+                except ValueError:
+                    stats['major_total_students'] = 100
                 stats['final_comprehensive_score'] = stats['final_score']
     
         # 计算总分并转换为列表

@@ -117,11 +117,13 @@ def get_rule(rule_id):
 def create_rule():
     try:
         data = request.get_json()
+        print(f"Received data for creating rule: {data}")
         
         # 验证必填字段
         required_fields = ['name', 'type', 'score']
         for field in required_fields:
             if field not in data:
+                print(f"Missing required field: {field}")
                 return jsonify({'error': f'Missing required field: {field}'}), 400
         
         # 创建新规则
@@ -147,7 +149,9 @@ def create_rule():
         )
         
         db.session.add(new_rule)
+        print("Added new rule to session")
         db.session.commit()
+        print("Committed new rule to database")
         
         return jsonify({
             'id': new_rule.id,
@@ -173,8 +177,9 @@ def create_rule():
         }), 201
         
     except Exception as e:
+        print(f"Error creating rule: {type(e).__name__}: {e}")
         traceback.print_exc()
-        return jsonify({'error': 'Failed to create rule'}), 500
+        return jsonify({'error': f'Failed to create rule: {type(e).__name__}: {e}'}), 500
 
 # 更新规则
 @rule_bp.route('/rules/<int:rule_id>', methods=['PUT'])

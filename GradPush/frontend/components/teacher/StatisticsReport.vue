@@ -34,6 +34,11 @@
         </div>
         <!-- 主表格容器 -->
         <div class="table-container" ref="tableContainer">
+          <!-- 加载状态指示器 -->
+          <div v-if="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">数据加载中...</div>
+          </div>
           <table class="application-table comprehensive-table" ref="dataTable">
             <thead>
               <tr>
@@ -217,13 +222,20 @@ const faculties = ref([])
 const studentsRanking = ref([])
 // 所有申请记录
 const allApplications = ref([])
+// 加载状态
+const loading = ref(false)
 
 // 加载学院列表
 const loadFaculties = async () => {
+  loading.value = true
   try {
     const response = await api.getFacultiesAdmin()
 
     faculties.value = response.faculties || []
+    // 如果成功加载到学院列表且当前选择的是'全部'，则默认选择第一个学院
+    if (faculties.value.length > 0 && filters.faculty === 'all') {
+      filters.faculty = faculties.value[0].id
+    }
   } catch (error) {
     console.error('加载学院数据失败:', error)
     // 添加默认学院数据作为备选
@@ -234,23 +246,22 @@ const loadFaculties = async () => {
       { id: 4, name: '经济管理学院' },
       { id: 5, name: '外国语学院' }
     ]
+    // 使用默认数据时，默认选择第一个学院
+    if (faculties.value.length > 0 && filters.faculty === 'all') {
+      filters.faculty = faculties.value[0].id
+    }
+  } finally {
+    loading.value = false
   }
 }
 
 // 从API获取学生排名数据
 const fetchStudentsRanking = async () => {
+  loading.value = true
   try {
-    // 构建查询参数
-    const queryParams = new URLSearchParams()
-    if (filters.faculty && filters.faculty !== 'all') {
-      queryParams.append('facultyId', filters.faculty)
-    }
-    
     // 直接使用后端学生排名API
     const responseData = await applicationsStore.fetchStudentsRanking({
-      faculty: filters.faculty,
-      department: filters.department,
-      major: filters.major
+      faculty: filters.faculty
     })
     
     // 转换为表格行数据
@@ -363,6 +374,8 @@ const fetchStudentsRanking = async () => {
   } catch (error) {
     console.error('获取学生排名失败:', error)
     studentsRanking.value = []
+  } finally {
+    loading.value = false
   }
 }
 
@@ -835,6 +848,8 @@ onMounted(async () => {
   padding-bottom: 10px;
   border-bottom: 1px solid #e9ecef;
 }
+
+
 </style>
 
 <style>

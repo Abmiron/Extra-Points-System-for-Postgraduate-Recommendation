@@ -370,7 +370,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">分值</label>
-                <input type="number" class="form-control" v-model="ruleForm.score" step="0.1" min="0" max="10" required>
+                <input type="number" class="form-control" v-model="ruleForm.score" step="0.1" min="0" max="20" required>
               </div>
               <div class="form-group">
                 <label class="form-label">状态</label>
@@ -684,6 +684,25 @@ const saveRule = async () => {
     // 将百分比转换为小数
     if (ruleData.author_rank_ratio !== null) {
       ruleData.author_rank_ratio = parseFloat(ruleData.author_rank_ratio) / 100
+    }
+    
+    // 处理可能的空值，确保与数据库字段类型匹配
+    // 将空字符串转换为null
+    for (const key in ruleData) {
+      if (ruleData[key] === '') {
+        ruleData[key] = null
+      }
+    }
+    
+    // 处理可能的空值，确保与数据库字段类型匹配
+    if (ruleData.author_rank === null) {
+      delete ruleData.author_rank
+    }
+    if (ruleData.max_score === null) {
+      delete ruleData.max_score
+    }
+    if (ruleData.max_count === null) {
+      delete ruleData.max_count
     }
     
     if (editingRule.value) {

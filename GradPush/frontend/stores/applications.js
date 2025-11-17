@@ -518,9 +518,21 @@ export const useApplicationsStore = defineStore('applications', () => {
     
     try {
       const queryParams = new URLSearchParams()
-      if (filters.faculty && filters.faculty !== 'all') queryParams.append('facultyId', filters.faculty)
-      if (filters.department && filters.department !== 'all') queryParams.append('departmentId', filters.department)
-      if (filters.major && filters.major !== 'all') queryParams.append('majorId', filters.major)
+      if (filters.faculty && filters.faculty !== 'all') {
+        // 确保facultyId是数字类型
+        const facultyId = parseInt(filters.faculty, 10)
+        if (!isNaN(facultyId)) queryParams.append('facultyId', facultyId)
+      }
+      if (filters.department && filters.department !== 'all') {
+        // 确保departmentId是数字类型
+        const departmentId = parseInt(filters.department, 10)
+        if (!isNaN(departmentId)) queryParams.append('departmentId', departmentId)
+      }
+      if (filters.major && filters.major !== 'all') {
+        // 确保majorId是数字类型
+        const majorId = parseInt(filters.major, 10)
+        if (!isNaN(majorId)) queryParams.append('majorId', majorId)
+      }
       
       const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ''
       const data = await apiRequest(`/applications/students-ranking${queryString}`)

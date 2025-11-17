@@ -5,47 +5,49 @@
       <span>成绩管理</span>
     </div>
 
+    <!-- 筛选和搜索区域 -->
+    <div class="filters">
+      <div class="filter-group">
+        <span class="filter-label">学号:</span>
+        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="输入学生学号">
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">姓名:</span>
+        <input type="text" class="form-control small" v-model="filters.studentName" placeholder="输入学生姓名">
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">学院:</span>
+        <input type="text" class="form-control small" v-model="filters.faculty" placeholder="输入学院名称">
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">系:</span>
+        <input type="text" class="form-control small" v-model="filters.department" placeholder="输入系名称">
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">专业:</span>
+        <input type="text" class="form-control small" v-model="filters.major" placeholder="输入专业名称">
+      </div>
+      <div class="filter-group">
+        <button class="btn btn-outline" @click="resetFilter">清空筛选</button>
+      </div>
+    </div>
+
     <!-- 成绩表格 -->
     <div class="card">
       <div class="card-title">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>成绩管理</span>
-        </div>
-      </div>
-      
-      <!-- 筛选和搜索区域 -->
-      <div class="filters" style="padding: 0 20px; padding-top: 20px;">
-        <div class="filter-group">
-          <input 
-            type="text" 
-            class="form-control" 
-            v-model="searchQuery" 
-            placeholder="搜索学生姓名或学号" 
-            @keyup.enter="handleSearch"
-          />
-        </div>
-        <div class="filter-group">
-          <button class="btn btn-outline" @click="handleSearch">
-            <font-awesome-icon :icon="['fas', 'search']" /> 搜索
-          </button>
-          <button class="btn btn-outline" @click="resetFilter">重置</button>
-        </div>
+        <span>成绩管理</span>
       </div>
       <!-- 加载状态指示器 -->
       <div v-if="loading" class="loading-overlay">
         <div class="loading-spinner"></div>
         <div class="loading-text">加载中...</div>
       </div>
-      <div class="table-container" style="padding: 0 20px 20px;">
+      <div class="table-container">
         <table class="application-table">
           <thead>
             <tr>
               <th>学号</th>
               <th>姓名</th>
-              <th>性别</th>
-              <th>学院</th>
-              <th>系</th>
-              <th>专业</th>
               <th>CET4成绩</th>
               <th>CET6成绩</th>
               <th>GPA</th>
@@ -64,12 +66,6 @@
             <tr v-for="student in paginatedScores" :key="student.id">
               <td>{{ student.student_id }}</td>
               <td>{{ student.student_name }}</td>
-              <td>
-                <span class="status-badge">{{ student.gender || '未设置' }}</span>
-              </td>
-              <td>{{ student.faculty }}</td>
-              <td>{{ student.department }}</td>
-              <td>{{ student.major }}</td>
               <td>{{ student.cet4_score || '-' }}</td>
               <td>{{ student.cet6_score || '-' }}</td>
               <td>{{ student.gpa || '-' }}</td>
@@ -84,13 +80,13 @@
               <td>
                 <div class="action-buttons">
                   <button class="btn-outline btn small-btn" @click="openEditModal(student)">
-                    <font-awesome-icon :icon="['fas', 'edit']" /> 
+                    <font-awesome-icon :icon="['fas', 'edit']" />
                   </button>
                 </div>
               </td>
             </tr>
             <tr v-if="paginatedScores.length === 0">
-              <td :colspan="18" class="no-data">暂无成绩数据</td>
+              <td :colspan="14" class="no-data">暂无成绩数据</td>
             </tr>
           </tbody>
         </table>
@@ -188,15 +184,15 @@
               </div>
               <div class="form-group">
                 <label class="form-label">学术专长</label>
-                <input type="number" class="form-control" v-model="formData.academic_specialty_total" placeholder="请输入学术专长成绩" min="0" max="12" step="0.01" />
-                <div v-if="errors.academic_specialty_total" class="error-message">{{ errors.academic_specialty_total }}</div>
+                <input type="number" class="form-control" v-model="formData.academic_specialty_total" placeholder="系统自动计算" min="0" max="12" step="0.01" readonly />
+                <div class="help-text">由系统根据申请记录自动计算</div>
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">综合表现</label>
-                <input type="number" class="form-control" v-model="formData.comprehensive_performance_total" placeholder="请输入综合表现成绩" min="0" max="8" step="0.01" />
-                <div v-if="errors.comprehensive_performance_total" class="error-message">{{ errors.comprehensive_performance_total }}</div>
+                <input type="number" class="form-control" v-model="formData.comprehensive_performance_total" placeholder="系统自动计算" min="0" max="8" step="0.01" readonly />
+                <div class="help-text">由系统根据申请记录自动计算</div>
               </div>
               <div class="form-group">
                 <label class="form-label">考核总分</label>
@@ -236,6 +232,7 @@
 
 <script>
 import api from '../../utils/api'
+import { useApplicationsStore } from '../../stores/applications'
 
 export default {
   name: 'ScoreManagement',
@@ -250,8 +247,14 @@ export default {
       // 分页
       currentPage: 1,
       pageSize: 10,
-      // 搜索
-      searchQuery: '',
+      // 筛选条件
+      filters: {
+        studentId: '',
+        studentName: '',
+        faculty: '',
+        department: '',
+        major: ''
+      },
       // 模态框
       dialogVisible: false,
       // 表单数据
@@ -289,8 +292,32 @@ export default {
     endIndex() {
       return Math.min(this.startIndex + this.pageSize, this.total)
     },
+    filteredScores() {
+      let filtered = this.scores.filter(student => {
+        const idMatch = !this.filters.studentId || student.student_id.includes(this.filters.studentId)
+        const nameMatch = !this.filters.studentName || student.student_name.includes(this.filters.studentName)
+        const facultyMatch = !this.filters.faculty || student.faculty.includes(this.filters.faculty)
+        const departmentMatch = !this.filters.department || student.department.includes(this.filters.department)
+        const majorMatch = !this.filters.major || student.major.includes(this.filters.major)
+        
+        return idMatch && nameMatch && facultyMatch && departmentMatch && majorMatch
+      })
+      
+      return filtered
+    },
     paginatedScores() {
-      return this.scores
+      // 前端实现分页
+      return this.filteredScores.slice(this.startIndex, this.endIndex)
+    }
+  },
+  watch: {
+    // 实时监听筛选条件变化，自动更新列表
+    filters: {
+      handler() {
+        this.currentPage = 1
+        // 这里不需要重新加载API，因为筛选是在前端进行的
+      },
+      deep: true
     }
   },
   mounted() {
@@ -301,20 +328,43 @@ export default {
     async loadScoresFromAPI() {
       this.loading = true
       try {
-        // 使用api工具加载成绩数据
-        const params = new URLSearchParams()
-        params.append('page', this.currentPage)
-        params.append('per_page', this.pageSize)
-        if (this.searchQuery) {
-          params.append('search', this.searchQuery)
-        }
-        const data = await api.getStudentsAdmin(params.toString())
+        // 使用applicationsStore加载学生排名数据
+        const applicationsStore = useApplicationsStore()
+        const responseData = await applicationsStore.fetchStudentsRanking()
+        
+        // 获取学生列表并转换字段名称
+        let students = responseData.students || []
+        students = students.map(student => {
+          return {
+            // 基本信息
+            id: student.id,
+            student_id: student.student_id,
+            student_name: student.student_name,
+            gender: student.gender,
+            faculty: student.faculty,
+            department: student.department,
+            major: student.major,
+            cet4_score: student.cet4_score,
+            cet6_score: student.cet6_score,
+            gpa: student.gpa,
+            academic_score: student.academic_score,
+            academic_weighted: student.academic_weighted,
+            
+            // 从排名数据获取的字段
+            academic_specialty_total: student.specialty_score || 0,
+            comprehensive_performance_total: student.comprehensive_score || 0,
+            total_score: student.total_comprehensive_score || student.total_score,
+            comprehensive_score: student.final_score || student.comprehensive_score,
+            major_ranking: student.major_ranking,
+            total_students: student.major_total_students
+          }
+        })
         
         // 更新数据
-        this.scores = data.students || []
-        this.total = Number(data.total) || 0
-        this.currentPage = Number(data.current_page) || 1
-        this.pageSize = Number(data.per_page) || 10
+        this.scores = students
+        this.total = this.filteredScores.length
+        this.currentPage = 1
+        this.pageSize = 10
       } catch (error) {
         alert('加载成绩数据失败')
         console.error('Error loading scores:', error)
@@ -323,40 +373,35 @@ export default {
       }
     },
 
-
-
-    // 搜索
-    handleSearch() {
-      this.currentPage = 1
-      this.loadScoresFromAPI()
-    },
-
     // 重置筛选条件
     resetFilter() {
-      this.searchQuery = ''
+      Object.assign(this.filters, {
+        studentId: '',
+        studentName: '',
+        faculty: '',
+        department: '',
+        major: ''
+      })
       this.currentPage = 1
-      this.loadScoresFromAPI()
     },
 
     // 分页相关
     prevPage() {
       if (this.currentPage > 1) {
         this.currentPage--
-        this.loadScoresFromAPI()
       }
     },
 
     nextPage() {
       if (this.currentPage < this.totalPages) {
         this.currentPage++
-        this.loadScoresFromAPI()
       }
     },
 
     // 打开编辑模态框
     openEditModal(row) {
       this.formData = {
-        id: row.id,
+        id: row.student_id, // 使用student_id作为更新API的ID参数
         student_id: row.student_id,
         student_name: row.student_name,
         gender: row.gender,
@@ -401,7 +446,7 @@ export default {
           
           // 关闭模态框并刷新数据
           this.dialogVisible = false
-            this.loadScoresFromAPI()
+          this.loadScoresFromAPI()
           alert('成绩信息更新成功')
         } catch (error) {
           alert('更新成绩信息失败')
@@ -451,5 +496,37 @@ export default {
   margin-top: 10px;
   color: #666;
   font-size: 14px;
+}
+
+/* 只读字段样式 */
+.form-control[readonly] {
+  background-color: #f5f5f5;
+  border-color: #ddd;
+  cursor: not-allowed;
+}
+
+/* 帮助文本样式 */
+.help-text {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+}
+
+/* 缩短输入框宽度 */
+.form-control.small {
+  width: 120px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-group {
+    margin-bottom: 10px;
+  }
 }
 </style>
