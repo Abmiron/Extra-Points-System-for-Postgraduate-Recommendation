@@ -19,6 +19,7 @@
 from extensions import db
 from datetime import datetime
 import bcrypt
+from sqlalchemy import event
 
 # 学院模型
 class Faculty(db.Model):
@@ -73,8 +74,8 @@ class User(db.Model):
     faculty_id = db.Column(db.Integer, db.ForeignKey('faculty.id'), nullable=True)
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=True)
     major_id = db.Column(db.Integer, db.ForeignKey('major.id'), nullable=True)
-    # 保留原有字段用于兼容旧数据（可在后续版本中移除）
-    student_id = db.Column(db.String(20), nullable=True)
+    # 与Student模型建立外键关系
+    student_id = db.Column(db.String(20), db.ForeignKey('student.student_id'), nullable=True, unique=True)
     email = db.Column(db.String(120), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     role_name = db.Column(db.String(50), nullable=True)
@@ -83,8 +84,24 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # 与Student模型建立一对一关系
+    student = db.relationship('Student', backref=db.backref('user', uselist=False), foreign_keys=[student_id])
+    
     def __repr__(self):
         return f'<User {self.username}>'
+    
+    # 保存前确保学生用户的信息与Student模型同步
+    def before_save(self):
+        if self.role == 'student' and self.student:
+            # 同步学生用户的基本信息到Student模型
+            self.student.student_name = self.name
+            # 同步学院、系、专业信息到Student模型
+            if self.faculty_id:
+                self.student.faculty_id = self.faculty_id
+            if self.department_id:
+                self.student.department_id = self.department_id
+            if self.major_id:
+                self.student.major_id = self.major_id
     
     # 设置密码（哈希）
     def set_password(self, password):
@@ -214,6 +231,32 @@ class Student(db.Model):
     
     def __repr__(self):
         return f'<Student {self.student_name} ({self.student_id})>'
+    
+    # 保存前确保学生信息与User模型同步
+    def before_save(self):
+        if self.user:
+            # 同步学生的基本信息到User模型
+            self.user.name = self.student_name
+            # 同步学院、系、专业信息到User模型
+            if self.faculty_id:
+                self.user.faculty_id = self.faculty_id
+            if self.department_id:
+                self.user.department_id = self.department_id
+            if self.major_id:
+                self.user.major_id = self.major_id
+
+# 添加事件监听器，确保在保存前调用同步方法
+@event.listens_for(User, 'before_insert')
+@event.listens_for(User, 'before_update')
+def call_before_save_user(mapper, connection, target):
+    if hasattr(target, 'before_save'):
+        target.before_save()
+
+@event.listens_for(Student, 'before_insert')
+@event.listens_for(Student, 'before_update')
+def call_before_save_student(mapper, connection, target):
+    if hasattr(target, 'before_save'):
+        target.before_save()
 
 # 加分规则模型
 class Rule(db.Model):

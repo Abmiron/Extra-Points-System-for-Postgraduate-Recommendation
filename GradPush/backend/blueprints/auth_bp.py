@@ -102,47 +102,95 @@ def login():
 # 注册接口
 @auth_bp.route('/register', methods=['POST'])
 def register():
+    from extensions import db
     data = request.get_json()
+    
+    # 基本数据验证
+    if not data:
+        return jsonify({'message': '请求数据不能为空'}), 400
+    
+    required_fields = ['username', 'name', 'role', 'password']
+    for field in required_fields:
+        if field not in data or not data[field]:
+            return jsonify({'message': f'{field}是必填字段'}), 400
     
     # 检查用户名是否已存在
     existing_user = User.query.filter_by(username=data['username']).first()
     if existing_user:
         return jsonify({'message': '用户名已存在'}), 400
     
-    from models import Faculty, Department, Major
+    from models import Faculty, Department, Major, Student
     
     # 获取关联ID
     faculty_id = data.get('facultyId')
     department_id = data.get('departmentId')
     major_id = data.get('majorId')
     
-    # 创建新用户
-    new_user = User(
-        username=data['username'],
-        name=data['name'],
-        role=data['role'],
-        avatar='/images/default-avatar.jpg',  # 统一使用默认头像
-        faculty_id=faculty_id,
-        email='',  # 默认值
-        phone=''   # 默认值
-    )
-    
-    # 设置密码（哈希）- 如果没有提供密码，使用默认密码
-    new_user.set_password(data.get('password', '123456'))
-    
-    # 根据角色添加额外信息
+    # 学生角色验证
     if data['role'] == 'student':
-        new_user.student_id = data['username']
-        new_user.department_id = department_id
-        new_user.major_id = major_id
-    elif data['role'] == 'teacher':
-        new_user.role_name = '审核员'  # 默认值
+        # 验证学生必填的关联字段
+        if not faculty_id or not department_id or not major_id:
+            return jsonify({'message': '学生注册必须选择学院、系和专业'}), 400
+        
+        # 验证关联ID是否存在
+        faculty = Faculty.query.get(faculty_id)
+        department = Department.query.get(department_id)
+        major = Major.query.get(major_id)
+        
+        if not faculty:
+            return jsonify({'message': '学院不存在'}), 400
+        if not department:
+            return jsonify({'message': '系不存在'}), 400
+        if not major:
+            return jsonify({'message': '专业不存在'}), 400
     
-    from extensions import db
-    db.session.add(new_user)
-    db.session.commit()
-    
-    return jsonify({'message': '注册成功'}), 201
+    try:
+        # 学生角色需要先处理Student记录
+        student_id = None
+        if data['role'] == 'student':
+            # 检查是否已存在对应的Student记录
+            existing_student = Student.query.filter_by(student_id=data['username']).first()
+            if not existing_student:
+                # 如果不存在，创建新的Student记录
+                new_student = Student(
+                    student_id=data['username'],
+                    student_name=data['name'],
+                    faculty_id=faculty_id,
+                    department_id=department_id,
+                    major_id=major_id
+                )
+                db.session.add(new_student)
+                db.session.flush()  # 立即刷新以确保学生记录已创建
+            student_id = data['username']
+        
+        # 创建新用户
+        new_user = User(
+            username=data['username'],
+            name=data['name'],
+            role=data['role'],
+            avatar='/images/default-avatar.jpg',  # 统一使用默认头像
+            faculty_id=faculty_id,
+            department_id=department_id if data['role'] == 'student' else None,
+            major_id=major_id if data['role'] == 'student' else None,
+            student_id=student_id,
+            email='',  # 默认值
+            phone='',  # 默认值
+            role_name='审核员' if data['role'] == 'teacher' else None  # 默认值
+        )
+        
+        # 设置密码（哈希）- 如果没有提供密码，使用默认密码
+        new_user.set_password(data.get('password', '123456'))
+
+        db.session.add(new_user)
+        
+        # 提交事务
+        db.session.commit()
+        
+        return jsonify({'message': '注册成功'}), 201
+    except Exception as e:
+        # 发生异常时回滚事务
+        db.session.rollback()
+        return jsonify({'message': f'注册失败: {str(e)}'}), 500
 
 # 密码重置接口
 @auth_bp.route('/reset-password', methods=['POST'])

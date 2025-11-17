@@ -57,7 +57,7 @@ const menuConfig = {
   ],
   admin: [
     { key: 'user-management', icon: ['fas', 'users'], title: '用户管理' },
-    { key: 'student-management', icon: ['fas', 'user-graduate'], title: '学生管理' },
+    { key: 'score-management', icon: ['fas', 'user-graduate'], title: '成绩管理' },
     { key: 'data-management', icon: ['fas', 'database'], title: '数据管理' },
     { key: 'faculty-management', icon: ['fas', 'university'], title: '学院管理' },
     { key: 'rule-management', icon: ['fas', 'ruler'], title: '规则管理' },

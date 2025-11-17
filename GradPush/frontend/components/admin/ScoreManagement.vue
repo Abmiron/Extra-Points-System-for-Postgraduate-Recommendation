@@ -2,17 +2,14 @@
   <div class="page-content">
     <!-- 页面标题 -->
     <div class="page-title">
-      <span>学生信息管理</span>
+      <span>成绩管理</span>
     </div>
 
-    <!-- 学生表格 -->
+    <!-- 成绩表格 -->
     <div class="card">
       <div class="card-title">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>学生管理</span>
-          <button class="btn btn-outline" @click="openAddModal">
-            <font-awesome-icon :icon="['fas', 'plus']" /> 添加学生
-          </button>
+          <span>成绩管理</span>
         </div>
       </div>
       
@@ -53,11 +50,18 @@
               <th>CET6成绩</th>
               <th>GPA</th>
               <th>学业成绩</th>
+              <th>学业加权</th>
+              <th>学术专长</th>
+              <th>综合表现</th>
+              <th>考核总分</th>
+              <th>综合成绩</th>
+              <th>专业排名</th>
+              <th>排名人数</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="student in paginatedStudents" :key="student.id">
+            <tr v-for="student in paginatedScores" :key="student.id">
               <td>{{ student.student_id }}</td>
               <td>{{ student.student_name }}</td>
               <td>
@@ -70,19 +74,23 @@
               <td>{{ student.cet6_score || '-' }}</td>
               <td>{{ student.gpa || '-' }}</td>
               <td>{{ student.academic_score || '-' }}</td>
+              <td>{{ student.academic_weighted || '-' }}</td>
+              <td>{{ student.academic_specialty_total || '-' }}</td>
+              <td>{{ student.comprehensive_performance_total || '-' }}</td>
+              <td>{{ student.total_score || '-' }}</td>
+              <td>{{ student.comprehensive_score || '-' }}</td>
+              <td>{{ student.major_ranking || '-' }}</td>
+              <td>{{ student.total_students || '-' }}</td>
               <td>
                 <div class="action-buttons">
                   <button class="btn-outline btn small-btn" @click="openEditModal(student)">
                     <font-awesome-icon :icon="['fas', 'edit']" /> 
                   </button>
-                  <button class="btn-outline btn small-btn delete-btn" @click="handleDelete(student.id)">
-                    <font-awesome-icon :icon="['fas', 'trash']" /> 
-                  </button>
                 </div>
               </td>
             </tr>
-            <tr v-if="paginatedStudents.length === 0">
-              <td :colspan="11" class="no-data">暂无学生数据</td>
+            <tr v-if="paginatedScores.length === 0">
+              <td :colspan="18" class="no-data">暂无成绩数据</td>
             </tr>
           </tbody>
         </table>
@@ -106,7 +114,7 @@
     <div v-if="dialogVisible" class="modal-overlay" @click="dialogVisible = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>{{ isEdit ? '编辑学生' : '添加学生' }}</h3>
+          <h3>编辑成绩</h3>
           <button class="close-btn" @click="dialogVisible = false">
             <font-awesome-icon :icon="['fas', 'times']" />
           </button>
@@ -116,13 +124,11 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">学号</label>
-                <input type="text" class="form-control" v-model="formData.student_id" placeholder="请输入学号" :disabled="isEdit" required />
-                <div v-if="errors.student_id" class="error-message">{{ errors.student_id }}</div>
+                <input type="text" class="form-control" v-model="formData.student_id" disabled />
               </div>
               <div class="form-group">
                 <label class="form-label">姓名</label>
-                <input type="text" class="form-control" v-model="formData.student_name" placeholder="请输入姓名" required />
-                <div v-if="errors.student_name" class="error-message">{{ errors.student_name }}</div>
+                <input type="text" class="form-control" v-model="formData.student_name" disabled />
               </div>
             </div>
             <div class="form-row">
@@ -137,35 +143,17 @@
               </div>
               <div class="form-group">
                 <label class="form-label">学院</label>
-                <select class="form-control" v-model="formData.facultyId" placeholder="请选择学院" @change="handleFacultyChange" required>
-                  <option value="">请选择学院</option>
-                  <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
-                    {{ faculty.name }}
-                  </option>
-                </select>
-                <div v-if="errors.facultyId" class="error-message">{{ errors.facultyId }}</div>
+                <input type="text" class="form-control" :value="formData.facultyName" disabled />
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">系</label>
-                <select class="form-control" v-model="formData.department_id" placeholder="请选择系" @change="handleDepartmentChange" required>
-                  <option value="">请选择系</option>
-                  <option v-for="department in departments" :key="department.id" :value="department.id">
-                    {{ department.name }}
-                  </option>
-                </select>
-                <div v-if="errors.department_id" class="error-message">{{ errors.department_id }}</div>
+                <input type="text" class="form-control" :value="formData.departmentName" disabled />
               </div>
               <div class="form-group">
                 <label class="form-label">专业</label>
-                <select class="form-control" v-model="formData.major_id" placeholder="请选择专业" required>
-                  <option value="">请选择专业</option>
-                  <option v-for="major in majors" :key="major.id" :value="major.id">
-                    {{ major.name }}
-                  </option>
-                </select>
-                <div v-if="errors.major_id" class="error-message">{{ errors.major_id }}</div>
+                <input type="text" class="form-control" :value="formData.majorName" disabled />
               </div>
             </div>
             <div class="form-row">
@@ -192,9 +180,52 @@
                 <div v-if="errors.academic_score" class="error-message">{{ errors.academic_score }}</div>
               </div>
             </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">学业加权</label>
+                <input type="number" class="form-control" v-model="formData.academic_weighted" placeholder="请输入学业加权成绩" min="0" max="80" step="0.01" />
+                <div v-if="errors.academic_weighted" class="error-message">{{ errors.academic_weighted }}</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">学术专长</label>
+                <input type="number" class="form-control" v-model="formData.academic_specialty_total" placeholder="请输入学术专长成绩" min="0" max="12" step="0.01" />
+                <div v-if="errors.academic_specialty_total" class="error-message">{{ errors.academic_specialty_total }}</div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">综合表现</label>
+                <input type="number" class="form-control" v-model="formData.comprehensive_performance_total" placeholder="请输入综合表现成绩" min="0" max="8" step="0.01" />
+                <div v-if="errors.comprehensive_performance_total" class="error-message">{{ errors.comprehensive_performance_total }}</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">考核总分</label>
+                <input type="number" class="form-control" v-model="formData.total_score" placeholder="请输入考核总分" min="0" max="100" step="0.01" />
+                <div v-if="errors.total_score" class="error-message">{{ errors.total_score }}</div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">综合成绩</label>
+                <input type="number" class="form-control" v-model="formData.comprehensive_score" placeholder="请输入综合成绩" min="0" max="100" step="0.01" />
+                <div v-if="errors.comprehensive_score" class="error-message">{{ errors.comprehensive_score }}</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">专业排名</label>
+                <input type="number" class="form-control" v-model="formData.major_ranking" placeholder="请输入专业排名" min="1" step="1" />
+                <div v-if="errors.major_ranking" class="error-message">{{ errors.major_ranking }}</div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">排名人数</label>
+                <input type="number" class="form-control" v-model="formData.total_students" placeholder="请输入排名人数" min="1" step="1" />
+                <div v-if="errors.total_students" class="error-message">{{ errors.total_students }}</div>
+              </div>
+            </div>
             <div class="form-actions">
               <button type="button" class="btn btn-outline" @click="dialogVisible = false">取消</button>
-              <button type="submit" class="btn btn-primary">{{ isEdit ? '更新' : '添加' }}</button>
+              <button type="submit" class="btn btn-primary">更新</button>
             </div>
           </form>
         </div>
@@ -207,13 +238,13 @@
 import api from '../../utils/api'
 
 export default {
-  name: 'StudentManagement',
+  name: 'ScoreManagement',
   components: {
   },
   data() {
     return {
       // 表格数据
-      students: [],
+      scores: [],
       total: 0,
       loading: false,
       // 分页
@@ -223,27 +254,29 @@ export default {
       searchQuery: '',
       // 模态框
       dialogVisible: false,
-      isEdit: false,
       // 表单数据
       formData: {
         id: null,
         student_id: '',
         student_name: '',
         gender: '',
-        facultyId: '',
-        department_id: '',
-        major_id: '',
+        facultyName: '',
+        departmentName: '',
+        majorName: '',
         cet4_score: null,
         cet6_score: null,
         gpa: null,
-        academic_score: null
+        academic_score: null,
+        academic_weighted: null,
+        academic_specialty_total: null,
+        comprehensive_performance_total: null,
+        total_score: null,
+        comprehensive_score: null,
+        major_ranking: null,
+        total_students: null
       },
       // 表单验证错误
-      errors: {},
-      // 学院、系、专业数据
-      faculties: [],
-      departments: [],
-      majors: []
+      errors: {}
     }
   },
   computed: {
@@ -256,20 +289,19 @@ export default {
     endIndex() {
       return Math.min(this.startIndex + this.pageSize, this.total)
     },
-    paginatedStudents() {
-      return this.students
+    paginatedScores() {
+      return this.scores
     }
   },
   mounted() {
-    this.loadStudentsFromAPI()
-    this.loadFacultiesFromAPI()
+    this.loadScoresFromAPI()
   },
   methods: {
-    // 从API加载学生数据
-    async loadStudentsFromAPI() {
+    // 从API加载成绩数据
+    async loadScoresFromAPI() {
       this.loading = true
       try {
-        // 使用api工具加载学生数据
+        // 使用api工具加载成绩数据
         const params = new URLSearchParams()
         params.append('page', this.currentPage)
         params.append('per_page', this.pageSize)
@@ -279,142 +311,72 @@ export default {
         const data = await api.getStudentsAdmin(params.toString())
         
         // 更新数据
-        this.students = data.students || []
+        this.scores = data.students || []
         this.total = Number(data.total) || 0
         this.currentPage = Number(data.current_page) || 1
         this.pageSize = Number(data.per_page) || 10
       } catch (error) {
-        alert('加载学生数据失败')
-        console.error('Error loading students:', error)
+        alert('加载成绩数据失败')
+        console.error('Error loading scores:', error)
       } finally {
         this.loading = false
       }
     },
 
-    // 从API加载学院数据
-    async loadFacultiesFromAPI() {
-      try {
-        const data = await api.getFacultiesAdmin()
-        this.faculties = data.faculties
-      } catch (error) {
-        console.error('Error loading faculties:', error)
-      }
-    },
 
-    // 从API加载系数据
-    async loadDepartmentsFromAPI(facultyId) {
-      try {
-        const data = await api.getDepartmentsAdmin(facultyId)
-        this.departments = data.departments
-      } catch (error) {
-        console.error('Error loading departments:', error)
-      }
-    },
-
-    // 从API加载专业数据
-    async loadMajorsFromAPI(departmentId) {
-      try {
-        const data = await api.getMajorsAdmin(departmentId)
-        this.majors = data.majors
-      } catch (error) {
-        console.error('Error loading majors:', error)
-      }
-    },
-
-    // 处理学院变化
-    handleFacultyChange(facultyId) {
-      this.formData.department_id = ''
-      this.formData.major_id = ''
-      this.departments = []
-      this.majors = []
-      
-      if (facultyId) {
-        this.loadDepartmentsFromAPI(facultyId)
-      }
-    },
-
-    // 处理系变化
-    handleDepartmentChange(departmentId) {
-      this.formData.major_id = ''
-      this.majors = []
-      
-      if (departmentId) {
-        this.loadMajorsFromAPI(departmentId)
-      }
-    },
 
     // 搜索
     handleSearch() {
       this.currentPage = 1
-      this.loadStudentsFromAPI()
+      this.loadScoresFromAPI()
     },
 
     // 重置筛选条件
     resetFilter() {
       this.searchQuery = ''
       this.currentPage = 1
-      this.loadStudentsFromAPI()
+      this.loadScoresFromAPI()
     },
 
     // 分页相关
     prevPage() {
       if (this.currentPage > 1) {
         this.currentPage--
-        this.loadStudentsFromAPI()
+        this.loadScoresFromAPI()
       }
     },
 
     nextPage() {
       if (this.currentPage < this.totalPages) {
         this.currentPage++
-        this.loadStudentsFromAPI()
+        this.loadScoresFromAPI()
       }
-    },
-
-    // 打开添加模态框
-    openAddModal() {
-      this.isEdit = false
-      this.formData = {
-        id: null,
-        student_id: '',
-        student_name: '',
-        gender: '',
-        facultyId: '',
-        department_id: '',
-        major_id: '',
-        cet4_score: null,
-        cet6_score: null,
-        gpa: null,
-        academic_score: null
-      }
-      this.errors = {}
-      this.dialogVisible = true
     },
 
     // 打开编辑模态框
     openEditModal(row) {
-      this.isEdit = true
       this.formData = {
         id: row.id,
         student_id: row.student_id,
         student_name: row.student_name,
         gender: row.gender,
-        facultyId: row.facultyId,
-        department_id: row.department_id,
-        major_id: row.major_id,
+        facultyName: row.faculty,
+        departmentName: row.department,
+        majorName: row.major,
         cet4_score: row.cet4_score,
         cet6_score: row.cet6_score,
         gpa: row.gpa,
-        academic_score: row.academic_score
+        academic_score: row.academic_score,
+        academic_weighted: row.academic_weighted,
+        academic_specialty_total: row.academic_specialty_total,
+        comprehensive_performance_total: row.comprehensive_performance_total,
+        total_score: row.total_score,
+        comprehensive_score: row.comprehensive_score,
+        major_ranking: row.major_ranking,
+        total_students: row.total_students
       }
       this.errors = {}
       this.dialogVisible = true
-      // 加载学院、系、专业数据
-      this.loadDepartmentsFromAPI(row.facultyId)
-      // 异步设置专业数据
-      setTimeout(() => {
-        this.loadMajorsFromAPI(row.department_id)
-      }, 100)
     },
 
     // 表单验证
@@ -422,39 +384,8 @@ export default {
       this.errors = {}
       let isValid = true
 
-      if (!this.formData.student_id) {
-        this.errors.student_id = '请输入学号'
-        isValid = false
-      } else if (this.formData.student_id.length < 8 || this.formData.student_id.length > 12) {
-        this.errors.student_id = '学号长度在 8 到 12 个字符'
-        isValid = false
-      }
-
-      if (!this.formData.student_name) {
-        this.errors.student_name = '请输入姓名'
-        isValid = false
-      } else if (this.formData.student_name.length < 2 || this.formData.student_name.length > 20) {
-        this.errors.student_name = '姓名长度在 2 到 20 个字符'
-        isValid = false
-      }
-
       if (!this.formData.gender) {
         this.errors.gender = '请选择性别'
-        isValid = false
-      }
-
-      if (!this.formData.facultyId) {
-        this.errors.facultyId = '请选择学院'
-        isValid = false
-      }
-
-      if (!this.formData.department_id) {
-        this.errors.department_id = '请选择系'
-        isValid = false
-      }
-
-      if (!this.formData.major_id) {
-        this.errors.major_id = '请选择专业'
         isValid = false
       }
 
@@ -465,38 +396,21 @@ export default {
     async handleSubmit() {
       if (this.validateForm()) {
         try {
-          if (this.isEdit) {
-            // 更新学生
-            await api.updateStudentAdmin(this.formData.id, this.formData)
-          } else {
-            // 添加学生
-            await api.createStudentAdmin(this.formData)
-          }
+          // 更新学生
+          await api.updateStudentAdmin(this.formData.id, this.formData)
           
           // 关闭模态框并刷新数据
           this.dialogVisible = false
-          this.loadStudentsFromAPI()
-          alert(this.isEdit ? '学生信息更新成功' : '学生添加成功')
+            this.loadScoresFromAPI()
+          alert('成绩信息更新成功')
         } catch (error) {
-          alert(this.isEdit ? '更新学生信息失败' : '添加学生失败')
+          alert('更新成绩信息失败')
           console.error('Error submitting student form:', error)
         }
       }
     },
 
-    // 删除学生
-    async handleDelete(studentId) {
-      if (confirm('确定要删除该学生吗？')) {
-        try {
-          await api.deleteStudentAdmin(studentId)
-          alert('学生删除成功')
-          this.loadStudentsFromAPI()
-        } catch (error) {
-          alert('删除学生失败')
-          console.error('Error deleting student:', error)
-        }
-      }
-    }
+
   }
 }
 </script>

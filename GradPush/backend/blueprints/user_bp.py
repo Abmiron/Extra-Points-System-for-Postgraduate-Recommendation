@@ -169,6 +169,11 @@ def delete_user(user_id):
         return jsonify({'message': '用户不存在'}), 404
     
     from app import db
+    
+    # 如果是学生用户，同时删除关联的Student记录
+    if user.role == 'student' and user.student:
+        db.session.delete(user.student)
+    
     db.session.delete(user)
     db.session.commit()
     
@@ -529,7 +534,14 @@ def get_all_students():
             'cet4_score': student.cet4_score,
             'cet6_score': student.cet6_score,
             'gpa': student.gpa,
-            'academic_score': student.academic_score
+            'academic_score': student.academic_score,
+            'academic_weighted': student.academic_weighted,
+            'academic_specialty_total': student.academic_specialty_total,
+            'comprehensive_performance_total': student.comprehensive_performance_total,
+            'total_score': student.total_score,
+            'comprehensive_score': student.comprehensive_score,
+            'major_ranking': student.major_ranking,
+            'total_students': student.total_students
         }
         student_list.append(student_data)
     
@@ -568,7 +580,14 @@ def get_student(student_id):
         'cet4_score': student.cet4_score,
         'cet6_score': student.cet6_score,
         'gpa': student.gpa,
-        'academic_score': student.academic_score
+        'academic_score': student.academic_score,
+        'academic_weighted': student.academic_weighted,
+        'academic_specialty_total': student.academic_specialty_total,
+        'comprehensive_performance_total': student.comprehensive_performance_total,
+        'total_score': student.total_score,
+        'comprehensive_score': student.comprehensive_score,
+        'major_ranking': student.major_ranking,
+        'total_students': student.total_students
     }
     
     return jsonify({'student': student_data}), 200
@@ -601,6 +620,12 @@ def create_student():
         academic_score=data.get('academic_score')
     )
     
+    # 检查是否已存在对应的User记录
+    existing_user = User.query.filter_by(username=data['student_id'], role='student').first()
+    if existing_user:
+        # 如果存在，建立关联
+        existing_user.student_id = data['student_id']
+        
     from app import db
     db.session.add(new_student)
     db.session.commit()
@@ -636,6 +661,20 @@ def update_student(student_id):
         student.gpa = data['gpa']
     if 'academic_score' in data:
         student.academic_score = data['academic_score']
+    if 'academic_weighted' in data:
+        student.academic_weighted = data['academic_weighted']
+    if 'academic_specialty_total' in data:
+        student.academic_specialty_total = data['academic_specialty_total']
+    if 'comprehensive_performance_total' in data:
+        student.comprehensive_performance_total = data['comprehensive_performance_total']
+    if 'total_score' in data:
+        student.total_score = data['total_score']
+    if 'comprehensive_score' in data:
+        student.comprehensive_score = data['comprehensive_score']
+    if 'major_ranking' in data:
+        student.major_ranking = data['major_ranking']
+    if 'total_students' in data:
+        student.total_students = data['total_students']
     
     from app import db
     db.session.commit()
@@ -651,6 +690,12 @@ def delete_student(student_id):
         return jsonify({'message': '学生不存在'}), 404
     
     from app import db
+    
+    # 先将关联的User记录的student_id设置为None
+    user = User.query.filter_by(student_id=student.student_id).first()
+    if user:
+        user.student_id = None
+    
     db.session.delete(student)
     db.session.commit()
     
