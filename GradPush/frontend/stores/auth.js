@@ -35,7 +35,9 @@ export const useAuthStore = defineStore('auth', () => {
       if (!username) {
         throw new Error('用户名不可用')
       }
-      const userData = await api.getCurrentUser(username)
+      const response = await api.getCurrentUser(username)
+      // 确保提取正确的用户数据结构
+      const userData = response.user || response
       user.value = userData
       role.value = userData.role
       isAuthenticated.value = true
@@ -50,7 +52,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   const updateUserInfo = async (userData) => {
     try {
-      const updatedUser = await api.updateUserInfo(userData)
+      const response = await api.updateUserInfo(userData)
+      // 确保提取正确的用户数据结构
+      const updatedUser = response.user || response
       user.value = updatedUser
       localStorage.setItem('user', JSON.stringify(updatedUser))
       return updatedUser

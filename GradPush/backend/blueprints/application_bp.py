@@ -13,7 +13,7 @@
 """
 
 from flask import Blueprint, request, jsonify, abort, current_app
-from models import Application, Student, Rule, Department, Major
+from models import Application, Student, Rule, Department, Major, SystemSettings
 from datetime import datetime, timezone
 import json
 import os
@@ -34,6 +34,7 @@ def update_student_statistics(student_id):
     :return: 更新后的统计数据
     """
     from extensions import db
+    from models import SystemSettings
     
     # 查询学生的所有已通过申请
     applications = Application.query.filter_by(
@@ -54,12 +55,28 @@ def update_student_statistics(student_id):
     student.academic_specialty_total = academic_score_calculated  # 学术专长总分
     student.comprehensive_performance_total = comprehensive_score  # 综合表现总分
     
+    # 获取系统设置中的权重比例
+    system_settings = SystemSettings.query.first()
+    if system_settings:
+        # 使用权重计算综合成绩
+        academic_score = student.academic_score or 0.0
+        specialty_total = student.academic_specialty_total or 0.0
+        performance_total = student.comprehensive_performance_total or 0.0
+        
+        # 计算综合成绩：学业成绩 * 学业成绩权重 + 学术专长总分 * 学术专长权重 + 综合表现总分 * 综合表现权重
+        comprehensive_score = (academic_score * system_settings.academic_score_weight / 100) + \
+                              (specialty_total * system_settings.specialty_score_weight / 100) + \
+                              (performance_total * system_settings.performance_score_weight / 100)
+        
+        student.comprehensive_score = comprehensive_score
+    
     # 保存更改到数据库
     db.session.commit()
     
     return {
         'academic_specialty_total': student.academic_specialty_total,
-        'comprehensive_performance_total': student.comprehensive_performance_total
+        'comprehensive_performance_total': student.comprehensive_performance_total,
+        'comprehensive_score': student.comprehensive_score
     }
 
 # 获取所有申请
@@ -1056,6 +1073,70 @@ def get_teacher_statistics():
 def health_check():
     return jsonify({'status': 'ok', 'message': 'Server is running'}), 200
 
+
+@application_bp.route('/applications/recalculate-comprehensive-scores', methods=['POST'])
+def recalculate_comprehensive_scores():
+    """
+    重新计算所有学生的综合成绩
+    仅允许管理员访问
+    """
+    from extensions import db
+    from models import SystemSettings, Student, User
+    
+    # 检查权限 - 仅管理员可以执行此操作
+    username = request.args.get('username')
+    if not username:
+        return jsonify({'error': '缺少用户名参数'}), 400
+    
+    user = User.query.filter_by(username=username).first()
+    if not user or user.role != 'admin':
+        return jsonify({'error': '无权限执行此操作'}), 403
+    
+    try:
+        # 获取系统设置中的权重比例
+        system_settings = SystemSettings.query.first()
+        if not system_settings:
+            return jsonify({'error': '未找到系统设置，请先配置权重比例'}), 404
+        
+        # 获取所有学生
+        students = Student.query.all()
+        
+        # 重新计算每个学生的综合成绩
+        updated_count = 0
+        for student in students:
+            # 获取学生的学术专长总分和综合表现总分
+            academic_score = student.academic_score or 0.0
+            specialty_total = student.academic_specialty_total or 0.0
+            performance_total = student.comprehensive_performance_total or 0.0
+            
+            # 使用权重计算综合成绩
+            comprehensive_score = (academic_score * system_settings.academic_score_weight / 100) + \
+                                  (specialty_total * system_settings.specialty_score_weight / 100) + \
+                                  (performance_total * system_settings.performance_score_weight / 100)
+            
+            # 更新学生的综合成绩
+            student.comprehensive_score = comprehensive_score
+            updated_count += 1
+        
+        # 保存所有更改到数据库
+        db.session.commit()
+        
+        return jsonify({
+            'message': '综合成绩重新计算完成',
+            'updated_students': updated_count,
+            'weights': {
+                'academic_score_weight': system_settings.academic_score_weight,
+                'specialty_score_weight': system_settings.specialty_score_weight,
+                'performance_score_weight': system_settings.performance_score_weight
+            }
+        }), 200
+    
+    except Exception as e:
+        # 发生错误时回滚事务
+        db.session.rollback()
+        current_app.logger.error(f"重新计算综合成绩时出错: {str(e)}")
+        return jsonify({'error': '重新计算失败', 'details': str(e)}), 500
+
 # 获取学生推免成绩排名API
 @application_bp.route('/applications/students-ranking', methods=['GET'])
 def get_students_ranking():
@@ -1117,15 +1198,15 @@ def get_students_ranking():
                 'cet6_score': student.cet6_score,
                 'gpa': student.gpa,
                 'academic_score': student.academic_score,
-                'academic_specialty_total': student.academic_specialty_total,
-                'comprehensive_performance_total': student.comprehensive_performance_total,
-                'total_score': student.total_score,
+                'academic_specialty_total': student.academic_specialty_total or 0.0,
+                'comprehensive_performance_total': student.comprehensive_performance_total or 0.0,
+                'total_score': student.total_score or 0.0,
                 'major_ranking': student.major_ranking,
                 'major_total_students': student.total_students,
                 'specialty_score': student.academic_specialty_total or 0.0,
-                'comprehensive_score': student.comprehensive_performance_total or 0.0,
+                'comprehensive_score': student.comprehensive_score or 0.0,
                 'total_comprehensive_score': student.total_score or 0.0,
-                'final_comprehensive_score': student.comprehensive_score or 0.0,
+                'final_comprehensive_score': student.total_score or 0.0,
                 'sequence': 0
             }
     
@@ -1161,6 +1242,11 @@ def get_students_ranking():
             # 更新学术专长总分
             student_stats[student_id]['specialty_score'] = academic_score
             student_stats[student_id]['academic_specialty_total'] = academic_score
+            # 重新计算总分和最终综合分数
+            comp_perf_total = student_stats[student_id]['comprehensive_performance_total'] or 0.0
+            student_stats[student_id]['total_score'] = academic_score + comp_perf_total
+            student_stats[student_id]['total_comprehensive_score'] = student_stats[student_id]['total_score']
+            student_stats[student_id]['final_comprehensive_score'] = student_stats[student_id]['total_score']
     
         # 获取综合表现详情 - 使用Application模型，application_type属于综合表现类型，同时兼容旧的'comprehensive'类型
         for student_id in student_stats:
@@ -1192,9 +1278,12 @@ def get_students_ranking():
                 })
             student_stats[student_id]['comprehensive_items'] = comprehensive_items
             # 更新综合表现总分
-            student_stats[student_id]['comprehensive_score'] = comprehensive_score
             student_stats[student_id]['comprehensive_performance_total'] = comprehensive_score
-            student_stats[student_id]['total_comprehensive_score'] = academic_score + comprehensive_score
+            # 重新计算总分和最终综合分数
+            aca_spe_total = student_stats[student_id]['academic_specialty_total'] or 0.0
+            student_stats[student_id]['total_score'] = aca_spe_total + comprehensive_score
+            student_stats[student_id]['total_comprehensive_score'] = student_stats[student_id]['total_score']
+            student_stats[student_id]['final_comprehensive_score'] = student_stats[student_id]['total_score']
     
         # 如果Student模型没有数据，回退到Application模型并生成模拟数据
         if not students:
@@ -1330,7 +1419,23 @@ def get_students_ranking():
                 
                 # AC-AF: 总分与排名
                 stats['total_comprehensive_score'] = stats['specialty_score'] + stats['comprehensive_score']  # AC: 考核综合成绩总分
-                stats['final_score'] = stats['academic_score'] * 0.8 + stats['total_comprehensive_score']  # AD: 综合成绩
+                
+                # 获取系统设置中的权重配置
+                system_settings = SystemSettings.query.first()
+                if system_settings:
+                    # 使用系统设置中的权重比例计算综合成绩
+                    academic_score = stats['academic_score'] or 0.0
+                    specialty_score = stats['specialty_score'] or 0.0
+                    comprehensive_score = stats['comprehensive_score'] or 0.0
+                    
+                    stats['final_score'] = (academic_score * system_settings.academic_score_weight / 100) + \
+                                          (specialty_score * system_settings.specialty_score_weight / 100) + \
+                                          (comprehensive_score * system_settings.performance_score_weight / 100)  # AD: 综合成绩
+                else:
+                    # 如果没有系统设置，使用默认权重
+                    stats['final_score'] = stats['academic_score'] * 0.6 + \
+                                          stats['specialty_score'] * 0.25 + \
+                                          stats['comprehensive_score'] * 0.15  # AD: 综合成绩
                 # 处理专业排名和排名人数，确保student_id的最后两位是数字
                 try:
                     stats['major_ranking'] = int(student_id[-2:]) % 20 + 1  # AE: 专业成绩排名

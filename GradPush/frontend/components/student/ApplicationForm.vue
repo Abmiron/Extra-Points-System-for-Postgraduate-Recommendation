@@ -985,6 +985,10 @@ const refreshRules = () => {
   fetchMatchingRules()
 }
 
+// 在组件挂载时自动刷新规则选择栏
+onMounted(() => {
+  refreshRules()
+})
 
 // 原有方法保持不变...
 const getFileIcon = (fileName) => {
@@ -1317,17 +1321,17 @@ const submitForm = async () => {
       if (success) {
         alert('申请已提交，等待审核中...')
 
-        // 重置表单
+        // 重置表单，但保持默认的加分申请类型
         Object.assign(formData, {
           id: null,
           studentId: authStore.user?.studentId || '',
           name: authStore.userName,
           departmentId: authStore.user?.departmentId || '',
           majorId: authStore.user?.majorId || '',
-          applicationType: 'academic',
+          applicationType: 'academic', // 默认选择学术专长
           projectName: '',
           awardDate: '',
-          academicType: '',
+          academicType: 'competition', // 默认选择学业竞赛
           researchType: '',
           innovationLevel: '',
           innovationRole: '',
@@ -1351,8 +1355,7 @@ const submitForm = async () => {
         availableRules.value = []
         estimatedScore.value = 0
         
-        // 通知父组件切换到申请历史页面
-        emit('switch-page', 'application-history')
+        // 不再自动切换到申请历史页面，保持在加分申请页面
       } else {
         alert('提交失败，请稍后重试')
       }

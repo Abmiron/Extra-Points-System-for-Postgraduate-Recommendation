@@ -30,6 +30,9 @@
       <div class="filter-group">
         <button class="btn btn-outline" @click="resetFilter">清空筛选</button>
       </div>
+      <div class="filter-group">
+        <button class="btn btn-primary" @click="recalculateComprehensiveScores">重新计算综合成绩</button>
+      </div>
     </div>
 
     <!-- 成绩表格 -->
@@ -343,9 +346,9 @@ export default {
             
             // 从排名数据获取的字段
             academic_specialty_total: student.specialty_score || 0,
-            comprehensive_performance_total: student.comprehensive_score || 0,
+            comprehensive_performance_total: student.comprehensive_performance_total || 0,
             total_score: student.total_comprehensive_score || student.total_score,
-            comprehensive_score: student.final_score || student.comprehensive_score,
+            comprehensive_score: student.comprehensive_score || 0,
             major_ranking: student.major_ranking,
             total_students: student.major_total_students
           }
@@ -442,6 +445,32 @@ export default {
           alert('更新成绩信息失败')
           console.error('Error submitting student form:', error)
         }
+      }
+    },
+
+    // 重新计算所有学生的综合成绩
+    async recalculateComprehensiveScores() {
+      try {
+        // 显示确认对话框
+        if (confirm('确定要重新计算所有学生的综合成绩吗？此操作可能需要一些时间。')) {
+          this.loading = true
+          
+          // 获取当前登录用户信息
+          const userInfo = JSON.parse(localStorage.getItem('user'))
+          
+          // 调用API重新计算综合成绩
+          await api.recalculateComprehensiveScores({ username: userInfo?.username })
+          
+          // 刷新成绩数据
+          await this.loadScoresFromAPI()
+          
+          alert('综合成绩重新计算完成')
+        }
+      } catch (error) {
+        console.error('Error recalculating comprehensive scores:', error)
+        alert('重新计算综合成绩失败')
+      } finally {
+        this.loading = false
       }
     },
 

@@ -744,7 +744,7 @@ export default {
     }
     
     const deleteFaculty = async (id) => {
-      if (confirm('确定要删除这个学院吗？删除后相关的系和专业也会被删除。')) {
+      if (confirm('确定要删除这个学院吗？删除后相关的系、专业和学生也会被删除。')) {
         try {
           await api.deleteFacultyAdmin(id)
           loadFaculties()
@@ -791,7 +791,7 @@ export default {
     }
     
     const deleteDepartment = async (id) => {
-      if (confirm('确定要删除这个系吗？删除后相关的专业也会被删除。')) {
+      if (confirm('确定要删除这个系吗？删除后相关的专业和学生也会被删除。')) {
         try {
           await api.deleteDepartmentAdmin(id)
           loadDepartments()
@@ -866,7 +866,7 @@ export default {
     }
     
     const deleteMajor = async (id) => {
-      if (confirm('确定要删除这个专业吗？')) {
+      if (confirm('确定要删除这个专业吗？删除后相关的学生也会被删除。')) {
         try {
           await api.deleteMajorAdmin(id)
           loadMajors()

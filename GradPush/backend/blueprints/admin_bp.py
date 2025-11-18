@@ -93,14 +93,42 @@ def delete_faculty(faculty_id):
     if not faculty:
         return jsonify({'message': '学院不存在'}), 404
     
-    # 检查是否有系关联到该学院
-    if faculty.departments:
-        return jsonify({'message': '该学院下存在系，无法删除'}), 400
+    # 级联删除：学院 -> 系 -> 专业 -> 学生 -> 用户
+    from models import Student, Department, Major, Application
     
+    # 1. 先获取所有关联的申请记录
+    applications = Application.query.filter_by(faculty_id=faculty.id).all()
+    for application in applications:
+        db.session.delete(application)
+    
+    # 2. 再获取所有关联的学生，通过直接关联的方式
+    students = Student.query.filter_by(faculty_id=faculty.id).all()
+    for student in students:
+        # 删除关联的用户记录
+        if student.user:
+            db.session.delete(student.user)
+        # 删除学生记录
+        db.session.delete(student)
+    
+    # 3. 再获取所有关联的专业
+    majors = Major.query.join(Department).filter(Department.faculty_id == faculty.id).all()
+    for major in majors:
+        db.session.delete(major)
+    
+    # 4. 再获取所有关联的系
+    departments = Department.query.filter_by(faculty_id=faculty.id).all()
+    for department in departments:
+        db.session.delete(department)
+    
+    # 5. 最后删除学院
     db.session.delete(faculty)
-    db.session.commit()
     
-    return jsonify({'message': '学院删除成功'}), 200
+    try:
+        db.session.commit()
+        return jsonify({'message': '学院删除成功'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'删除学院失败: {str(e)}'}), 500
 
 # 系管理API
 
@@ -201,14 +229,37 @@ def delete_department(department_id):
     if not department:
         return jsonify({'message': '系不存在'}), 404
     
-    # 检查是否有专业关联到该系
-    if department.majors:
-        return jsonify({'message': '该系下存在专业，无法删除'}), 400
+    # 级联删除：系 -> 专业 -> 学生 -> 用户
+    from models import Student, Major, Application
     
+    # 1. 先获取所有关联的申请记录
+    applications = Application.query.filter_by(department_id=department.id).all()
+    for application in applications:
+        db.session.delete(application)
+    
+    # 2. 再获取所有关联的学生
+    students = Student.query.filter_by(department_id=department.id).all()
+    for student in students:
+        # 删除关联的用户记录
+        if student.user:
+            db.session.delete(student.user)
+        # 删除学生记录
+        db.session.delete(student)
+    
+    # 3. 再获取所有关联的专业
+    majors = Major.query.filter_by(department_id=department.id).all()
+    for major in majors:
+        db.session.delete(major)
+    
+    # 4. 最后删除系
     db.session.delete(department)
-    db.session.commit()
     
-    return jsonify({'message': '系删除成功'}), 200
+    try:
+        db.session.commit()
+        return jsonify({'message': '系删除成功'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'删除系失败: {str(e)}'}), 500
 
 # 专业管理API
 
@@ -321,10 +372,32 @@ def delete_major(major_id):
     if not major:
         return jsonify({'message': '专业不存在'}), 404
     
-    db.session.delete(major)
-    db.session.commit()
+    # 级联删除：专业 -> 申请记录 -> 学生 -> 用户
+    from models import Student, Application
     
-    return jsonify({'message': '专业删除成功'}), 200
+    # 1. 先获取所有关联的申请记录
+    applications = Application.query.filter_by(major_id=major.id).all()
+    for application in applications:
+        db.session.delete(application)
+    
+    # 2. 再获取所有关联的学生
+    students = Student.query.filter_by(major_id=major.id).all()
+    for student in students:
+        # 删除关联的用户记录
+        if student.user:
+            db.session.delete(student.user)
+        # 删除学生记录
+        db.session.delete(student)
+    
+    # 3. 最后删除专业
+    db.session.delete(major)
+    
+    try:
+        db.session.commit()
+        return jsonify({'message': '专业删除成功'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'删除专业失败: {str(e)}'}), 500
 
 # 系统设置API
 

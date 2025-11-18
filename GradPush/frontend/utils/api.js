@@ -65,7 +65,7 @@ export default {
   // 用户相关
   getCurrentUser: (username) => apiRequest(`/user/current?username=${username}`),
   getUser: (username) => apiRequest(`/user/${username}`),
-  updateUserInfo: (data) => apiRequest('/user/update', 'PUT', data),
+  updateUserInfo: (data) => apiRequest('/user/profile', 'PUT', data),
   updateProfile: (data) => apiRequest('/user/profile', 'PUT', data),
   uploadAvatar: (username, avatarFile) => {
     const formData = new FormData();
@@ -158,5 +158,12 @@ getRules: (filters) => {
   getStudentAdmin: (studentId) => apiRequest(`/admin/students/${studentId}`),
   createStudentAdmin: (data) => apiRequest('/admin/students', 'POST', data),
   updateStudentAdmin: (studentId, data) => apiRequest(`/admin/students/${studentId}`, 'PUT', data),
-  deleteStudentAdmin: (studentId) => apiRequest(`/admin/students/${studentId}`, 'DELETE')
+  deleteStudentAdmin: (studentId) => apiRequest(`/admin/students/${studentId}`, 'DELETE'),
+  
+  // 综合成绩计算相关API
+  recalculateComprehensiveScores: (params) => {
+    const queryParams = params ? new URLSearchParams(params).toString() : '';
+    const endpoint = `/applications/recalculate-comprehensive-scores${queryParams ? `?${queryParams}` : ''}`;
+    return apiRequest(endpoint, 'POST');
+  }
 };
