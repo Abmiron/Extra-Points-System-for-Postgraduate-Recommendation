@@ -193,8 +193,8 @@
               </div>
             </div>
             
-            <!-- 级别选择（科研成果和创新创业训练不需要） -->
-            <div class="form-group" v-if="!(ruleForm.type === 'academic' && (ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation'))">
+            <!-- 级别选择 -->
+            <div class="form-group" v-if="!(ruleForm.type === 'academic' && (ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation')) && currentLevels.length > 0">
               <label class="form-label">级别</label>
               <div class="radio-cards">
                 <div class="radio-card" v-for="level in currentLevels" :key="level.value" 
@@ -208,8 +208,8 @@
               </div>
             </div>
             
-            <!-- 等级选择（科研成果和创新创业训练不需要） -->
-            <div class="form-group" v-if="!(ruleForm.type === 'academic' && (ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation'))">
+            <!-- 等级选择（科研成果、创新创业训练和综合表现不需要） -->
+            <div class="form-group" v-if="ruleForm.type === 'academic' && !(ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation')">
               <label class="form-label">等级</label>
               <div class="radio-cards">
                 <div class="radio-card" v-for="grade in currentGrades" :key="grade.value" 
@@ -628,7 +628,7 @@ const saveRule = async () => {
     // 表单验证
     if (!ruleForm.name || !ruleForm.type || !ruleForm.sub_type || !ruleForm.score) {
       // 检查级别字段是否必填
-      const needLevel = ['volunteer', 'sports', 'honor_title'] // 需要级别的综合表现子类型
+      const needLevel = ['volunteer', 'sports', 'honor_title', 'international_internship', 'military_service', 'social_work'] // 需要级别的综合表现子类型
       if ((ruleForm.type !== 'academic' || !(ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation')) && 
           (ruleForm.type !== 'comprehensive' || needLevel.includes(ruleForm.sub_type)) && 
           !ruleForm.level) {
@@ -638,18 +638,10 @@ const saveRule = async () => {
     }
     
     // 检查等级字段是否必填
-    if (ruleForm.type !== 'comprehensive') {
-      // 学术类型：科研成果和创新创业训练不需要等级
-      if (!(ruleForm.type === 'academic' && (ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation')) && !ruleForm.grade) {
-        alert('请选择等级')
-        return
-      }
-    } else {
-      // 综合表现类型：所有子类型都需要等级
-      if (!ruleForm.grade) {
-        alert('请选择等级')
-        return
-      }
+    // 综合表现类型不需要等级，只有学术类型需要等级（科研成果和创新创业训练除外）
+    if (ruleForm.type !== 'comprehensive' && !(ruleForm.type === 'academic' && (ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation')) && !ruleForm.grade) {
+      alert('请选择等级')
+      return
     }
     
     // 对于学业竞赛，奖项类别是必填的
@@ -665,9 +657,7 @@ const saveRule = async () => {
     }
     
     // 对于综合表现类型，清空等级字段
-    if (ruleForm.type === 'comprehensive') {
-      ruleForm.grade = ''
-    }
+    // 综合表现类型不需要等级，设置为空值（已在表单验证中处理）
     
     // 对于非学业竞赛类型，清空奖项类别字段
     if (!(ruleForm.type === 'academic' && ruleForm.sub_type === 'competition')) {
@@ -792,48 +782,54 @@ const levelGradeOptions = {
   },
   comprehensive: {
     international_internship: {
-      levels: [],  // 国际组织实习不需要级别区分
+      levels: ['provincial', 'school', 'college'],  // 国际组织实习级别
       grades: {
-        '': ['full_year', 'half_year']  // 满一学年、超过一学期不满一年
+        provincial: ['full_year', 'half_year'],  // 省级：满一学年、超过一学期不满一年
+        school: ['full_year', 'half_year'],  // 校级：满一学年、超过一学期不满一年
+        college: ['full_year', 'half_year']  // 院级：满一学年、超过一学期不满一年
       }
     },
     military_service: {
-      levels: [],  // 参军入伍服兵役不需要级别区分
+      levels: ['provincial', 'school', 'college'],  // 参军入伍服兵役级别
       grades: {
-        '': ['1-2_years', '2+_years']  // 1-2年、2年以上
+        provincial: ['1-2_years', '2+_years'],  // 省级：1-2年、2年以上
+        school: ['1-2_years', '2+_years'],  // 校级：1-2年、2年以上
+        college: ['1-2_years', '2+_years']  // 院级：1-2年、2年以上
       }
     },
     volunteer: {
-      levels: ['international', 'national', 'provincial', 'university'],  // 志愿服务表彰级别
+      levels: ['provincial', 'school', 'college'],  // 志愿服务表彰级别
       grades: {
-        international: ['captain', 'team_member', 'individual'],  // 队长、队员、个人
-        national: ['captain', 'team_member', 'individual'],
-        provincial: ['captain', 'team_member', 'individual'],
-        university: ['captain', 'team_member', 'individual']
+        provincial: ['captain', 'team_member', 'individual'],  // 省级：队长、队员、个人
+        school: ['captain', 'team_member', 'individual'],  // 校级：队长、队员、个人
+        college: ['captain', 'team_member', 'individual']  // 院级：队长、队员、个人
       }
     },
     social_work: {
-      levels: [],  // 社会工作不需要级别区分
+      levels: ['provincial', 'school', 'college'],  // 社会工作级别
       grades: {
-        '': ['executive_chair', 'presidium_member', 'department_head', 'branch_secretary', 'monitor', 
-             'assistant_department_head', 'club_president', 'committee_member', 'assistant_club_president']  // 各类职务
+        provincial: ['executive_chair', 'presidium_member', 'department_head', 'branch_secretary', 'monitor', 
+             'assistant_department_head', 'club_president', 'committee_member', 'assistant_club_president'],  // 省级：各类职务
+        school: ['executive_chair', 'presidium_member', 'department_head', 'branch_secretary', 'monitor', 
+             'assistant_department_head', 'club_president', 'committee_member', 'assistant_club_president'],  // 校级：各类职务
+        college: ['executive_chair', 'presidium_member', 'department_head', 'branch_secretary', 'monitor', 
+             'assistant_department_head', 'club_president', 'committee_member', 'assistant_club_president']  // 院级：各类职务
       }
     },
     sports: {
-      levels: ['international', 'national', 'provincial'],  // 体育比赛级别
+      levels: ['provincial', 'school', 'college'],  // 体育比赛级别
       grades: {
-        international: ['champion', 'runner_up', 'third_place', 'top_8'],  // 国际级：冠军、亚军、季军、第四至八名
-        national: ['champion', 'runner_up', 'third_place', 'top_8'],  // 国家级：冠军、亚军、季军、第四至八名
-        provincial: ['champion', 'runner_up', 'third_place', 'top_8']  // 省级：冠军、亚军、季军、第四至八名
+        provincial: ['champion', 'runner_up', 'third_place', 'top_8'],  // 省级：冠军、亚军、季军、第四至八名
+        school: ['champion', 'runner_up', 'third_place', 'top_8'],  // 校级：冠军、亚军、季军、第四至八名
+        college: ['champion', 'runner_up', 'third_place', 'top_8']  // 院级：冠军、亚军、季军、第四至八名
       }
     },
     honor_title: {
-      levels: ['international', 'national', 'provincial', 'university'],  // 荣誉称号级别
+      levels: ['provincial', 'school', 'college'],  // 荣誉称号级别
       grades: {
-        international: ['individual', 'collective'],  // 个人、集体
-        national: ['individual', 'collective'],
-        provincial: ['individual', 'collective'],
-        university: ['individual', 'collective']
+        provincial: ['individual', 'collective'],  // 省级：个人、集体
+        school: ['individual', 'collective'],  // 校级：个人、集体
+        college: ['individual', 'collective']  // 院级：个人、集体
       }
     }
   }
@@ -855,14 +851,20 @@ const handleTypeChange = (type) => {
 // 处理子类型变化
 const handleSubTypeChange = () => {
   ruleForm.level = '' // 切换子类型时清空级别
-  ruleForm.grade = '' // 清空等级
+  // 综合表现类型不需要等级，其他类型需要清空等级
+  if (ruleForm.type !== 'comprehensive') {
+    ruleForm.grade = '' // 清空等级
+  }
   ruleForm.category = '' // 清空奖项类别
   ruleForm.research_type = '' // 清空科研成果类型
 }
 
 // 处理级别变化
 const handleLevelChange = () => {
-  ruleForm.grade = '' // 切换级别时清空等级
+  // 综合表现类型不需要等级，其他类型切换级别时清空等级
+  if (ruleForm.type !== 'comprehensive') {
+    ruleForm.grade = '' // 切换级别时清空等级
+  }
 }
 
 // 根据当前规则类型获取子类型选项
