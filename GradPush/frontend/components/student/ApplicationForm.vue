@@ -1295,6 +1295,7 @@ const submitForm = async () => {
       // 确保使用正确的字段名，与显示组件保持一致
       studentName,
       studentId,
+      facultyId: authStore.user?.facultyId || '',
       departmentId: authStore.user?.departmentId || '',
       majorId: authStore.user?.majorId || '',
       status: 'pending',

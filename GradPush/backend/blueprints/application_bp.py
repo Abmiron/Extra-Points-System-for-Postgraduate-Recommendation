@@ -350,6 +350,7 @@ def create_application():
             'studentId': 'student_id',
             'studentName': 'student_name',
             'name': 'student_name',  # 兼容前端可能使用的name字段
+            'facultyId': 'faculty_id',
             'departmentId': 'department_id',
             'majorId': 'major_id',
             'applicationType': 'application_type',
@@ -453,6 +454,7 @@ def create_application():
         new_application = Application(
             student_id=data.get('student_id'),
             student_name=data.get('student_name'),
+            faculty_id=data.get('faculty_id'),
             department_id=data.get('department_id'),
             major_id=data.get('major_id'),
             application_type=data.get('application_type'),

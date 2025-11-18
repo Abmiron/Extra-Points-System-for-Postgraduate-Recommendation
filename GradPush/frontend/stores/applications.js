@@ -167,6 +167,7 @@ export const useApplicationsStore = defineStore('applications', () => {
         'studentId': 'student_id',
         'studentName': 'student_name',
         'name': 'student_name', // 兼容前端使用name字段的情况
+        'facultyId': 'faculty_id',
         'department': 'department',
         'major': 'major',
         'applicationType': 'application_type',
@@ -339,6 +340,7 @@ export const useApplicationsStore = defineStore('applications', () => {
         'studentId': 'student_id',
         'studentName': 'student_name',
         'name': 'student_name', // 兼容前端使用name字段的情况
+        'facultyId': 'faculty_id',
         'department': 'department',
         'major': 'major',
         'applicationType': 'application_type',
