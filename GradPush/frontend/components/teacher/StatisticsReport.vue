@@ -291,7 +291,10 @@ const fetchStudentsRanking = async () => {
           
           // 分数信息
           specialtyScore: student.specialty_score || student.specialtyScore,
-          comprehensiveScore: student.comprehensive_score || student.comprehensiveScore,
+          // 综合表现学院核定总分
+          comprehensiveScore: student.comprehensive_performance_total || student.comprehensiveScore,
+          // 综合成绩
+          actualComprehensiveScore: student.comprehensive_score || student.actualComprehensiveScore,
           totalScore: student.total_score || student.totalScore,
           totalComprehensiveScore: student.total_comprehensive_score || student.totalComprehensiveScore,
           finalScore: student.final_score || student.finalScore,

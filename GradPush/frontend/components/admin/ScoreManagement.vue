@@ -181,14 +181,14 @@
               <div class="form-group">
                 <label class="form-label">学术专长</label>
                 <input type="number" class="form-control" v-model="formData.academic_specialty_total" placeholder="系统自动计算" min="0" max="12" step="0.01" readonly />
-                <div class="help-text">由系统根据申请记录自动计算</div>
+                <div class="help-text">由系统根据申请记录自动计算，直接计入综合成绩</div>
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">综合表现</label>
                 <input type="number" class="form-control" v-model="formData.comprehensive_performance_total" placeholder="系统自动计算" min="0" max="8" step="0.01" readonly />
-                <div class="help-text">由系统根据申请记录自动计算</div>
+                <div class="help-text">由系统根据申请记录自动计算，直接计入综合成绩</div>
               </div>
               <div class="form-group">
                 <label class="form-label">考核总分</label>
@@ -200,7 +200,7 @@
               <div class="form-group">
                 <label class="form-label">综合成绩</label>
                 <input type="number" class="form-control" v-model="formData.comprehensive_score" placeholder="系统自动计算" min="0" max="100" step="0.01" readonly />
-                <div class="help-text">由系统根据申请记录自动计算</div>
+                <div class="help-text">计算方式：学业成绩 * 学业成绩权重 / 100 + 学术专长总分 + 综合表现总分</div>
               </div>
               <div class="form-group">
                 <label class="form-label">专业排名</label>

@@ -544,7 +544,7 @@ def get_all_students():
             'academic_score': student.academic_score,
                     'academic_specialty_total': student.academic_specialty_total,
             'comprehensive_performance_total': student.comprehensive_performance_total,
-            'total_score': student.total_score,
+            'total_score': student.comprehensive_score,  # 保持向后兼容，使用comprehensive_score的值
             'comprehensive_score': student.comprehensive_score,
             'major_ranking': student.major_ranking,
             'total_students': student.total_students
@@ -589,7 +589,7 @@ def get_student(student_id):
         'academic_score': student.academic_score,
                     'academic_specialty_total': student.academic_specialty_total,
         'comprehensive_performance_total': student.comprehensive_performance_total,
-        'total_score': student.total_score,
+        'total_score': student.comprehensive_score,  # 保持向后兼容，使用comprehensive_score的值
         'comprehensive_score': student.comprehensive_score,
         'major_ranking': student.major_ranking,
         'total_students': student.total_students
@@ -670,8 +670,10 @@ def update_student(student_id):
         student.academic_specialty_total = data['academic_specialty_total']
     if 'comprehensive_performance_total' in data:
         student.comprehensive_performance_total = data['comprehensive_performance_total']
+    # total_score字段已废弃，建议使用comprehensive_score
     if 'total_score' in data:
-        student.total_score = data['total_score']
+        # 如果提供了total_score，将其值赋给comprehensive_score
+        student.comprehensive_score = data['total_score']
     if 'comprehensive_score' in data:
         student.comprehensive_score = data['comprehensive_score']
     if 'major_ranking' in data:

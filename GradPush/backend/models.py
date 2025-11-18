@@ -199,7 +199,6 @@ class Student(db.Model):
     comprehensive_performance_total = db.Column(db.Float, nullable=True)  # 学院核定总分
     
     # 总分与排名
-    total_score = db.Column(db.Float, nullable=True)  # 考核综合成绩总分
     comprehensive_score = db.Column(db.Float, nullable=True)  # 综合成绩
     major_ranking = db.Column(db.Integer, nullable=True)  # 专业成绩排名
     total_students = db.Column(db.Integer, nullable=True)  # 排名人数
@@ -274,13 +273,14 @@ class SystemSettings(db.Model):
     application_end = db.Column(db.Date, nullable=True)
     
     # 文件存储设置
-    file_size_limit = db.Column(db.Integer, default=10)  # MB
+    single_file_size_limit = db.Column(db.Integer, default=10)  # 单文件大小限制（MB）
+    total_file_size_limit = db.Column(db.Integer, default=50)  # 总文件大小限制（MB）
     allowed_file_types = db.Column(db.String(200), default='.pdf, .jpg, .jpeg, .png')
     
-    # 综合成绩比例设置
-    academic_score_weight = db.Column(db.Float, default=60.0)  # 学业成绩比例
-    specialty_score_weight = db.Column(db.Float, default=25.0)  # 学术专长成绩比例
-    performance_score_weight = db.Column(db.Float, default=15.0)  # 综合表现成绩比例
+    # 综合成绩设置
+    academic_score_weight = db.Column(db.Float, default=80.0)  # 学业成绩比例
+    specialty_max_score = db.Column(db.Float, default=15.0)  # 学术专长分数上限
+    performance_max_score = db.Column(db.Float, default=5.0)  # 综合表现分数上限
     
     # 系统维护信息
     system_status = db.Column(db.String(20), default='online')  # online, maintenance

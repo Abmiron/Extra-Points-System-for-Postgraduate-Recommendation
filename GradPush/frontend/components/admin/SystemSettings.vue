@@ -28,6 +28,70 @@
       </div>
     </div>
 
+    
+
+    <!-- 综合成绩设置 -->
+    <div class="card">
+      <div class="card-title">综合成绩设置</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">学业成绩比例</label>
+          <div class="input-with-unit">
+            <input type="number" class="form-control small-input" v-model="settings.academicScoreWeight" min="0" max="100">
+            <span class="unit">%</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">学术专长分数上限</label>
+          <div class="input-with-unit">
+            <input type="number" class="form-control small-input" v-model="settings.specialtyMaxScore" min="0" step="0.1">
+            <span class="unit">分</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">综合表现分数上限</label>
+          <div class="input-with-unit">
+            <input type="number" class="form-control small-input" v-model="settings.performanceMaxScore" min="0" step="0.1">
+            <span class="unit">分</span>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-outline" @click="saveScoreWeightSettings">保存设置</button>
+      </div>
+    </div>
+
+    <!-- 文件存储设置 -->
+    <div class="card">
+      <div class="card-title">文件存储设置</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">单文件大小限制</label>
+          <div class="input-with-unit">
+            <input type="number" class="form-control small-input" v-model="settings.singleFileSizeLimit">
+            <span class="unit">MB</span>
+          </div>
+          <div class="help-text">单个上传文件的最大大小</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">总文件大小限制</label>
+          <div class="input-with-unit">
+            <input type="number" class="form-control small-input" v-model="settings.totalFileSizeLimit">
+            <span class="unit">MB</span>
+          </div>
+          <div class="help-text">一次申请能上传的所有文件的总大小</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">允许的文件类型</label>
+        <input type="text" class="form-control" v-model="settings.allowedFileTypes">
+        <div class="help-text">多个扩展名用逗号分隔</div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-outline" @click="saveStorageSettings">保存设置</button>
+      </div>
+    </div>
+
     <!-- 系统公告管理 -->
     <div class="card">
       <div class="card-title">系统公告管理</div>
@@ -58,63 +122,6 @@
       </div>
       <div class="form-actions">
         <button class="btn btn-outline" @click="publishAnnouncement">发布公告</button>
-      </div>
-    </div>
-
-    <!-- 综合成绩比例设置 -->
-    <div class="card">
-      <div class="card-title">综合成绩比例设置</div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">学业成绩比例</label>
-          <div class="input-with-unit">
-            <input type="number" class="form-control small-input" v-model="settings.academicScoreWeight" min="0" max="100">
-            <span class="unit">%</span>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">学术专长成绩比例</label>
-          <div class="input-with-unit">
-            <input type="number" class="form-control small-input" v-model="settings.specialtyScoreWeight" min="0" max="100">
-            <span class="unit">%</span>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">综合表现成绩比例</label>
-          <div class="input-with-unit">
-            <input type="number" class="form-control small-input" v-model="settings.performanceScoreWeight" min="0" max="100">
-            <span class="unit">%</span>
-          </div>
-        </div>
-      </div>
-      <div class="form-group" style="margin-top: -10px;">
-        <div class="help-text" :class="{ 'text-danger': totalWeight !== 100 }">
-          总比例: {{ totalWeight }}% {{ totalWeight !== 100 ? '(必须等于100%)' : '(符合要求)' }}
-        </div>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn-outline" @click="saveScoreWeightSettings" :disabled="totalWeight !== 100">保存设置</button>
-      </div>
-    </div>
-
-    <!-- 文件存储设置 -->
-    <div class="card">
-      <div class="card-title">文件存储设置</div>
-      <div class="form-group">
-        <label class="form-label">文件大小限制</label>
-        <div class="input-with-unit">
-          <input type="number" class="form-control small-input" v-model="settings.fileSizeLimit">
-          <span class="unit">MB</span>
-        </div>
-        <div class="help-text">单个上传文件的最大大小</div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">允许的文件类型</label>
-        <input type="text" class="form-control" v-model="settings.allowedFileTypes">
-        <div class="help-text">多个扩展名用逗号分隔</div>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn-outline" @click="saveStorageSettings">保存设置</button>
       </div>
     </div>
 
@@ -185,18 +192,16 @@ const settings = reactive({
   academicYear: '',
   applicationStart: '',
   applicationEnd: '',
-  fileSizeLimit: '',
+  singleFileSizeLimit: '',
+  totalFileSizeLimit: '',
   allowedFileTypes: '',
   lastBackup: '',
   academicScoreWeight: '',
-  specialtyScoreWeight: '',
-  performanceScoreWeight: ''
+  specialtyMaxScore: '',
+  performanceMaxScore: ''
 })
 
-// 计算总比例
-const totalWeight = computed(() => {
-  return Number(settings.academicScoreWeight) + Number(settings.specialtyScoreWeight) + Number(settings.performanceScoreWeight)
-})
+
 
 const announcement = reactive({
   title: '',
@@ -222,7 +227,8 @@ const saveAcademicSettings = async () => {
 const saveStorageSettings = async () => {
   try {
     await api.updateSystemSettings({
-      fileSizeLimit: settings.fileSizeLimit,
+      singleFileSizeLimit: settings.singleFileSizeLimit,
+      totalFileSizeLimit: settings.totalFileSizeLimit,
       allowedFileTypes: settings.allowedFileTypes
     })
     alert('设置已保存')
@@ -236,8 +242,8 @@ const saveScoreWeightSettings = async () => {
   try {
     await api.updateSystemSettings({
       academicScoreWeight: settings.academicScoreWeight,
-      specialtyScoreWeight: settings.specialtyScoreWeight,
-      performanceScoreWeight: settings.performanceScoreWeight
+      specialtyMaxScore: settings.specialtyMaxScore,
+      performanceMaxScore: settings.performanceMaxScore
     })
     alert('设置已保存')
   } catch (error) {
@@ -320,12 +326,13 @@ async function loadSystemSettings() {
     settings.academicYear = data.academicYear || ''
     settings.applicationStart = data.applicationStart || ''
     settings.applicationEnd = data.applicationEnd || ''
-    settings.fileSizeLimit = data.fileSizeLimit || ''
+    settings.singleFileSizeLimit = data.singleFileSizeLimit || ''
+    settings.totalFileSizeLimit = data.totalFileSizeLimit || ''
     settings.allowedFileTypes = data.allowedFileTypes || ''
     settings.lastBackup = data.lastBackup || ''
     settings.academicScoreWeight = data.academicScoreWeight || ''
-    settings.specialtyScoreWeight = data.specialtyScoreWeight || ''
-    settings.performanceScoreWeight = data.performanceScoreWeight || ''
+    settings.specialtyMaxScore = data.specialtyMaxScore || ''
+    settings.performanceMaxScore = data.performanceMaxScore || ''
     
     systemStatus.value = data.systemStatus === '维护中' ? 'maintenance' : 'online'
   } catch (error) {

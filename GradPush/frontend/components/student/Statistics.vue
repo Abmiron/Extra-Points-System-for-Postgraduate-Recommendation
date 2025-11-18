@@ -15,13 +15,13 @@
       <div class="stat-card">
         <div class="stat-label">学术专长成绩</div>
         <div class="stat-value">{{ statistics.specialtyScore }}</div>
-        <div class="stat-note">(满分: 15分)</div>
+        <div class="stat-note">(满分: {{ systemSettings.specialtyMaxScore }}分)</div>
       </div>
 
       <div class="stat-card">
         <div class="stat-label">综合表现成绩</div>
         <div class="stat-value">{{ statistics.comprehensiveScore }}</div>
-        <div class="stat-note">(满分: 5分)</div>
+        <div class="stat-note">(满分: {{ systemSettings.performanceMaxScore }}分)</div>
       </div>
 
       <div class="stat-card">
@@ -115,6 +115,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useAuthStore } from '../../stores/auth.js'
 import { useApplicationsStore } from '../../stores/applications.js'
+import api from '../../utils/api.js'
 
 const authStore = useAuthStore()
 const applicationsStore = useApplicationsStore()
@@ -129,7 +130,13 @@ const statistics = reactive({
   specialtyScore: 0,
   comprehensiveScore: 0,
   totalScore: 0,
-  ranking: '-'
+  ranking: '-' 
+})
+
+const systemSettings = reactive({
+  specialtyMaxScore: 15,
+  performanceMaxScore: 5,
+  academicScoreWeight: 80
 })
 
 // 计算属性
@@ -171,6 +178,21 @@ const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString('zh-CN')
 }
 
+const loadSystemSettings = async () => {
+  try {
+    // 获取系统设置，包括满分值
+    const settingsData = await api.getSystemSettings()
+    systemSettings.specialtyMaxScore = settingsData.settings.specialtyMaxScore
+    systemSettings.performanceMaxScore = settingsData.settings.performanceMaxScore
+    systemSettings.academicScoreWeight = settingsData.settings.academicScoreWeight
+  } catch (err) {
+    console.error('加载系统设置失败:', err)
+    // 使用默认值
+    systemSettings.specialtyMaxScore = 15
+    systemSettings.performanceMaxScore = 5
+  }
+}
+
 const loadStatistics = async () => {
   loading.value = true
   error.value = null
@@ -180,6 +202,9 @@ const loadStatistics = async () => {
       error.value = '用户未登录'
       return
     }
+    
+    // 获取系统设置
+    await loadSystemSettings()
     
     // 调试：查看用户信息
     //console.log('当前用户:', authStore.user)
@@ -204,8 +229,8 @@ const loadStatistics = async () => {
     statistics.academicScore = statsData.academic_score || 0
     statistics.gpa = statsData.gpa || 0
     statistics.specialtyScore = statsData.specialty_score || 0
-    statistics.comprehensiveScore = statsData.comprehensive_score || 0
-    statistics.totalScore = statsData.total_score || 0
+    statistics.comprehensiveScore = statsData.comprehensive_performance_total || 0
+    statistics.totalScore = statsData.total_score || statsData.comprehensive_score || 0
     statistics.ranking = statsData.ranking || '-'
     
   } catch (err) {

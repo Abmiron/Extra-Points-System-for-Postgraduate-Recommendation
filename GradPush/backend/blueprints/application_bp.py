@@ -55,20 +55,19 @@ def update_student_statistics(student_id):
     student.academic_specialty_total = academic_score_calculated  # 学术专长总分
     student.comprehensive_performance_total = comprehensive_score  # 综合表现总分
     
-    # 获取系统设置中的权重比例
+    # 获取系统设置
     system_settings = SystemSettings.query.first()
     if system_settings:
-        # 使用权重计算综合成绩
+        # 计算综合成绩：学业成绩 * 学业成绩权重 / 100 + 学术专长总分 + 综合表现总分
         academic_score = student.academic_score or 0.0
         specialty_total = student.academic_specialty_total or 0.0
         performance_total = student.comprehensive_performance_total or 0.0
         
-        # 计算综合成绩：学业成绩 * 学业成绩权重 + 学术专长总分 * 学术专长权重 + 综合表现总分 * 综合表现权重
-        comprehensive_score = (academic_score * system_settings.academic_score_weight / 100) + \
-                              (specialty_total * system_settings.specialty_score_weight / 100) + \
-                              (performance_total * system_settings.performance_score_weight / 100)
+        calculated_score = (academic_score * system_settings.academic_score_weight / 100) + \
+                          specialty_total + performance_total
         
-        student.comprehensive_score = comprehensive_score
+        # 更新综合成绩
+        student.comprehensive_score = calculated_score
     
     # 保存更改到数据库
     db.session.commit()
@@ -417,6 +416,15 @@ def create_application():
         # 处理文件上传
         files = []
         if request.files:
+            # 获取系统设置中的文件大小限制和允许的文件类型
+            settings = SystemSettings.query.first()
+            if not settings:
+                return jsonify({'error': '系统设置未配置'}), 500
+            
+            single_file_size_limit = settings.single_file_size_limit * 1024 * 1024  # 转换为字节
+            total_file_size_limit = settings.total_file_size_limit * 1024 * 1024  # 转换为字节
+            allowed_file_types = settings.allowed_file_types
+            
             # 创建上传目录（如果不存在）
             if not os.path.exists(current_app.config['UPLOAD_FOLDER']):
                 os.makedirs(current_app.config['UPLOAD_FOLDER'])
@@ -425,9 +433,27 @@ def create_application():
             if not os.path.exists(current_app.config['FILE_FOLDER']):
                 os.makedirs(current_app.config['FILE_FOLDER'])
             
+            total_upload_size = 0
             # 保存文件并记录信息
             for file in request.files.getlist('files'):
                 if file and file.filename:
+                    # 检查文件类型
+                    file_ext = os.path.splitext(file.filename)[1].lower()
+                    if file_ext not in allowed_file_types:
+                        return jsonify({'error': f'文件类型不允许: {file.filename}，仅支持{allowed_file_types}'}), 400
+                    
+                    # 检查单个文件大小
+                    file.seek(0, 2)  # 移动到文件末尾
+                    file_size = file.tell()  # 获取文件大小
+                    file.seek(0)  # 重置文件指针到开头
+                    
+                    if file_size > single_file_size_limit:
+                        return jsonify({'error': f'单个文件大小超过限制: {file.filename}，最大允许{settings.single_file_size_limit}MB'}), 400
+                    
+                    # 检查总文件大小
+                    total_upload_size += file_size
+                    if total_upload_size > total_file_size_limit:
+                        return jsonify({'error': f'总文件大小超过限制，最大允许{settings.total_file_size_limit}MB'}), 400
                     # 生成安全且保留中文的文件名
                     def generate_safe_filename(original_filename):
                         """
@@ -607,6 +633,15 @@ def update_application(id):
         # 处理文件上传
         files = []
         if request.files:
+            # 获取系统设置中的文件大小限制和允许的文件类型
+            settings = SystemSettings.query.first()
+            if not settings:
+                return jsonify({'error': '系统设置未配置'}), 500
+            
+            single_file_size_limit = settings.single_file_size_limit * 1024 * 1024  # 转换为字节
+            total_file_size_limit = settings.total_file_size_limit * 1024 * 1024  # 转换为字节
+            allowed_file_types = settings.allowed_file_types
+            
             # 创建上传目录（如果不存在）
             if not os.path.exists(current_app.config['UPLOAD_FOLDER']):
                 os.makedirs(current_app.config['UPLOAD_FOLDER'])
@@ -615,9 +650,27 @@ def update_application(id):
             if not os.path.exists(current_app.config['FILE_FOLDER']):
                 os.makedirs(current_app.config['FILE_FOLDER'])
             
+            total_upload_size = 0
             # 保存文件并记录信息
             for key, file in request.files.items():
                 if file and file.filename:
+                    # 检查文件类型
+                    file_ext = os.path.splitext(file.filename)[1].lower()
+                    if file_ext not in allowed_file_types:
+                        return jsonify({'error': f'文件类型不允许: {file.filename}，仅支持{allowed_file_types}'}), 400
+                    
+                    # 检查单个文件大小
+                    file.seek(0, 2)  # 移动到文件末尾
+                    file_size = file.tell()  # 获取文件大小
+                    file.seek(0)  # 重置文件指针到开头
+                    
+                    if file_size > single_file_size_limit:
+                        return jsonify({'error': f'单个文件大小超过限制: {file.filename}，最大允许{settings.single_file_size_limit}MB'}), 400
+                    
+                    # 检查总文件大小
+                    total_upload_size += file_size
+                    if total_upload_size > total_file_size_limit:
+                        return jsonify({'error': f'总文件大小超过限制，最大允许{settings.total_file_size_limit}MB'}), 400
                     # 生成安全且保留中文的文件名
                     def generate_safe_filename(original_filename):
                         """
@@ -988,15 +1041,19 @@ def get_application_statistics():
         academic_score = student.academic_score or 0.0
         gpa = student.gpa or 0.0
         specialty_score = student.academic_specialty_total or 0.0
-        comprehensive_score = student.comprehensive_performance_total or 0.0
-        total_score = student.total_score or 0.0
+        performance_total = student.comprehensive_performance_total or 0.0
+        comprehensive_score = student.comprehensive_score or 0.0
+        # 保持向后兼容，total_score使用comprehensive_score的值
+        total_score = comprehensive_score
         ranking = student.major_ranking or '-'
     else:
         # 如果Student模型中没有数据，初始化默认值
         academic_score = 0.0
         gpa = 0.0
         specialty_score = 0.0
+        performance_total = 0.0
         comprehensive_score = 0.0
+        # 保持向后兼容，total_score使用comprehensive_score的值
         total_score = 0.0
         ranking = '-'
     
@@ -1014,6 +1071,7 @@ def get_application_statistics():
         'academic_score': round(academic_score, 2),
         'gpa': round(gpa, 2),
         'specialty_score': round(specialty_score, 2),
+        'comprehensive_performance_total': round(performance_total, 2),
         'comprehensive_score': round(comprehensive_score, 2),
         'ranking': ranking,
         'approved_count': len(applications)
@@ -1109,13 +1167,12 @@ def recalculate_comprehensive_scores():
             specialty_total = student.academic_specialty_total or 0.0
             performance_total = student.comprehensive_performance_total or 0.0
             
-            # 使用权重计算综合成绩
-            comprehensive_score = (academic_score * system_settings.academic_score_weight / 100) + \
-                                  (specialty_total * system_settings.specialty_score_weight / 100) + \
-                                  (performance_total * system_settings.performance_score_weight / 100)
+            # 计算综合成绩：学业成绩 * 学业成绩权重 / 100 + 学术专长总分 + 综合表现总分
+            calculated_score = (academic_score * system_settings.academic_score_weight / 100) + \
+                              specialty_total + performance_total
             
             # 更新学生的综合成绩
-            student.comprehensive_score = comprehensive_score
+            student.comprehensive_score = calculated_score
             updated_count += 1
         
         # 保存所有更改到数据库
@@ -1125,9 +1182,7 @@ def recalculate_comprehensive_scores():
             'message': '综合成绩重新计算完成',
             'updated_students': updated_count,
             'weights': {
-                'academic_score_weight': system_settings.academic_score_weight,
-                'specialty_score_weight': system_settings.specialty_score_weight,
-                'performance_score_weight': system_settings.performance_score_weight
+                'academic_score_weight': system_settings.academic_score_weight
             }
         }), 200
     
@@ -1200,13 +1255,18 @@ def get_students_ranking():
                 'academic_score': student.academic_score,
                 'academic_specialty_total': student.academic_specialty_total or 0.0,
                 'comprehensive_performance_total': student.comprehensive_performance_total or 0.0,
-                'total_score': student.total_score or 0.0,
+                # 保持向后兼容，total_score使用comprehensive_score的值
+                'total_score': student.comprehensive_score or 0.0,
                 'major_ranking': student.major_ranking,
                 'major_total_students': student.total_students,
                 'specialty_score': student.academic_specialty_total or 0.0,
                 'comprehensive_score': student.comprehensive_score or 0.0,
-                'total_comprehensive_score': student.total_score or 0.0,
-                'final_comprehensive_score': student.total_score or 0.0,
+                # 考核综合成绩总分（学术专长分 + 综合表现分）
+                'total_comprehensive_score': (student.academic_specialty_total or 0.0) + (student.comprehensive_performance_total or 0.0),
+                # 综合成绩（学业成绩*权重 + 学术专长分 + 综合表现分）
+                'final_comprehensive_score': student.comprehensive_score or 0.0,
+                # 向前端提供final_score字段，用于显示综合成绩
+                'final_score': student.comprehensive_score or 0.0,
                 'sequence': 0
             }
     
@@ -1246,7 +1306,9 @@ def get_students_ranking():
             comp_perf_total = student_stats[student_id]['comprehensive_performance_total'] or 0.0
             student_stats[student_id]['total_score'] = academic_score + comp_perf_total
             student_stats[student_id]['total_comprehensive_score'] = student_stats[student_id]['total_score']
-            student_stats[student_id]['final_comprehensive_score'] = student_stats[student_id]['total_score']
+            # 保持最终综合成绩为综合表现学院核定的成绩，不被覆盖
+            student_stats[student_id]['final_comprehensive_score'] = student_stats[student_id]['comprehensive_score']
+            student_stats[student_id]['final_score'] = student_stats[student_id]['comprehensive_score']
     
         # 获取综合表现详情 - 使用Application模型，application_type属于综合表现类型，同时兼容旧的'comprehensive'类型
         for student_id in student_stats:
@@ -1283,7 +1345,9 @@ def get_students_ranking():
             aca_spe_total = student_stats[student_id]['academic_specialty_total'] or 0.0
             student_stats[student_id]['total_score'] = aca_spe_total + comprehensive_score
             student_stats[student_id]['total_comprehensive_score'] = student_stats[student_id]['total_score']
-            student_stats[student_id]['final_comprehensive_score'] = student_stats[student_id]['total_score']
+            # 保持最终综合成绩为综合表现学院核定的成绩，不被覆盖
+            student_stats[student_id]['final_comprehensive_score'] = student_stats[student_id]['comprehensive_score']
+            student_stats[student_id]['final_score'] = student_stats[student_id]['comprehensive_score']
     
         # 如果Student模型没有数据，回退到Application模型并生成模拟数据
         if not students:
@@ -1314,6 +1378,10 @@ def get_students_ranking():
             for app in applications:
                 student_id = app.student_id
                 if student_id not in student_stats:
+                    # 尝试从Student模型获取学生的综合成绩数据
+                    student = Student.query.filter_by(student_id=app.student_id).first()
+                    comprehensive_score = student.comprehensive_score or 0.0
+                    
                     student_stats[student_id] = {
                         'student_id': app.student_id,
                         'student_name': app.student_name,
@@ -1324,8 +1392,9 @@ def get_students_ranking():
                         'facultyId': app.faculty_id,  # 添加学院ID
                         'faculty': app.faculty.name if app.faculty else '未知学院',  # 添加学院名称
                         'specialty_score': 0.0,
-                        'comprehensive_score': 0.0,
-                        'total_score': 0.0,
+                        'comprehensive_score': comprehensive_score,  # 原始综合成绩，来自Student模型
+                        'comprehensive_performance_score': 0.0,  # 新增：用于累加综合表现分数
+                        'total_score': comprehensive_score,
                         'total_comprehensive_score': 0.0,  # 考核综合成绩总分
                         'cet4_score': None,  # CET4成绩
                         'cet6_score': None,  # CET6成绩
@@ -1335,7 +1404,8 @@ def get_students_ranking():
                         'major_total_students': None,  # 排名人数
                         'academic_items': [],  # 添加学术专长项目列表
                         'comprehensive_items': [],  # 添加综合表现项目列表
-                        'final_score': 0.0  # 添加最终成绩字段
+                        'final_score': comprehensive_score,  # 添加最终成绩字段
+                        'final_comprehensive_score': comprehensive_score  # 添加最终综合成绩字段
                     }
                 
                 # 按项目类型添加到对应的列表
@@ -1358,7 +1428,7 @@ def get_students_ranking():
                 
                 # 累加综合表现分数并添加到综合表现列表
                 if app.application_type in ['international_internship', 'military_service', 'volunteer', 'social_work', 'sports', 'honor_title'] and app.final_score is not None:
-                    student_stats[student_id]['comprehensive_score'] += app.final_score
+                    student_stats[student_id]['comprehensive_performance_score'] += app.final_score
                     student_stats[student_id]['comprehensive_items'].append(app_item)
                 
                 # 兼容旧的application_type值
@@ -1367,7 +1437,7 @@ def get_students_ranking():
                     student_stats[student_id]['academic_items'].append(app_item)
                 
                 if app.application_type == 'comprehensive' and app.final_score is not None:
-                    student_stats[student_id]['comprehensive_score'] += app.final_score
+                    student_stats[student_id]['comprehensive_performance_score'] += app.final_score
                     student_stats[student_id]['comprehensive_items'].append(app_item)
             
             # 为了演示，添加一些模拟数据（仅当没有实际数据时）
@@ -1418,24 +1488,14 @@ def get_students_ranking():
                     }]
                 
                 # AC-AF: 总分与排名
-                stats['total_comprehensive_score'] = stats['specialty_score'] + stats['comprehensive_score']  # AC: 考核综合成绩总分
+                stats['total_comprehensive_score'] = stats['specialty_score'] + stats['comprehensive_performance_score']  # AC: 考核综合成绩总分(学术专长分+综合表现分)
                 
                 # 获取系统设置中的权重配置
                 system_settings = SystemSettings.query.first()
-                if system_settings:
-                    # 使用系统设置中的权重比例计算综合成绩
-                    academic_score = stats['academic_score'] or 0.0
-                    specialty_score = stats['specialty_score'] or 0.0
-                    comprehensive_score = stats['comprehensive_score'] or 0.0
-                    
-                    stats['final_score'] = (academic_score * system_settings.academic_score_weight / 100) + \
-                                          (specialty_score * system_settings.specialty_score_weight / 100) + \
-                                          (comprehensive_score * system_settings.performance_score_weight / 100)  # AD: 综合成绩
-                else:
-                    # 如果没有系统设置，使用默认权重
-                    stats['final_score'] = stats['academic_score'] * 0.6 + \
-                                          stats['specialty_score'] * 0.25 + \
-                                          stats['comprehensive_score'] * 0.15  # AD: 综合成绩
+                
+                # 始终使用原始综合成绩，不重新计算
+                stats['final_score'] = stats['comprehensive_score']
+                stats['final_comprehensive_score'] = stats['comprehensive_score']
                 # 处理专业排名和排名人数，确保student_id的最后两位是数字
                 try:
                     stats['major_ranking'] = int(student_id[-2:]) % 20 + 1  # AE: 专业成绩排名

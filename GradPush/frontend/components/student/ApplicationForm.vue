@@ -515,7 +515,7 @@
             </div>
             <div class="upload-text">
               <p>点击或拖拽文件到此处上传</p>
-              <p class="help-text">支持 PDF, JPG, PNG 格式，单个文件不超过10MB</p>
+              <p class="help-text">支持 {{ systemSettings.allowedFileTypes.join(', ') }} 格式，单个文件不超过{{ systemSettings.singleFileSizeLimit }}MB，总文件大小不超过{{ systemSettings.totalFileSizeLimit }}MB</p>
             </div>
           </div>
           <input type="file" ref="fileInput" style="display: none;" accept=".pdf,.jpg,.jpeg,.png"
@@ -664,6 +664,13 @@ import api from '../../utils/api'
 
 const availableRules = ref([])
 const estimatedScore = ref(0)
+
+// 系统设置
+const systemSettings = ref({
+  singleFileSizeLimit: 10, // 默认10MB
+  totalFileSizeLimit: 50, // 默认50MB
+  allowedFileTypes: ['.pdf', '.jpg', '.jpeg', '.png']
+})
 
 // 加载编辑数据
 const loadEditData = async (applicationId) => {
@@ -985,10 +992,25 @@ const refreshRules = () => {
   fetchMatchingRules()
 }
 
-// 在组件挂载时自动刷新规则选择栏
+// 在组件挂载时自动刷新规则选择栏并加载系统设置
 onMounted(() => {
   refreshRules()
+  loadSystemSettings()
 })
+
+// 加载系统设置
+const loadSystemSettings = async () => {
+  try {
+    const settings = await api.getSystemSettings()
+    systemSettings.value = {
+      singleFileSizeLimit: settings.singleFileSizeLimit || 10,
+      totalFileSizeLimit: settings.totalFileSizeLimit || 50,
+      allowedFileTypes: settings.allowedFileTypes || ['.pdf', '.jpg', '.jpeg', '.png']
+    }
+  } catch (error) {
+    console.error('获取系统设置失败:', error)
+  }
+}
 
 // 原有方法保持不变...
 const getFileIcon = (fileName) => {
@@ -1025,11 +1047,34 @@ const triggerFileInput = () => {
 
 const handleFileSelect = (event) => {
   const files = Array.from(event.target.files)
+  
+  // 检查总文件大小
+  const currentTotalSize = formData.files.reduce((total, file) => total + file.size, 0)
+  let totalSizeWithNewFiles = currentTotalSize
+  
+  for (const file of files) {
+    totalSizeWithNewFiles += file.size
+  }
+  
+  if (totalSizeWithNewFiles > systemSettings.value.totalFileSizeLimit * 1024 * 1024) {
+    alert(`总文件大小超过${systemSettings.value.totalFileSizeLimit}MB限制`)
+    event.target.value = ''
+    return
+  }
+  
+  // 检查单个文件大小和类型
   files.forEach(file => {
-    if (file.size > 10 * 1024 * 1024) {
-      alert(`文件 ${file.name} 大小超过10MB限制`)
+    if (file.size > systemSettings.value.singleFileSizeLimit * 1024 * 1024) {
+      alert(`文件 ${file.name} 大小超过${systemSettings.value.singleFileSizeLimit}MB限制`)
       return
     }
+    
+    const fileExt = `.${file.name.split('.').pop().toLowerCase()}`
+    if (!systemSettings.value.allowedFileTypes.includes(fileExt)) {
+      alert(`文件 ${file.name} 类型不支持，仅支持${systemSettings.value.allowedFileTypes.join(', ')}格式`)
+      return
+    }
+    
     // 使用展开运算符创建新数组，确保响应式更新
     formData.files = [...formData.files, file]
   })
@@ -1039,11 +1084,33 @@ const handleFileSelect = (event) => {
 const handleDrop = (event) => {
   event.preventDefault()
   const files = Array.from(event.dataTransfer.files)
+  
+  // 检查总文件大小
+  const currentTotalSize = formData.files.reduce((total, file) => total + file.size, 0)
+  let totalSizeWithNewFiles = currentTotalSize
+  
+  for (const file of files) {
+    totalSizeWithNewFiles += file.size
+  }
+  
+  if (totalSizeWithNewFiles > systemSettings.value.totalFileSizeLimit * 1024 * 1024) {
+    alert(`总文件大小超过${systemSettings.value.totalFileSizeLimit}MB限制`)
+    return
+  }
+  
+  // 检查单个文件大小和类型
   files.forEach(file => {
-    if (file.size > 10 * 1024 * 1024) {
-      alert(`文件 ${file.name} 大小超过10MB限制`)
+    if (file.size > systemSettings.value.singleFileSizeLimit * 1024 * 1024) {
+      alert(`文件 ${file.name} 大小超过${systemSettings.value.singleFileSizeLimit}MB限制`)
       return
     }
+    
+    const fileExt = `.${file.name.split('.').pop().toLowerCase()}`
+    if (!systemSettings.value.allowedFileTypes.includes(fileExt)) {
+      alert(`文件 ${file.name} 类型不支持，仅支持${systemSettings.value.allowedFileTypes.join(', ')}格式`)
+      return
+    }
+    
     // 使用展开运算符创建新数组，确保响应式更新
     formData.files = [...formData.files, file]
   })

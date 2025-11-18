@@ -12,11 +12,11 @@
         <!-- 左侧：文件预览区域 -->
         <div class="left-column" v-if="hasFiles">
           <div class="card preview-card">
-            <!-- 图片预览区域 -->
-            <div v-if="hasImages">
+            <!-- 可预览文件区域 -->
+            <div v-if="hasPreviewFiles">
               <div class="card-title">
                 证明文件预览
-                <span class="image-counter">({{ currentImageIndex + 1 }}/{{ imageFiles.length }})</span>
+                <span class="image-counter">({{ currentImageIndex + 1 }}/{{ previewFiles.length }})</span>
                 <div class="preview-controls">
                   <button class="btn-icon" @click="zoomOut" title="缩小" :disabled="previewZoomLevel <= 0.5">
                     <font-awesome-icon :icon="['fas', 'search-minus']" />
@@ -28,24 +28,28 @@
                   <button class="btn-icon" @click="resetPreviewZoom" title="重置">
                     <font-awesome-icon :icon="['fas', 'sync']" />
                   </button>
-                  <button class="btn-icon" @click.stop="downloadFile(currentImage)" title="下载">
+                  <button class="btn-icon" @click.stop="downloadFile(currentPreviewFile)" title="下载">
                     <font-awesome-icon :icon="['fas', 'download']" />
                   </button>
                 </div>
               </div>
 
-              <!-- 图片导航移动到控制按钮下方、主预览区域上方 -->
-              <div class="image-navigation" v-if="imageFiles.length > 1">
+              <!-- 预览文件导航 -->
+              <div class="image-navigation" v-if="previewFiles.length > 1">
                 <button class="nav-btn" @click="prevImage" :disabled="currentImageIndex === 0">
                   <font-awesome-icon :icon="['fas', 'chevron-left']" />
                 </button>
                 <div class="thumbnail-list">
-                  <div v-for="(file, index) in imageFiles" :key="index" class="thumbnail-item"
+                  <div v-for="(file, index) in previewFiles" :key="index" class="thumbnail-item"
                     :class="{ active: index === currentImageIndex }" @click="switchImage(index)">
-                    <img :src="getFileUrl(file)" :alt="file.name" />
+                    <img v-if="isImage(file)" :src="getFileUrl(file)" :alt="file.name" />
+                    <div v-else-if="isPDF(file)" class="pdf-thumbnail">
+                      <font-awesome-icon :icon="['fas', 'file-pdf']" class="pdf-icon" />
+                      <span class="pdf-name">{{ file.name.split('.')[0] }}</span>
+                    </div>
                   </div>
                 </div>
-                <button class="nav-btn" @click="nextImage" :disabled="currentImageIndex === imageFiles.length - 1">
+                <button class="nav-btn" @click="nextImage" :disabled="currentImageIndex === previewFiles.length - 1">
                   <font-awesome-icon :icon="['fas', 'chevron-right']" />
                 </button>
               </div>
@@ -54,23 +58,28 @@
               <div class="main-preview">
                 <div class="image-container" @mousedown="startPreviewDrag" @mousemove="onPreviewDrag"
                   @mouseup="endPreviewDrag" @mouseleave="endPreviewDrag" @wheel="onPreviewWheel">
-                  <div class="image-transform-container" :style="{
+                  <div v-if="isImage(currentPreviewFile)" class="image-transform-container" :style="{
                     transform: `translate(${previewDragOffset.x}px, ${previewDragOffset.y}px) scale(${previewZoomLevel})`,
                     cursor: isPreviewDragging ? 'grabbing' : 'grab'
                   }">
-                    <img :src="getFileUrl(currentImage)" :alt="currentImage.name" class="preview-image"
+                    <img :src="getFileUrl(currentPreviewFile)" :alt="currentPreviewFile.name" class="preview-image"
                       @load="onPreviewImageLoad" />
+                  </div>
+                  <div v-else-if="isPDF(currentPreviewFile)" class="pdf-preview-container" :style="{
+                    transform: `translate(${previewDragOffset.x}px, ${previewDragOffset.y}px) scale(${previewZoomLevel})`,
+                  }">
+                    <iframe :src="getFileUrl(currentPreviewFile)" class="pdf-preview" type="application/pdf" title="PDF Preview"></iframe>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- 没有图片但有其他文件时显示提示 -->
+            <!-- 没有可预览文件但有其他文件时显示提示 -->
             <div v-else>
               <div class="card-title">证明文件预览</div>
               <div class="no-files">
                 <font-awesome-icon :icon="['fas', 'file-image']" class="no-files-icon" />
-                <p>暂无图片文件可预览</p>
+                <p>暂无图片或PDF文件可预览</p>
                 <p class="no-files-desc">您可以在右侧文件列表中下载其他格式的文件</p>
               </div>
             </div>
@@ -221,7 +230,7 @@
                 <font-awesome-icon :icon="getFileIcon(file.name)" class="file-icon" />
                 <span class="file-name">{{ file.name }}</span>
                 <div class="file-actions">
-                  <button v-if="isImage(file)" class="btn-icon" @click="switchToImage(file)" :class="{ active: isCurrentImage(file) }" title="预览">
+                  <button v-if="isImage(file) || isPDF(file)" class="btn-icon" @click="switchToImage(file)" :class="{ active: isCurrentImage(file) }" title="预览">
                     <font-awesome-icon :icon="['fas', 'eye']" />
                   </button>
                   <button class="btn-icon" @click.stop="downloadFile(file)" title="下载">
@@ -306,9 +315,36 @@ const imageFiles = computed(() => {
   return validFiles.filter(file => isImage(file));
 })
 
+const pdfFiles = computed(() => {
+  // 确保 files 是数组，且过滤掉 null/undefined 等无效元素
+  const validFiles = (props.application.files || []).filter(file => file && typeof file === 'object');
+  return validFiles.filter(file => isPDF(file));
+})
+
+// 所有可预览的文件（图片和PDF）
+const previewFiles = computed(() => {
+  // 确保 files 是数组，且过滤掉 null/undefined 等无效元素
+  const validFiles = (props.application.files || []).filter(file => file && typeof file === 'object');
+  return validFiles.filter(file => isImage(file) || isPDF(file));
+})
+
 const hasImages = computed(() => imageFiles.value.length > 0)
+const hasPDFs = computed(() => pdfFiles.value.length > 0)
+const hasPreviewFiles = computed(() => previewFiles.value.length > 0)
 const hasFiles = computed(() => props.application.files && props.application.files.length > 0)
 const currentImage = computed(() => imageFiles.value[currentImageIndex.value] || null)
+
+// 当前预览的文件（图片或PDF）
+const currentPreviewFile = computed(() => {
+  if (previewFiles.value.length > 0) {
+    // 如果当前索引超出范围，重置为0
+    if (currentImageIndex.value >= previewFiles.value.length) {
+      currentImageIndex.value = 0;
+    }
+    return previewFiles.value[currentImageIndex.value];
+  }
+  return null;
+})
 
 // 分数不匹配警告
 const isScoreMismatch = computed(() => {
@@ -355,6 +391,14 @@ const isImage = (file) => {
   return imageExtensions.includes(ext)
 }
 
+// 判断是否为PDF文件
+const isPDF = (file) => {
+  // 先判断 file 和 file.name 是否存在
+  if (!file || !file.name) return false;
+  const ext = file.name.split('.').pop().toLowerCase()
+  return ext === 'pdf'
+}
+
 const getFileIcon = (fileName) => {
   if (!fileName) {
     return ['fas', 'file-question']
@@ -395,7 +439,7 @@ const getFileUrl = (file) => {
   return fileUrl || ''
 }
 
-// 图片导航方法
+// 预览文件导航方法
 const switchImage = (index) => {
   currentImageIndex.value = index
   resetPreviewZoom()
@@ -409,18 +453,18 @@ const prevImage = () => {
 }
 
 const nextImage = () => {
-  if (currentImageIndex.value < imageFiles.value.length - 1) {
+  if (currentImageIndex.value < previewFiles.value.length - 1) {
     currentImageIndex.value++
     resetPreviewZoom()
   }
 }
 
 const switchToImage = (file) => {
-  const index = imageFiles.value.findIndex(f => f.name === file.name)
+  const index = previewFiles.value.findIndex(f => f.name === file.name)
   if (index !== -1) switchImage(index)
 }
 
-const isCurrentImage = (file) => currentImage.value && currentImage.value.name === file.name
+const isCurrentImage = (file) => currentPreviewFile.value && currentPreviewFile.value.name === file.name
 
 // 预览区域缩放控制
 const zoomIn = () => {
@@ -771,6 +815,48 @@ const rejectApplication = () => {
   max-height: 100%;
   object-fit: contain;
   transition: transform 0.1s ease-out;
+}
+
+/* PDF预览样式 */
+.pdf-preview-container {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.pdf-preview {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* PDF缩略图样式 */
+.pdf-thumbnail {
+  width: 100%;
+  height: 100%;
+  background-color: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+.pdf-icon {
+  font-size: 20px;
+  margin-bottom: 5px;
+  color: #dc3545;
+}
+
+.pdf-name {
+  font-size: 10px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
 }
 
 .image-navigation {

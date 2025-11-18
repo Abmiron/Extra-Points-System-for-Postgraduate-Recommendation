@@ -417,11 +417,12 @@ def get_system_settings():
         'academicYear': settings.academic_year,
         'applicationStart': settings.application_start.isoformat() if settings.application_start else None,
         'applicationEnd': settings.application_end.isoformat() if settings.application_end else None,
-        'fileSizeLimit': settings.file_size_limit,
+        'singleFileSizeLimit': settings.single_file_size_limit,
+        'totalFileSizeLimit': settings.total_file_size_limit,
         'allowedFileTypes': settings.allowed_file_types,
         'academicScoreWeight': settings.academic_score_weight,
-        'specialtyScoreWeight': settings.specialty_score_weight,
-        'performanceScoreWeight': settings.performance_score_weight,
+        'specialtyMaxScore': settings.specialty_max_score,
+        'performanceMaxScore': settings.performance_max_score,
         'systemStatus': settings.system_status,
         'lastBackup': settings.last_backup.isoformat() if settings.last_backup else None
     }
@@ -449,8 +450,11 @@ def update_system_settings():
     if 'applicationEnd' in data and data['applicationEnd']:
         settings.application_end = datetime.fromisoformat(data['applicationEnd']).date()
     
-    if 'fileSizeLimit' in data:
-        settings.file_size_limit = data['fileSizeLimit']
+    if 'singleFileSizeLimit' in data:
+        settings.single_file_size_limit = data['singleFileSizeLimit']
+    
+    if 'totalFileSizeLimit' in data:
+        settings.total_file_size_limit = data['totalFileSizeLimit']
     
     if 'allowedFileTypes' in data:
         settings.allowed_file_types = data['allowedFileTypes']
@@ -458,11 +462,11 @@ def update_system_settings():
     if 'academicScoreWeight' in data:
         settings.academic_score_weight = data['academicScoreWeight']
     
-    if 'specialtyScoreWeight' in data:
-        settings.specialty_score_weight = data['specialtyScoreWeight']
+    if 'specialtyMaxScore' in data:
+        settings.specialty_max_score = data['specialtyMaxScore']
     
-    if 'performanceScoreWeight' in data:
-        settings.performance_score_weight = data['performanceScoreWeight']
+    if 'performanceMaxScore' in data:
+        settings.performance_max_score = data['performanceMaxScore']
     
     if 'systemStatus' in data:
         settings.system_status = data['systemStatus']
@@ -477,11 +481,12 @@ def update_system_settings():
         'academicYear': settings.academic_year,
         'applicationStart': settings.application_start.isoformat() if settings.application_start else None,
         'applicationEnd': settings.application_end.isoformat() if settings.application_end else None,
-        'fileSizeLimit': settings.file_size_limit,
+        'singleFileSizeLimit': settings.single_file_size_limit,
+        'totalFileSizeLimit': settings.total_file_size_limit,
         'allowedFileTypes': settings.allowed_file_types,
         'academicScoreWeight': settings.academic_score_weight,
-        'specialtyScoreWeight': settings.specialty_score_weight,
-        'performanceScoreWeight': settings.performance_score_weight,
+        'specialtyMaxScore': settings.specialty_max_score,
+        'performanceMaxScore': settings.performance_max_score,
         'systemStatus': settings.system_status,
         'lastBackup': settings.last_backup.isoformat() if settings.last_backup else None
     }

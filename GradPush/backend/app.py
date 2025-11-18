@@ -6,10 +6,12 @@ Flask应用主入口文件
 是整个后端应用的启动点和核心配置文件。
 """
 
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, make_response
 from flask_cors import CORS
 from flask_migrate import Migrate
 import os
+from werkzeug.utils import safe_join
+from urllib.parse import quote
 from extensions import db
 
 # 创建应用实例
@@ -44,21 +46,33 @@ from routes import main_bp
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
     response = send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    # 使用安全的方式处理中文文件名
+    response.headers['Content-Disposition'] = f'attachment; filename*=UTF-8''={quote(filename)}'
     return response
 
 # 配置头像文件的静态服务
 @app.route('/uploads/avatars/<path:filename>')
 def uploaded_avatar(filename):
     response = send_from_directory(app.config['AVATAR_FOLDER'], filename)
-    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    # 使用安全的方式处理中文文件名
+    response.headers['Content-Disposition'] = f'attachment; filename*=UTF-8''={quote(filename)}'
     return response
 
 # 配置普通文件的静态服务
 @app.route('/uploads/files/<path:filename>')
 def uploaded_app_file(filename):
+    # 检查文件是否是PDF
+    is_pdf = filename.lower().endswith('.pdf')
     response = send_from_directory(app.config['FILE_FOLDER'], filename)
-    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    
+    if is_pdf:
+        # PDF文件设置为内联显示
+        response.headers['Content-Disposition'] = f'inline; filename*=UTF-8''={quote(filename)}'
+        response.headers['Content-Type'] = 'application/pdf'
+    else:
+        # 其他文件设置为附件下载
+        response.headers['Content-Disposition'] = f'attachment; filename*=UTF-8''={quote(filename)}'
+    
     return response
 
 # 注册蓝图
