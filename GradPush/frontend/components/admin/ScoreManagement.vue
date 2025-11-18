@@ -52,7 +52,6 @@
               <th>CET6成绩</th>
               <th>GPA</th>
               <th>学业成绩</th>
-              <th>学业加权</th>
               <th>学术专长</th>
               <th>综合表现</th>
               <th>考核总分</th>
@@ -70,7 +69,6 @@
               <td>{{ student.cet6_score || '-' }}</td>
               <td>{{ student.gpa || '-' }}</td>
               <td>{{ student.academic_score || '-' }}</td>
-              <td>{{ student.academic_weighted || '-' }}</td>
               <td>{{ student.academic_specialty_total || '-' }}</td>
               <td>{{ student.comprehensive_performance_total || '-' }}</td>
               <td>{{ student.total_score || '-' }}</td>
@@ -178,11 +176,6 @@
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">学业加权</label>
-                <input type="number" class="form-control" v-model="formData.academic_weighted" placeholder="请输入学业加权成绩" min="0" max="80" step="0.01" />
-                <div v-if="errors.academic_weighted" class="error-message">{{ errors.academic_weighted }}</div>
-              </div>
-              <div class="form-group">
                 <label class="form-label">学术专长</label>
                 <input type="number" class="form-control" v-model="formData.academic_specialty_total" placeholder="系统自动计算" min="0" max="12" step="0.01" readonly />
                 <div class="help-text">由系统根据申请记录自动计算</div>
@@ -196,27 +189,27 @@
               </div>
               <div class="form-group">
                 <label class="form-label">考核总分</label>
-                <input type="number" class="form-control" v-model="formData.total_score" placeholder="请输入考核总分" min="0" max="100" step="0.01" />
-                <div v-if="errors.total_score" class="error-message">{{ errors.total_score }}</div>
+                <input type="number" class="form-control" v-model="formData.total_score" placeholder="系统自动计算" min="0" max="100" step="0.01" readonly />
+                <div class="help-text">由系统根据申请记录自动计算</div>
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">综合成绩</label>
-                <input type="number" class="form-control" v-model="formData.comprehensive_score" placeholder="请输入综合成绩" min="0" max="100" step="0.01" />
-                <div v-if="errors.comprehensive_score" class="error-message">{{ errors.comprehensive_score }}</div>
+                <input type="number" class="form-control" v-model="formData.comprehensive_score" placeholder="系统自动计算" min="0" max="100" step="0.01" readonly />
+                <div class="help-text">由系统根据申请记录自动计算</div>
               </div>
               <div class="form-group">
                 <label class="form-label">专业排名</label>
-                <input type="number" class="form-control" v-model="formData.major_ranking" placeholder="请输入专业排名" min="1" step="1" />
-                <div v-if="errors.major_ranking" class="error-message">{{ errors.major_ranking }}</div>
+                <input type="number" class="form-control" v-model="formData.major_ranking" placeholder="系统自动计算" min="1" step="1" readonly />
+                <div class="help-text">由系统根据申请记录自动计算</div>
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">排名人数</label>
-                <input type="number" class="form-control" v-model="formData.total_students" placeholder="请输入排名人数" min="1" step="1" />
-                <div v-if="errors.total_students" class="error-message">{{ errors.total_students }}</div>
+                <input type="number" class="form-control" v-model="formData.total_students" placeholder="系统自动计算" min="1" step="1" readonly />
+                <div class="help-text">由系统根据申请记录自动计算</div>
               </div>
             </div>
             <div class="form-actions">
@@ -270,7 +263,6 @@ export default {
         cet6_score: null,
         gpa: null,
         academic_score: null,
-        academic_weighted: null,
         academic_specialty_total: null,
         comprehensive_performance_total: null,
         total_score: null,
@@ -348,7 +340,6 @@ export default {
             cet6_score: student.cet6_score,
             gpa: student.gpa,
             academic_score: student.academic_score,
-            academic_weighted: student.academic_weighted,
             
             // 从排名数据获取的字段
             academic_specialty_total: student.specialty_score || 0,
@@ -401,7 +392,7 @@ export default {
     // 打开编辑模态框
     openEditModal(row) {
       this.formData = {
-        id: row.student_id, // 使用student_id作为更新API的ID参数
+        id: row.id, // 使用主键ID作为更新API的ID参数
         student_id: row.student_id,
         student_name: row.student_name,
         gender: row.gender,
@@ -412,7 +403,6 @@ export default {
         cet6_score: row.cet6_score,
         gpa: row.gpa,
         academic_score: row.academic_score,
-        academic_weighted: row.academic_weighted,
         academic_specialty_total: row.academic_specialty_total,
         comprehensive_performance_total: row.comprehensive_performance_total,
         total_score: row.total_score,

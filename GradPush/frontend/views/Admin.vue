@@ -23,7 +23,7 @@ import Sidebar from '../components/common/Sidebar.vue'
 
 // 导入管理员端组件
 import UserManagement from '../components/admin/UserManagement.vue'
-import DataManagement from '../components/admin/DataManagement.vue'
+import ApplicationManagement from '../components/admin/ApplicationManagement.vue'
 import RuleManagement from '../components/admin/RuleManagement.vue'
 import StatisticsReport from '../components/admin/StatisticsReport.vue'
 import SystemSettings from '../components/admin/SystemSettings.vue'
@@ -41,7 +41,7 @@ const currentPage = ref('user-management')
 const pageComponents = {
   'user-management': UserManagement,
   'score-management': ScoreManagement,
-  'data-management': DataManagement,
+  'data-management': ApplicationManagement,
   'rule-management': RuleManagement,
   'faculty-management': FacultyManagement,
   'statistics-report': StatisticsReport,

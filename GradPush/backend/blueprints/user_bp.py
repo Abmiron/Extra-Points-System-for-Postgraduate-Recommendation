@@ -12,13 +12,14 @@
 - 学生信息管理（增删改查）
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from models import User, Faculty, Department, Major, Student
 import os
 import uuid
 from werkzeug.utils import secure_filename
 from PIL import Image
 from io import BytesIO
+from extensions import db
 
 # 创建蓝图实例
 user_bp = Blueprint('user', __name__, url_prefix='/api')
@@ -33,12 +34,29 @@ def get_user(username):
     
     return _get_user_data(user)
 
+# 获取当前登录用户信息接口
+@user_bp.route('/user/current', methods=['GET'])
+def get_current_user():
+    # 从请求头获取用户名（实际项目中应该从JWT token获取）
+    # 这里简化处理，只从URL参数获取username
+    username = request.args.get('username')
+    
+    if not username:
+        return jsonify({'message': '缺少用户名参数'}), 400
+    
+    user = User.query.filter_by(username=username).first()
+    
+    if not user:
+        return jsonify({'message': '用户不存在'}), 404
+    
+    return _get_user_data(user)
+
 # 获取当前学生用户信息接口（为了解决前端调用/api/user/student的问题）
 @user_bp.route('/user/student', methods=['GET'])
 def get_student_user():
     # 从请求头获取用户名（实际项目中应该从JWT token获取）
-    # 这里简化处理，从请求参数或请求体中获取username
-    username = request.args.get('username') or request.json.get('username') if request.json else None
+    # 这里简化处理，只从URL参数获取username
+    username = request.args.get('username')
     
     if not username:
         return jsonify({'message': '缺少用户名参数'}), 400
@@ -168,8 +186,6 @@ def delete_user(user_id):
     if not user:
         return jsonify({'message': '用户不存在'}), 404
     
-    from app import db
-    
     # 如果是学生用户，同时删除关联的Student记录
     if user.role == 'student' and user.student:
         db.session.delete(user.student)
@@ -216,7 +232,6 @@ def update_user(user_id):
     if 'status' in data:
         user.status = data['status']
     
-    from app import db
     db.session.commit()
     
     return jsonify({'message': '用户信息更新成功'}), 200
@@ -245,7 +260,6 @@ def admin_reset_password(user_id):
     # 设置新密码
     user.set_password(new_password)
     
-    from app import db
     db.session.commit()
     
     return jsonify({'message': '密码重置成功'}), 200
@@ -280,7 +294,6 @@ def update_profile():
     if 'phone' in data:
         user.phone = data['phone']
     
-    from app import db
     db.session.commit()
     
     # 获取学院、系和专业名称
@@ -328,7 +341,6 @@ def reset_avatar():
         # 将用户头像设置为空字符串，表示使用默认头像
         user.avatar = ''
         
-        from app import db
         db.session.commit()
         
         # 获取学院、系和专业名称
@@ -390,22 +402,19 @@ def upload_avatar():
         return jsonify({'message': '用户不存在'}), 404
     
     try:
-        # 导入app以避免循环导入
-        from app import app
-        
         # 确保上传目录存在
-        if not os.path.exists(app.config['UPLOAD_FOLDER']):
-            os.makedirs(app.config['UPLOAD_FOLDER'])
+        if not os.path.exists(current_app.config['UPLOAD_FOLDER']):
+            os.makedirs(current_app.config['UPLOAD_FOLDER'])
         
         # 确保头像上传目录存在
-        if not os.path.exists(app.config['AVATAR_FOLDER']):
-            os.makedirs(app.config['AVATAR_FOLDER'])
+        if not os.path.exists(current_app.config['AVATAR_FOLDER']):
+            os.makedirs(current_app.config['AVATAR_FOLDER'])
         
-        # 生成唯一的文件名
-        filename = secure_filename(file.filename)
+        # 生成唯一的文件名和路径
+        filename = file.filename
         ext = os.path.splitext(filename)[1]
-        unique_filename = f"{uuid.uuid4().hex}{ext}"
-        file_path = os.path.join(app.config['AVATAR_FOLDER'], unique_filename)
+        unique_filename = f"{uuid.uuid4()}{ext}"
+        file_path = os.path.join(current_app.config['AVATAR_FOLDER'], unique_filename)
         
         # 处理图片：调整大小和压缩
         image = Image.open(file)
@@ -433,7 +442,6 @@ def upload_avatar():
         # 更新用户头像路径
         user.avatar = f"/uploads/avatars/{unique_filename}"
         
-        from app import db
         db.session.commit()
         
         # 获取学院、系和专业名称
@@ -488,7 +496,6 @@ def change_password():
     # 设置新密码
     user.set_password(new_password)
     
-    from app import db
     db.session.commit()
     
     return jsonify({'message': '密码修改成功'}), 200
@@ -535,8 +542,7 @@ def get_all_students():
             'cet6_score': student.cet6_score,
             'gpa': student.gpa,
             'academic_score': student.academic_score,
-            'academic_weighted': student.academic_weighted,
-            'academic_specialty_total': student.academic_specialty_total,
+                    'academic_specialty_total': student.academic_specialty_total,
             'comprehensive_performance_total': student.comprehensive_performance_total,
             'total_score': student.total_score,
             'comprehensive_score': student.comprehensive_score,
@@ -581,8 +587,7 @@ def get_student(student_id):
         'cet6_score': student.cet6_score,
         'gpa': student.gpa,
         'academic_score': student.academic_score,
-        'academic_weighted': student.academic_weighted,
-        'academic_specialty_total': student.academic_specialty_total,
+                    'academic_specialty_total': student.academic_specialty_total,
         'comprehensive_performance_total': student.comprehensive_performance_total,
         'total_score': student.total_score,
         'comprehensive_score': student.comprehensive_score,
@@ -626,7 +631,6 @@ def create_student():
         # 如果存在，建立关联
         existing_user.student_id = data['student_id']
         
-    from app import db
     db.session.add(new_student)
     db.session.commit()
     
@@ -661,8 +665,7 @@ def update_student(student_id):
         student.gpa = data['gpa']
     if 'academic_score' in data:
         student.academic_score = data['academic_score']
-    if 'academic_weighted' in data:
-        student.academic_weighted = data['academic_weighted']
+    # academic_weighted字段已移除，由academic_score自动计算
     if 'academic_specialty_total' in data:
         student.academic_specialty_total = data['academic_specialty_total']
     if 'comprehensive_performance_total' in data:
@@ -676,7 +679,6 @@ def update_student(student_id):
     if 'total_students' in data:
         student.total_students = data['total_students']
     
-    from app import db
     db.session.commit()
     
     return jsonify({'message': '学生信息更新成功'}), 200
@@ -688,8 +690,6 @@ def delete_student(student_id):
     
     if not student:
         return jsonify({'message': '学生不存在'}), 404
-    
-    from app import db
     
     # 先将关联的User记录的student_id设置为None
     user = User.query.filter_by(student_id=student.student_id).first()

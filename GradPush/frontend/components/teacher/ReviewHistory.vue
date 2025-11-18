@@ -391,9 +391,10 @@ const closeEditDialog = () => {
 }
 
 // 审核操作处理
-const handleApproveApplication = async (applicationId, finalScore, comment) => {
+const handleApproveApplication = async (approveData) => {
   try {
-    const success = await applicationsStore.approveApplication(applicationId, finalScore, comment, authStore.userName)
+    const { applicationId, finalScore, approveComment } = approveData
+    const success = await applicationsStore.approveApplication(applicationId, finalScore, approveComment, authStore.userName)
     if (success) {
       alert('审核通过成功')
       closeEditDialog()
@@ -406,9 +407,10 @@ const handleApproveApplication = async (applicationId, finalScore, comment) => {
   }
 }
 
-const handleRejectApplication = async (applicationId, comment) => {
+const handleRejectApplication = async (rejectData) => {
   try {
-    const success = await applicationsStore.rejectApplication(applicationId, comment, authStore.userName)
+    const { applicationId, rejectComment } = rejectData
+    const success = await applicationsStore.rejectApplication(applicationId, rejectComment, authStore.userName)
     if (success) {
       alert('驳回成功')
       closeEditDialog()

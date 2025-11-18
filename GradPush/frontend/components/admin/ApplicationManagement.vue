@@ -1,7 +1,7 @@
 <template>
   <div class="page-content">
     <div class="page-title">
-      <span>数据管理</span>
+      <span>申请管理</span>
   
     </div>
 

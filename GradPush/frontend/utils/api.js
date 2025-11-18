@@ -51,6 +51,8 @@ async function apiRequest(endpoint, method = 'GET', data = null, token = null) {
 
 // 导出API函数
 export default {
+  // 基础请求方法
+  apiRequest,
   // 认证相关
   login: (data) => apiRequest('/login', 'POST', data),
   register: (data) => apiRequest('/register', 'POST', data),
@@ -61,7 +63,9 @@ export default {
   getMajors: () => apiRequest('/majors'),
   
   // 用户相关
+  getCurrentUser: (username) => apiRequest(`/user/current?username=${username}`),
   getUser: (username) => apiRequest(`/user/${username}`),
+  updateUserInfo: (data) => apiRequest('/user/update', 'PUT', data),
   updateProfile: (data) => apiRequest('/user/profile', 'PUT', data),
   uploadAvatar: (username, avatarFile) => {
     const formData = new FormData();
@@ -97,7 +101,7 @@ export default {
   getStatistics: (studentId) => apiRequest(`/applications/statistics?studentId=${studentId}`),
   
   // 规则管理相关
-  getRules: (filters) => {
+getRules: (filters) => {
     const filteredParams = { ...filters };
     // 排除值为'all'的参数
     Object.keys(filteredParams).forEach(key => {
@@ -113,6 +117,10 @@ export default {
   updateRule: (id, data) => apiRequest(`/rules/${id}`, 'PUT', data),
   deleteRule: (id) => apiRequest(`/rules/${id}`, 'DELETE'),
   toggleRuleStatus: (id) => apiRequest(`/rules/${id}/toggle-status`, 'PATCH'),
+  
+  // 系统设置相关API
+  getSystemSettings: () => apiRequest('/admin/system-settings', 'GET'),
+  updateSystemSettings: (settingsData) => apiRequest('/admin/system-settings', 'PUT', settingsData),
   
   // 学院管理相关API
   getFacultiesAdmin: () => apiRequest('/admin/faculties'),

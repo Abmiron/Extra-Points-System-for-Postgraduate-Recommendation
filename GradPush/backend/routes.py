@@ -10,12 +10,15 @@ from flask import Blueprint, jsonify
 # 创建蓝图
 main_bp = Blueprint('main', __name__)
 
+
 # 根路径健康检查
 @main_bp.route('/', methods=['GET'])
 def index():
     return jsonify({'status': 'ok', 'message': 'Server is running'}), 200
 
+
 # 健康检查接口
 @main_bp.route('/api/health', methods=['GET'])
 def health_check():
     return jsonify({'status': 'ok', 'message': 'Server is running'}), 200
+

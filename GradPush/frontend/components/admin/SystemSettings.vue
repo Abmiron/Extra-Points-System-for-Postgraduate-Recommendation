@@ -11,9 +11,7 @@
         <div class="form-group">
           <label class="form-label">当前学术年度</label>
           <select class="form-control" v-model="settings.academicYear">
-            <option value="2023">2023-2024学年</option>
-            <option value="2022">2022-2023学年</option>
-            <option value="2021">2021-2022学年</option>
+            <option v-for="year in academicYearOptions" :key="year.value" :value="year.value">{{ year.label }}</option>
           </select>
         </div>
         <div class="form-group">
@@ -26,7 +24,7 @@
         </div>
       </div>
       <div class="form-actions">
-        <button class="btn" @click="saveAcademicSettings">保存设置</button>
+        <button class="btn btn-outline" @click="saveAcademicSettings">保存设置</button>
       </div>
     </div>
 
@@ -59,7 +57,43 @@
         </div>
       </div>
       <div class="form-actions">
-        <button class="btn" @click="publishAnnouncement">发布公告</button>
+        <button class="btn btn-outline" @click="publishAnnouncement">发布公告</button>
+      </div>
+    </div>
+
+    <!-- 综合成绩比例设置 -->
+    <div class="card">
+      <div class="card-title">综合成绩比例设置</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">学业成绩比例</label>
+          <div class="input-with-unit">
+            <input type="number" class="form-control small-input" v-model="settings.academicScoreWeight" min="0" max="100">
+            <span class="unit">%</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">学术专长成绩比例</label>
+          <div class="input-with-unit">
+            <input type="number" class="form-control small-input" v-model="settings.specialtyScoreWeight" min="0" max="100">
+            <span class="unit">%</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">综合表现成绩比例</label>
+          <div class="input-with-unit">
+            <input type="number" class="form-control small-input" v-model="settings.performanceScoreWeight" min="0" max="100">
+            <span class="unit">%</span>
+          </div>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top: -10px;">
+        <div class="help-text" :class="{ 'text-danger': totalWeight !== 100 }">
+          总比例: {{ totalWeight }}% {{ totalWeight !== 100 ? '(必须等于100%)' : '(符合要求)' }}
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-outline" @click="saveScoreWeightSettings" :disabled="totalWeight !== 100">保存设置</button>
       </div>
     </div>
 
@@ -68,7 +102,10 @@
       <div class="card-title">文件存储设置</div>
       <div class="form-group">
         <label class="form-label">文件大小限制</label>
-        <input type="number" class="form-control small-input" v-model="settings.fileSizeLimit"> MB
+        <div class="input-with-unit">
+          <input type="number" class="form-control small-input" v-model="settings.fileSizeLimit">
+          <span class="unit">MB</span>
+        </div>
         <div class="help-text">单个上传文件的最大大小</div>
       </div>
       <div class="form-group">
@@ -77,7 +114,7 @@
         <div class="help-text">多个扩展名用逗号分隔</div>
       </div>
       <div class="form-actions">
-        <button class="btn" @click="saveStorageSettings">保存设置</button>
+        <button class="btn btn-outline" @click="saveStorageSettings">保存设置</button>
       </div>
     </div>
 
@@ -112,11 +149,11 @@
           <label class="form-label">系统状态</label>
           <div class="system-status">
             <span :class="`status-indicator ${systemStatus}`"></span>
-            {{ systemStatus === 'online' ? '运行正常' : '系统维护中' }}
-          </div>
-          <button class="btn btn-outline" @click="toggleSystemStatus">
+            {{ systemStatusText }}
+            <button class="btn btn-outline" @click="toggleSystemStatus">
             {{ systemStatus === 'online' ? '进入维护模式' : '恢复正常运行' }}
-          </button>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -124,17 +161,41 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
+import api from '../../utils/api'
+
+// 动态生成学术年度选项（最近5年）
+const generateAcademicYearOptions = () => {
+  const currentYear = new Date().getFullYear()
+  const options = []
+  for (let i = currentYear; i >= currentYear - 4; i--) {
+    options.push({
+      value: String(i),
+      label: `${i}-${i + 1}学年`
+    })
+  }
+  return options
+}
+
+const academicYearOptions = ref(generateAcademicYearOptions())
 
 const systemStatus = ref('online') // online, maintenance
 
 const settings = reactive({
-  academicYear: '2023',
-  applicationStart: '2023-09-01',
-  applicationEnd: '2023-10-15',
-  fileSizeLimit: 10,
-  allowedFileTypes: '.pdf, .jpg, .jpeg, .png',
-  lastBackup: ''
+  academicYear: '',
+  applicationStart: '',
+  applicationEnd: '',
+  fileSizeLimit: '',
+  allowedFileTypes: '',
+  lastBackup: '',
+  academicScoreWeight: '',
+  specialtyScoreWeight: '',
+  performanceScoreWeight: ''
+})
+
+// 计算总比例
+const totalWeight = computed(() => {
+  return Number(settings.academicScoreWeight) + Number(settings.specialtyScoreWeight) + Number(settings.performanceScoreWeight)
 })
 
 const announcement = reactive({
@@ -144,50 +205,63 @@ const announcement = reactive({
 })
 
 // 方法
-const saveAcademicSettings = () => {
-  // 保存学术年度设置
-  localStorage.setItem('systemSettings', JSON.stringify(settings))
-  alert('学术年度设置已保存')
+const saveAcademicSettings = async () => {
+  try {
+    await api.updateSystemSettings({
+      academicYear: settings.academicYear,
+      applicationStart: settings.applicationStart,
+      applicationEnd: settings.applicationEnd
+    })
+    alert('设置已保存')
+  } catch (error) {
+    console.error('保存设置失败:', error)
+    alert('保存设置失败')
+  }
 }
 
-const saveStorageSettings = () => {
-  // 保存文件存储设置
-  localStorage.setItem('systemSettings', JSON.stringify(settings))
-  alert('文件存储设置已保存')
+const saveStorageSettings = async () => {
+  try {
+    await api.updateSystemSettings({
+      fileSizeLimit: settings.fileSizeLimit,
+      allowedFileTypes: settings.allowedFileTypes
+    })
+    alert('设置已保存')
+  } catch (error) {
+    console.error('保存设置失败:', error)
+    alert('保存设置失败')
+  }
+}
+
+const saveScoreWeightSettings = async () => {
+  try {
+    await api.updateSystemSettings({
+      academicScoreWeight: settings.academicScoreWeight,
+      specialtyScoreWeight: settings.specialtyScoreWeight,
+      performanceScoreWeight: settings.performanceScoreWeight
+    })
+    alert('设置已保存')
+  } catch (error) {
+    console.error('保存设置失败:', error)
+    alert('保存设置失败')
+  }
 }
 
 const publishAnnouncement = () => {
-  if (!announcement.title || !announcement.content) {
-    alert('请填写公告标题和内容')
-    return
-  }
-
-  // 发布公告
-  const announcements = JSON.parse(localStorage.getItem('systemAnnouncements') || '[]')
-  const newAnnouncement = {
-    id: Date.now(),
-    ...announcement,
-    publishTime: new Date().toISOString(),
-    publisher: '系统管理员'
-  }
-  announcements.push(newAnnouncement)
-  localStorage.setItem('systemAnnouncements', JSON.stringify(announcements))
-
-  // 清空表单
-  Object.assign(announcement, {
-    title: '',
-    content: '',
-    audience: 'all'
-  })
-
-  alert('公告发布成功')
+  alert('公告发布功能正在开发中...')
 }
 
-const backupDatabase = () => {
-  // 模拟数据库备份
-  settings.lastBackup = new Date().toLocaleString('zh-CN')
-  localStorage.setItem('systemSettings', JSON.stringify(settings))
-  alert('数据库备份完成')
+const backupDatabase = async () => {
+  try {
+    // 更新最后备份时间
+    await api.updateSystemSettings({
+      lastBackup: new Date().toISOString()
+    })
+    settings.lastBackup = new Date().toLocaleString('zh-CN')
+    alert('数据库备份完成')
+  } catch (error) {
+    console.error('数据库备份失败:', error)
+    alert('数据库备份失败')
+  }
 }
 
 const viewSystemLogs = () => {
@@ -195,33 +269,70 @@ const viewSystemLogs = () => {
 }
 
 const clearCache = () => {
-  if (confirm('确定要清理系统缓存吗？')) {
-    // 清理缓存
-    localStorage.removeItem('cacheData')
-    alert('缓存清理完成')
-  }
+  alert('缓存清理功能正在开发中...')
 }
 
-const toggleSystemStatus = () => {
-  if (systemStatus.value === 'online') {
-    if (confirm('确定要进入系统维护模式吗？在此期间用户将无法访问系统。')) {
-      systemStatus.value = 'maintenance'
-      alert('系统已进入维护模式')
+const toggleSystemStatus = async () => {
+  try {
+    if (systemStatus.value === 'online') {
+      if (confirm('确定要进入系统维护模式吗？在此期间用户将无法访问系统。')) {
+        systemStatus.value = 'maintenance'
+        await api.updateSystemSettings({
+          systemStatus: systemStatusApiValue.value
+        })
+        alert('系统已进入维护模式')
+      }
+    } else {
+      systemStatus.value = 'online'
+      await api.updateSystemSettings({
+        systemStatus: systemStatusApiValue.value
+      })
+      alert('系统已恢复正常运行')
     }
-  } else {
-    systemStatus.value = 'online'
-    alert('系统已恢复正常运行')
+  } catch (error) {
+    console.error('切换系统状态失败:', error)
+    alert('切换系统状态失败')
   }
 }
 
 // 生命周期
 onMounted(() => {
   // 加载系统设置
-  const savedSettings = localStorage.getItem('systemSettings')
-  if (savedSettings) {
-    Object.assign(settings, JSON.parse(savedSettings))
-  }
+  loadSystemSettings()
 })
+
+// 系统状态文本映射
+const systemStatusText = computed(() => {
+  return systemStatus.value === 'online' ? '运行正常' : '系统维护中'
+})
+
+const systemStatusApiValue = computed(() => {
+  return systemStatus.value === 'online' ? '正常' : '维护中'
+})
+
+// 加载系统设置
+async function loadSystemSettings() {
+  try {
+    const response = await api.getSystemSettings()
+    const data = response.settings
+    
+    // 更新设置数据
+    settings.academicYear = data.academicYear || ''
+    settings.applicationStart = data.applicationStart || ''
+    settings.applicationEnd = data.applicationEnd || ''
+    settings.fileSizeLimit = data.fileSizeLimit || ''
+    settings.allowedFileTypes = data.allowedFileTypes || ''
+    settings.lastBackup = data.lastBackup || ''
+    settings.academicScoreWeight = data.academicScoreWeight || ''
+    settings.specialtyScoreWeight = data.specialtyScoreWeight || ''
+    settings.performanceScoreWeight = data.performanceScoreWeight || ''
+    
+    systemStatus.value = data.systemStatus === '维护中' ? 'maintenance' : 'online'
+  } catch (error) {
+    console.error('加载系统设置失败:', error)
+    alert('加载系统设置失败')
+  }
+}
 </script>
 
 <style scoped>
@@ -265,10 +376,21 @@ onMounted(() => {
 }
 
 .small-input {
-  width: 100px;
-  display: inline-block;
-  margin-right: 10px;
-}
+    width: 100px;
+    display: inline-block;
+  }
+
+  .input-with-unit {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .unit {
+    color: #666;
+    font-size: 14px;
+    white-space: nowrap;
+  }
 
 .form-actions {
   display: flex;
@@ -317,6 +439,11 @@ onMounted(() => {
 
 .status-indicator.maintenance {
   background-color: #ffc107;
+}
+
+.text-danger {
+  color: #dc3545;
+  font-weight: 500;
 }
 
 /* 响应式设计 */

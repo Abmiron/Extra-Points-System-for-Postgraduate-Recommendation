@@ -285,7 +285,6 @@ const fetchStudentsRanking = async () => {
           cet6Score: student.cet6_score || student.cet6Score,
           gpa: student.gpa,
           academicScore: student.academic_score || student.academicScore,
-          academicWeighted: student.academic_weighted || student.academicWeighted,
           majorRanking: student.major_ranking || student.majorRanking,
           majorTotalStudents: student.major_total_students || student.majorTotalStudents,
           sequence: student.sequence,

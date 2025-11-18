@@ -122,14 +122,12 @@
                 <label>申请类型</label>
                 <span>{{ application.applicationType || '未知类型' }}</span>
               </div>
-              <div class="compact-group">
-                <label>申请状态</label>
-                <span class="status-badge" :class="`status-${application.status}`">{{ getStatusText(application.status) }}</span>
-              </div>
+              
               <div class="compact-group">
                 <label>申请时间</label>
                 <span>{{ formatDate(application.appliedAt || application.createdAt) }}</span>
               </div>
+              
               <div class="compact-group">
                 <label>审核时间</label>
                 <span>{{ formatDate(application.reviewedAt) || '-' }}</span>
@@ -138,10 +136,19 @@
                 <label>审核人</label>
                 <span>{{ application.reviewedBy || '-' }}</span>
               </div>
+              <div class="compact-group">
+                <label>申请状态</label>
+                <span class="status-badge" :class="`status-${application.status}`">{{ getStatusText(application.status) }}</span>
+              </div>
+              <div class="compact-group">
+                <label>自评分数</label>
+                <span>{{ application.selfScore || 0 }}</span>
+              </div>
               <div v-if="isReviewMode || application.status !== 'pending'" class="compact-group">
                 <label>最终分数</label>
-                <span>{{ application.finalScore || application.rule?.score || 0 }}</span>
+                <span>{{ application.status === 'pending' ? '-' : (application.status === 'rejected' ? 0 : application.finalScore || 0) }}</span>
               </div>
+              
             </div>
             <div class="compact-group full-width" v-if="application.reviewComment && !isReviewMode">
               <label>审核意见</label>
@@ -166,7 +173,7 @@
             </div>
             <div class="compact-group full-width">
               <label>规则说明</label>
-              <p>{{ application.rule.description }}</p>
+              <p>{{ application.rule.description || '无' }}</p>
             </div>
           </div>
 
@@ -177,9 +184,9 @@
               <label>最终分数</label>
               <div class="score-input-container">
                 <input type="number" v-model.number="reviewData.finalScore" min="0" max="100" step="0.5" class="form-control small-input" />
-                <span class="score-hint">预计分数: {{ application.rule?.score || 0 }}</span>
+                <span class="score-hint">规则分数（预计分数）: {{ application.rule?.score || 0 }}</span>
                 <span v-if="isScoreMismatch" class="score-mismatch-warning">
-                  分数与预计分数不一致，请确认
+                  最终分数与规则分数不一致，请确认
                 </span>
               </div>
             </div>
@@ -189,8 +196,8 @@
                 <textarea class="form-control small-textarea" v-model="reviewData.approveComment" rows="2" placeholder="通过说明（可选）"></textarea>
               </div>
               <div class="form-group">
-                <label>驳回意见</label>
-                <textarea class="form-control small-textarea" v-model="reviewData.rejectComment" rows="2" placeholder="驳回理由"></textarea>
+                <label>驳回意见 <span class="required">*</span></label>
+                <textarea class="form-control small-textarea" v-model="reviewData.rejectComment" rows="2" placeholder="请输入驳回理由（必填）"></textarea>
               </div>
             </div>
             <div class="form-actions-compact">
@@ -271,7 +278,7 @@ const isReviewMode = computed(() => props.isReviewMode)
 
 // 审核数据
 const reviewData = reactive({
-  finalScore: props.application.finalScore || props.application.rule?.score || 0,
+  finalScore: props.application.finalScore || props.application.selfScore || 0,
   approveComment: props.application.status === 'approved' ? props.application.reviewComment || '' : '',
   rejectComment: props.application.status === 'rejected' ? props.application.reviewComment || '' : ''
 })
@@ -279,7 +286,7 @@ const reviewData = reactive({
 // 监听application变化，更新reviewData
 watch(() => props.application, (newApplication) => {
   if (newApplication) {
-    reviewData.finalScore = newApplication.finalScore || newApplication.rule?.score || 0
+    reviewData.finalScore = newApplication.finalScore || newApplication.selfScore || 0
     reviewData.approveComment = newApplication.status === 'approved' ? newApplication.reviewComment || '' : ''
     reviewData.rejectComment = newApplication.status === 'rejected' ? newApplication.reviewComment || '' : ''
   }
@@ -557,6 +564,11 @@ const approveApplication = () => {
 }
 
 const rejectApplication = () => {
+  // 验证驳回理由是否填写
+  if (!reviewData.rejectComment || reviewData.rejectComment.trim() === '') {
+    alert('请填写驳回理由')
+    return
+  }
   emit('reject', {
     ...reviewData,
     applicationId: props.application.id
@@ -892,6 +904,13 @@ const rejectApplication = () => {
 .compact-group.full-width {
   width: 100%;
   min-width: 100%;
+}
+
+/* 必填项标记 */
+.required {
+  color: #dc3545;
+  font-weight: bold;
+  margin-left: 2px;
 }
 
 .compact-group label {

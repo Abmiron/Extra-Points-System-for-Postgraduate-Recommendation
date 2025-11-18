@@ -1,50 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-
-// API基础URL
-const API_BASE_URL = '/api'
-
-// 封装fetch请求
-async function apiRequest(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`
-  
-  // 检查是否是FormData请求
-  const isFormData = options.body && options.body instanceof FormData
-  
-  // 如果是FormData请求，不需要设置Content-Type
-  const defaultOptions = {
-    headers: isFormData ? {} : {
-      'Content-Type': 'application/json',
-    },
-  }
-
-  const config = { ...defaultOptions, ...options }
-
-  try {
-    const response = await fetch(url, config)
-    
-    // 先读取响应体为文本
-    const responseText = await response.text()
-    
-    if (!response.ok) {
-      // 尝试解析为JSON
-      let errorDetails = responseText
-      try {
-        const errorData = JSON.parse(responseText)
-        errorDetails = JSON.stringify(errorData, null, 2)
-      } catch {
-        // 如果解析失败，直接使用文本
-      }
-      throw new Error(`API请求失败: ${response.statusText}\n详细信息: ${errorDetails}`)
-    }
-
-    // 解析为JSON并返回
-    return JSON.parse(responseText)
-  } catch (error) {
-    console.error('API请求错误:', error)
-    throw error
-  }
-}
+import api from '../utils/api.js'
 
 export const useApplicationsStore = defineStore('applications', () => {
   // 状态定义
@@ -81,7 +37,7 @@ export const useApplicationsStore = defineStore('applications', () => {
       if (filters.reviewedEndDate) queryParams.append('reviewedEndDate', filters.reviewedEndDate)
       
       const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ''
-      const data = await apiRequest(`/applications${queryString}`)
+      const data = await api.apiRequest(`/applications${queryString}`)
       applications.value = data
       return data
     } catch (err) {
@@ -100,7 +56,7 @@ export const useApplicationsStore = defineStore('applications', () => {
     error.value = null
     
     try {
-      const data = await apiRequest(`/applications/${applicationId}`)
+      const data = await api.apiRequest(`/applications/${applicationId}`)
       return data
     } catch (err) {
       console.error('加载申请详情失败:', err)
@@ -125,7 +81,7 @@ export const useApplicationsStore = defineStore('applications', () => {
       if (filters.studentName) queryParams.append('studentName', filters.studentName)
       
       const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ''
-      const data = await apiRequest(`/applications/pending${queryString}`)
+      const data = await api.apiRequest(`/applications/pending${queryString}`)
       // 将获取到的待审核申请保存到store中
       applications.value = data
       return data
@@ -216,10 +172,7 @@ export const useApplicationsStore = defineStore('applications', () => {
       })
       
       // 发送请求
-      const data = await apiRequest('/applications', {
-        method: 'POST',
-        body: formData
-      })
+      const data = await api.apiRequest('/applications', 'POST', formData)
       
       // 获取完整的申请数据
       const newApplication = await fetchApplicationById(data.id)
@@ -248,10 +201,7 @@ export const useApplicationsStore = defineStore('applications', () => {
       }
       
       // 使用审核接口而不是通用更新接口，以触发自动评分逻辑
-      await apiRequest(`/applications/${applicationId}/review`, {
-        method: 'POST',
-        body: JSON.stringify(updatedData)
-      })
+      await api.apiRequest(`/applications/${applicationId}/review`, 'POST', updatedData)
       
       // 更新本地状态
       const application = applications.value.find(app => app.id === applicationId)
@@ -291,9 +241,7 @@ export const useApplicationsStore = defineStore('applications', () => {
     error.value = null
     
     try {
-      await apiRequest(`/applications/${applicationId}`, {
-        method: 'DELETE'
-      })
+      await api.apiRequest(`/applications/${applicationId}`, 'DELETE')
       
       // 更新本地状态
       const index = applications.value.findIndex(app => app.id === applicationId)
@@ -389,10 +337,7 @@ export const useApplicationsStore = defineStore('applications', () => {
       })
       
       // 发送请求
-      await apiRequest(`/applications/${applicationId}`, {
-        method: 'PUT',
-        body: formData
-      })
+      await api.apiRequest(`/applications/${applicationId}`, 'PUT', formData)
       
       // 更新本地状态
       const application = applications.value.find(app => app.id === applicationId)
@@ -502,7 +447,7 @@ export const useApplicationsStore = defineStore('applications', () => {
     error.value = null
     
     try {
-      const data = await apiRequest(`/applications/statistics?studentId=${studentId}`)
+      const data = await api.apiRequest(`/applications/statistics?studentId=${studentId}`)
       return data
     } catch (err) {
       console.error('加载加分统计数据失败:', err)
@@ -537,7 +482,7 @@ export const useApplicationsStore = defineStore('applications', () => {
       }
       
       const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ''
-      const data = await apiRequest(`/applications/students-ranking${queryString}`)
+      const data = await api.apiRequest(`/applications/students-ranking${queryString}`)
       return data
     } catch (err) {
       console.error('加载学生排名数据失败:', err)

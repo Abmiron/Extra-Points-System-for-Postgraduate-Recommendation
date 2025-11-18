@@ -171,7 +171,6 @@ class Application(db.Model):
         return f'<Application {self.id}>'
 
 
-
 # 合并学生模型和学生总评模型
 class Student(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -192,7 +191,6 @@ class Student(db.Model):
     # 学业综合成绩
     gpa = db.Column(db.Float, nullable=True)  # 推免绩点(满分4分)
     academic_score = db.Column(db.Float, nullable=True)  # 换算后的学业成绩(满分100分)
-    academic_weighted = db.Column(db.Float, nullable=True)  # 学业综合成绩（80%）
     
     # 学术专长成绩（占总分12%）
     academic_specialty_total = db.Column(db.Float, nullable=True)  # 学院核定总分
@@ -238,6 +236,7 @@ def call_before_save_student(mapper, connection, target):
     if hasattr(target, 'before_save'):
         target.before_save()
 
+
 # 加分规则模型
 class Rule(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -264,3 +263,31 @@ class Rule(db.Model):
     
     def __repr__(self):
         return f'<Rule {self.name}>'
+
+# 系统设置模型
+class SystemSettings(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # 学术年度设置
+    academic_year = db.Column(db.String(10), default='2023')
+    application_start = db.Column(db.Date, nullable=True)
+    application_end = db.Column(db.Date, nullable=True)
+    
+    # 文件存储设置
+    file_size_limit = db.Column(db.Integer, default=10)  # MB
+    allowed_file_types = db.Column(db.String(200), default='.pdf, .jpg, .jpeg, .png')
+    
+    # 综合成绩比例设置
+    academic_score_weight = db.Column(db.Float, default=60.0)  # 学业成绩比例
+    specialty_score_weight = db.Column(db.Float, default=25.0)  # 学术专长成绩比例
+    performance_score_weight = db.Column(db.Float, default=15.0)  # 综合表现成绩比例
+    
+    # 系统维护信息
+    system_status = db.Column(db.String(20), default='online')  # online, maintenance
+    last_backup = db.Column(db.DateTime, nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<SystemSettings id={self.id}>'

@@ -261,13 +261,15 @@ const reviewApplication = (application) => {
   //console.log('selectedApplication 属性:', Object.keys(selectedApplication.value || {}))
 }
 
-const handleApprove = async (applicationId, finalScore, comment) => {
+const handleApprove = async (approveData) => {
   try {
+    // 从对象参数中提取需要的字段
+    const { applicationId, finalScore, approveComment } = approveData
     // 调用API批准申请
     await applicationsStore.approveApplication(
       applicationId,
       finalScore,
-      comment,
+      approveComment,
       authStore.userName || '当前教师'
     )
     // 重新加载数据
@@ -280,12 +282,14 @@ const handleApprove = async (applicationId, finalScore, comment) => {
   }
 }
 
-const handleReject = async (applicationId, comment) => {
+const handleReject = async (rejectData) => {
   try {
+    // 从对象参数中提取需要的字段
+    const { applicationId, rejectComment } = rejectData
     // 调用API拒绝申请
     await applicationsStore.rejectApplication(
       applicationId,
-      comment,
+      rejectComment,
       authStore.userName || '当前教师'
     )
     // 重新加载数据

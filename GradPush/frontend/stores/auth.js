@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-
-const API_BASE_URL = 'http://localhost:5001/api'
+import api from '../utils/api.js'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
@@ -30,61 +29,46 @@ export const useAuthStore = defineStore('auth', () => {
 
   // 获取当前用户信息
   const getCurrentUser = async () => {
-    if (!user.value) return null
-    
     try {
-      const response = await fetch(`${API_BASE_URL}/user/${user.value.username}`)
-      
-      if (!response.ok) {
-        throw new Error('获取用户信息失败')
+      // 使用当前已有的username调用API
+      const username = user.value?.username
+      if (!username) {
+        throw new Error('用户名不可用')
       }
-      
-      const data = await response.json()
-      user.value = data.user
-      role.value = data.user.role
+      const userData = await api.getCurrentUser(username)
+      user.value = userData
+      role.value = userData.role
       isAuthenticated.value = true
-      localStorage.setItem('user', JSON.stringify(data.user)) // 保留localStorage作为缓存
-      
-      return data.user
+      localStorage.setItem('user', JSON.stringify(userData))
+      return userData
     } catch (error) {
-      console.error('获取用户信息错误:', error)
-      return user.value // 出错时返回当前缓存的用户信息
+      console.error('获取当前用户失败:', error)
+      // 失败时不抛出错误，继续使用当前数据
+      return user.value
     }
   }
 
-  // 更新用户信息
-  const updateUserInfo = (userInfo) => {
-    user.value = userInfo
-    role.value = userInfo.role
-    isAuthenticated.value = true
-    localStorage.setItem('user', JSON.stringify(userInfo)) // 保留localStorage作为缓存
-    return '用户信息已更新'
+  const updateUserInfo = async (userData) => {
+    try {
+      const updatedUser = await api.updateUserInfo(userData)
+      user.value = updatedUser
+      localStorage.setItem('user', JSON.stringify(updatedUser))
+      return updatedUser
+    } catch (error) {
+      console.error('更新用户信息失败:', error)
+      throw error
+    }
   }
 
   // 登录
   const login = async (username, password) => {
     try {
-      // 执行正常的登录流程
-      const response = await fetch(`${API_BASE_URL}/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, password })
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || '登录失败')
-      }
-      
-      const data = await response.json()
+      const data = await api.apiRequest('/login', 'POST', { username, password })
       user.value = data.user
       role.value = data.user.role
       isAuthenticated.value = true
-      localStorage.setItem('user', JSON.stringify(data.user)) // 保留localStorage作为缓存
-      
-      return data.message
+      localStorage.setItem('user', JSON.stringify(data.user))
+      return data.user
     } catch (error) {
       console.error('登录错误:', error)
       throw error
@@ -94,21 +78,8 @@ export const useAuthStore = defineStore('auth', () => {
   // 注册
   const register = async (userData) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(userData)
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || '注册失败')
-      }
-      
-      const data = await response.json()
-      return data.message
+      const message = await api.apiRequest('/register', 'POST', userData)
+      return message
     } catch (error) {
       console.error('注册错误:', error)
       throw error
@@ -118,21 +89,8 @@ export const useAuthStore = defineStore('auth', () => {
   // 密码重置
   const resetPassword = async (username, newPassword) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/reset-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, newPassword })
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || '密码重置失败')
-      }
-      
-      const data = await response.json()
-      return data.message
+      const message = await api.apiRequest('/reset-password', 'POST', { username, newPassword })
+      return message
     } catch (error) {
       console.error('密码重置错误:', error)
       throw error

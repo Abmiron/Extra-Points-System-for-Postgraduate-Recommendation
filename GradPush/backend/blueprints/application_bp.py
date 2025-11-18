@@ -13,13 +13,14 @@
 """
 
 from flask import Blueprint, request, jsonify, abort, current_app
-from models import Application, Student, Rule
-from datetime import datetime
+from models import Application, Student, Rule, Department, Major
+from datetime import datetime, timezone
 import json
 import os
 import traceback
 import uuid
 from werkzeug.utils import secure_filename
+from extensions import db
 # 不再直接导入app，而是使用current_app
 
 # 创建蓝图实例
@@ -99,7 +100,7 @@ def get_applications():
         query = query.filter_by(department_id=department_id)
     elif department_name:
         # 按系名称筛选（支持部分匹配）
-        from models import Department
+
         # 先根据名称获取所有匹配的系ID
         departments = Department.query.filter(Department.name.like(f'%{department_name}%')).all()
         if departments:
@@ -110,7 +111,7 @@ def get_applications():
         query = query.filter_by(major_id=major_id)
     elif major_name:
         # 按专业名称筛选（支持部分匹配）
-        from models import Major
+
         # 先根据名称获取所有匹配的专业ID
         majors = Major.query.filter(Major.name.like(f'%{major_name}%')).all()
         if majors:
@@ -141,7 +142,7 @@ def get_applications():
     app_list = []
     
     # 获取所有相关系、专业和规则信息以避免N+1查询问题
-    from models import Department, Major, Rule
+
     
     department_ids = {app.department_id for app in applications}
     departments = Department.query.filter(Department.id.in_(department_ids)).all()
@@ -271,7 +272,7 @@ def get_application(id):
             processed_files.append(processed_file)
     
     # 获取相关系、专业和规则信息
-    from models import Department, Major, Rule
+
     
     # 安全获取系和专业名称
     department = Department.query.get(app.department_id) if app.department_id else None
@@ -399,16 +400,13 @@ def create_application():
         # 处理文件上传
         files = []
         if request.files:
-            # 导入Flask应用实例以访问配置
-            from app import app as flask_app
-            
             # 创建上传目录（如果不存在）
-            if not os.path.exists(flask_app.config['UPLOAD_FOLDER']):
-                os.makedirs(flask_app.config['UPLOAD_FOLDER'])
+            if not os.path.exists(current_app.config['UPLOAD_FOLDER']):
+                os.makedirs(current_app.config['UPLOAD_FOLDER'])
             
             # 确保文件上传目录存在
-            if not os.path.exists(flask_app.config['FILE_FOLDER']):
-                os.makedirs(flask_app.config['FILE_FOLDER'])
+            if not os.path.exists(current_app.config['FILE_FOLDER']):
+                os.makedirs(current_app.config['FILE_FOLDER'])
             
             # 保存文件并记录信息
             for file in request.files.getlist('files'):
@@ -431,7 +429,7 @@ def create_application():
                     
                     # 使用自定义函数生成文件名
                     filename = generate_safe_filename(file.filename)
-                    filepath = os.path.join(flask_app.config['FILE_FOLDER'], filename)
+                    filepath = os.path.join(current_app.config['FILE_FOLDER'], filename)
                     file.save(filepath)
                     
                     # 获取实际文件大小（比file.content_length更可靠）
@@ -445,7 +443,7 @@ def create_application():
                         'type': file.content_type
                     })
         
-        from app import db
+
         # 处理日期字段，允许为空
         award_date_value = None
         if data.get('award_date'):
@@ -592,16 +590,13 @@ def update_application(id):
         # 处理文件上传
         files = []
         if request.files:
-            # 导入Flask应用实例以访问配置
-            from app import app as flask_app
-            
             # 创建上传目录（如果不存在）
-            if not os.path.exists(flask_app.config['UPLOAD_FOLDER']):
-                os.makedirs(flask_app.config['UPLOAD_FOLDER'])
+            if not os.path.exists(current_app.config['UPLOAD_FOLDER']):
+                os.makedirs(current_app.config['UPLOAD_FOLDER'])
             
             # 确保文件上传目录存在
-            if not os.path.exists(flask_app.config['FILE_FOLDER']):
-                os.makedirs(flask_app.config['FILE_FOLDER'])
+            if not os.path.exists(current_app.config['FILE_FOLDER']):
+                os.makedirs(current_app.config['FILE_FOLDER'])
             
             # 保存文件并记录信息
             for key, file in request.files.items():
@@ -624,7 +619,7 @@ def update_application(id):
                     
                     # 使用自定义函数生成文件名
                     filename = generate_safe_filename(file.filename)
-                    filepath = os.path.join(flask_app.config['FILE_FOLDER'], filename)
+                    filepath = os.path.join(current_app.config['FILE_FOLDER'], filename)
                     file.save(filepath)
                     
                     # 获取实际文件大小（比file.content_length更可靠）
@@ -697,7 +692,7 @@ def update_application(id):
         application.performance_participation = data.get('performance_participation', application.performance_participation)
         application.team_role = data.get('team_role', application.team_role)
         
-        from app import db
+    
         db.session.commit()
         
         return jsonify({'message': '申请更新成功'}), 200
@@ -831,7 +826,6 @@ def review_application(id):
     application.reviewed_at = datetime.utcnow()
     application.reviewed_by = data.get('reviewedBy')
     
-    from app import db
     db.session.commit()
     
     # 更新学生的统计数据
@@ -847,7 +841,6 @@ def delete_application(id):
     # 获取学生ID，用于后续更新统计数据
     student_id = application.student_id
     
-    from app import db
     db.session.delete(application)
     db.session.commit()
     
@@ -1110,6 +1103,7 @@ def get_students_ranking():
         for student in students:
             student_id = student.id
             student_stats[student_id] = {
+                'id': student.id,  # 添加主键ID字段
                 'student_id': student.student_id,
                 'student_name': student.student_name,
                 'departmentId': student.department_id,
@@ -1123,7 +1117,6 @@ def get_students_ranking():
                 'cet6_score': student.cet6_score,
                 'gpa': student.gpa,
                 'academic_score': student.academic_score,
-                'academic_weighted': student.academic_weighted,
                 'academic_specialty_total': student.academic_specialty_total,
                 'comprehensive_performance_total': student.comprehensive_performance_total,
                 'total_score': student.total_score,
@@ -1244,7 +1237,6 @@ def get_students_ranking():
                         'specialty_score': 0.0,
                         'comprehensive_score': 0.0,
                         'total_score': 0.0,
-                        'academic_weighted': 0.0,  # 学业综合成绩（80%）
                         'total_comprehensive_score': 0.0,  # 考核综合成绩总分
                         'cet4_score': None,  # CET4成绩
                         'cet6_score': None,  # CET6成绩
@@ -1305,7 +1297,6 @@ def get_students_ranking():
                 # I-J: 学业综合成绩（占总分80%）
                 stats['gpa'] = 3.5 + (int(student_id[-2:]) % 10) * 0.1  # I: 推免绩点(满分4分)
                 stats['academic_score'] = 85 + (int(student_id[-2:]) % 15)  # J: 换算后的成绩(满分100分)
-                stats['academic_weighted'] = stats['academic_score'] * 0.8  # 学业综合成绩（80%）
                 
                 # K-S: 学术专长成绩（占总分12%）
                 # 学术专长项目数组 - 仅当没有实际项目时添加模拟数据
@@ -1339,7 +1330,7 @@ def get_students_ranking():
                 
                 # AC-AF: 总分与排名
                 stats['total_comprehensive_score'] = stats['specialty_score'] + stats['comprehensive_score']  # AC: 考核综合成绩总分
-                stats['final_score'] = stats['academic_weighted'] + stats['total_comprehensive_score']  # AD: 综合成绩
+                stats['final_score'] = stats['academic_score'] * 0.8 + stats['total_comprehensive_score']  # AD: 综合成绩
                 # 处理专业排名和排名人数，确保student_id的最后两位是数字
                 try:
                     stats['major_ranking'] = int(student_id[-2:]) % 20 + 1  # AE: 专业成绩排名

@@ -9,8 +9,9 @@
 """
 
 from flask import Blueprint, request, jsonify, make_response
-from models import User
+from models import User, Faculty, Department, Major, Student
 from datetime import datetime
+from extensions import db
 
 # 创建蓝图
 auth_bp = Blueprint('auth', __name__, url_prefix='/api')
@@ -19,11 +20,6 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/api')
 @auth_bp.route('/login', methods=['OPTIONS'])
 def login_options():
     response = make_response()
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    response.headers.add('Access-Control-Max-Age', '3600')
     return response
 
 # 登录接口 - POST请求处理
@@ -37,31 +33,20 @@ def login():
     user = User.query.filter_by(username=username).first()
     
     if not user:
-        response = make_response(jsonify({'message': '用户不存在'}), 401)
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        return response
+        return jsonify({'message': '用户不存在'}), 401
     
     if user.status == 'disabled':
-        response = make_response(jsonify({'message': '账户已被禁用'}), 401)
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        return response
+        return jsonify({'message': '账户已被禁用'}), 401
     
     # 验证密码
     if not user.check_password(password):
-        response = make_response(jsonify({'message': '密码错误'}), 401)
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        return response
+        return jsonify({'message': '密码错误'}), 401
     
     # 更新最后登录时间
     user.last_login = datetime.utcnow()
-    from extensions import db
     db.session.commit()
     
     # 获取学院、系和专业名称
-    from models import Faculty, Department, Major
     
     # 安全获取关联对象的名称
     faculty = Faculty.query.get(user.faculty_id) if user.faculty_id else None
@@ -93,16 +78,12 @@ def login():
         'lastLogin': user.last_login.isoformat() if user.last_login else None
     }
     
-    # 创建响应并添加CORS头
-    response = make_response(jsonify({'user': user_data, 'message': '登录成功'}), 200)
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    return response
+    # 返回用户信息（不包含密码）
+    return jsonify({'user': user_data, 'message': '登录成功'}), 200
 
 # 注册接口
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    from extensions import db
     data = request.get_json()
     
     # 基本数据验证
@@ -118,8 +99,6 @@ def register():
     existing_user = User.query.filter_by(username=data['username']).first()
     if existing_user:
         return jsonify({'message': '用户名已存在'}), 400
-    
-    from models import Faculty, Department, Major, Student
     
     # 获取关联ID
     faculty_id = data.get('facultyId')
@@ -208,7 +187,6 @@ def reset_password():
     # 设置新密码
     user.set_password(new_password)
     
-    from extensions import db
     db.session.commit()
     
     return jsonify({'message': '密码重置成功'}), 200
@@ -216,7 +194,6 @@ def reset_password():
 # 获取所有学院（用于注册选择）
 @auth_bp.route('/faculties', methods=['GET'])
 def get_faculties():
-    from models import Faculty
     faculties = Faculty.query.all()
     result = []
     for faculty in faculties:
@@ -229,7 +206,6 @@ def get_faculties():
 # 根据学院ID获取系列表（用于注册选择）
 @auth_bp.route('/departments/<int:faculty_id>', methods=['GET'])
 def get_departments_by_faculty(faculty_id):
-    from models import Department
     departments = Department.query.filter_by(faculty_id=faculty_id).all()
     result = []
     for department in departments:
@@ -242,7 +218,6 @@ def get_departments_by_faculty(faculty_id):
 # 获取所有专业列表
 @auth_bp.route('/majors', methods=['GET'])
 def get_all_majors():
-    from models import Major
     majors = Major.query.all()
     result = []
     for major in majors:
@@ -255,7 +230,6 @@ def get_all_majors():
 # 根据系ID获取专业列表（用于注册选择）
 @auth_bp.route('/majors/<int:department_id>', methods=['GET'])
 def get_majors_by_department(department_id):
-    from models import Major
     majors = Major.query.filter_by(department_id=department_id).all()
     result = []
     for major in majors:

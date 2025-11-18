@@ -9,32 +9,14 @@
 """
 
 from flask import Blueprint, request, jsonify, make_response
-from models import Faculty, Department, Major, User
+from models import Faculty, Department, Major, User, SystemSettings
 from datetime import datetime
+from extensions import db
 
 # 创建蓝图实例
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
-# 添加CORS头的辅助函数
-def add_cors_headers(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    response.headers.add('Access-Control-Max-Age', '3600')
-    return response
-
-# OPTIONS请求处理
-@admin_bp.route('/<path:path>', methods=['OPTIONS'])
-def handle_options(path):
-    response = make_response()
-    return add_cors_headers(response)
-
-# 针对根路径的OPTIONS请求
-@admin_bp.route('/', methods=['OPTIONS'])
-def handle_root_options():
-    response = make_response()
-    return add_cors_headers(response)
+# CORS已在app.py中全局配置，无需在此处重复设置
 
 # 学院管理API
 
@@ -51,8 +33,7 @@ def get_faculties():
             'created_at': faculty.created_at.isoformat(),
             'updated_at': faculty.updated_at.isoformat()
         })
-    response = make_response(jsonify({'faculties': result}), 200)
-    return add_cors_headers(response)
+    return make_response(jsonify({'faculties': result}), 200)
 
 # 创建学院
 @admin_bp.route('/faculties', methods=['POST'])
@@ -70,7 +51,6 @@ def create_faculty():
         description=data.get('description', '')
     )
     
-    from app import db
     db.session.add(new_faculty)
     db.session.commit()
     
@@ -97,7 +77,6 @@ def update_faculty(faculty_id):
     faculty.name = data['name']
     faculty.description = data.get('description', '')
     
-    from app import db
     db.session.commit()
     
     return jsonify({'message': '学院更新成功', 'faculty': {
@@ -118,7 +97,6 @@ def delete_faculty(faculty_id):
     if faculty.departments:
         return jsonify({'message': '该学院下存在系，无法删除'}), 400
     
-    from app import db
     db.session.delete(faculty)
     db.session.commit()
     
@@ -153,8 +131,7 @@ def get_departments():
             'created_at': department.created_at.isoformat(),
             'updated_at': department.updated_at.isoformat()
         })
-    response = make_response(jsonify({'departments': result}), 200)
-    return add_cors_headers(response)
+    return make_response(jsonify({'departments': result}), 200)
 
 # 创建系
 @admin_bp.route('/departments', methods=['POST'])
@@ -176,7 +153,6 @@ def create_department():
         description=data.get('description', '')
     )
     
-    from app import db
     db.session.add(new_department)
     db.session.commit()
     
@@ -208,7 +184,6 @@ def update_department(department_id):
     department.faculty_id = data['faculty_id']
     department.description = data.get('description', '')
     
-    from app import db
     db.session.commit()
     
     return jsonify({'message': '系更新成功', 'department': {
@@ -230,7 +205,6 @@ def delete_department(department_id):
     if department.majors:
         return jsonify({'message': '该系下存在专业，无法删除'}), 400
     
-    from app import db
     db.session.delete(department)
     db.session.commit()
     
@@ -277,8 +251,7 @@ def get_majors():
             'created_at': major.created_at.isoformat(),
             'updated_at': major.updated_at.isoformat()
         })
-    response = make_response(jsonify({'majors': result}), 200)
-    return add_cors_headers(response)
+    return make_response(jsonify({'majors': result}), 200)
 
 # 创建专业
 @admin_bp.route('/majors', methods=['POST'])
@@ -300,7 +273,6 @@ def create_major():
         description=data.get('description', '')
     )
     
-    from app import db
     db.session.add(new_major)
     db.session.commit()
     
@@ -332,7 +304,6 @@ def update_major(major_id):
     major.department_id = data['department_id']
     major.description = data.get('description', '')
     
-    from app import db
     db.session.commit()
     
     return jsonify({'message': '专业更新成功', 'major': {
@@ -350,8 +321,96 @@ def delete_major(major_id):
     if not major:
         return jsonify({'message': '专业不存在'}), 404
     
-    from app import db
     db.session.delete(major)
     db.session.commit()
     
     return jsonify({'message': '专业删除成功'}), 200
+
+# 系统设置API
+
+# 获取系统设置
+@admin_bp.route('/system-settings', methods=['GET'])
+def get_system_settings():
+    # 获取唯一的系统设置记录，如果不存在则创建默认记录
+    settings = SystemSettings.query.first()
+    if not settings:
+        # 创建默认设置
+        settings = SystemSettings()
+        db.session.add(settings)
+        db.session.commit()
+    
+    # 转换为JSON格式
+    settings_data = {
+        'academicYear': settings.academic_year,
+        'applicationStart': settings.application_start.isoformat() if settings.application_start else None,
+        'applicationEnd': settings.application_end.isoformat() if settings.application_end else None,
+        'fileSizeLimit': settings.file_size_limit,
+        'allowedFileTypes': settings.allowed_file_types,
+        'academicScoreWeight': settings.academic_score_weight,
+        'specialtyScoreWeight': settings.specialty_score_weight,
+        'performanceScoreWeight': settings.performance_score_weight,
+        'systemStatus': settings.system_status,
+        'lastBackup': settings.last_backup.isoformat() if settings.last_backup else None
+    }
+    
+    return jsonify({'settings': settings_data}), 200
+
+# 更新系统设置
+@admin_bp.route('/system-settings', methods=['PUT'])
+def update_system_settings():
+    data = request.get_json()
+    
+    # 获取唯一的系统设置记录，如果不存在则创建
+    settings = SystemSettings.query.first()
+    if not settings:
+        settings = SystemSettings()
+        db.session.add(settings)
+    
+    # 更新设置
+    if 'academicYear' in data:
+        settings.academic_year = data['academicYear']
+    
+    if 'applicationStart' in data and data['applicationStart']:
+        settings.application_start = datetime.fromisoformat(data['applicationStart']).date()
+    
+    if 'applicationEnd' in data and data['applicationEnd']:
+        settings.application_end = datetime.fromisoformat(data['applicationEnd']).date()
+    
+    if 'fileSizeLimit' in data:
+        settings.file_size_limit = data['fileSizeLimit']
+    
+    if 'allowedFileTypes' in data:
+        settings.allowed_file_types = data['allowedFileTypes']
+    
+    if 'academicScoreWeight' in data:
+        settings.academic_score_weight = data['academicScoreWeight']
+    
+    if 'specialtyScoreWeight' in data:
+        settings.specialty_score_weight = data['specialtyScoreWeight']
+    
+    if 'performanceScoreWeight' in data:
+        settings.performance_score_weight = data['performanceScoreWeight']
+    
+    if 'systemStatus' in data:
+        settings.system_status = data['systemStatus']
+    
+    if 'lastBackup' in data and data['lastBackup']:
+        settings.last_backup = datetime.fromisoformat(data['lastBackup'])
+    
+    db.session.commit()
+    
+    # 返回更新后的设置
+    updated_settings = {
+        'academicYear': settings.academic_year,
+        'applicationStart': settings.application_start.isoformat() if settings.application_start else None,
+        'applicationEnd': settings.application_end.isoformat() if settings.application_end else None,
+        'fileSizeLimit': settings.file_size_limit,
+        'allowedFileTypes': settings.allowed_file_types,
+        'academicScoreWeight': settings.academic_score_weight,
+        'specialtyScoreWeight': settings.specialty_score_weight,
+        'performanceScoreWeight': settings.performance_score_weight,
+        'systemStatus': settings.system_status,
+        'lastBackup': settings.last_backup.isoformat() if settings.last_backup else None
+    }
+    
+    return jsonify({'message': '系统设置更新成功', 'settings': updated_settings}), 200
