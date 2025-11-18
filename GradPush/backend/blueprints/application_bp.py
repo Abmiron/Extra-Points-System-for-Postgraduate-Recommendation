@@ -13,7 +13,7 @@
 """
 
 from flask import Blueprint, request, jsonify, abort, current_app
-from models import Application, Student, PerformanceDetail, Rule
+from models import Application, Student, Rule
 from datetime import datetime
 import json
 import os
@@ -24,6 +24,42 @@ from werkzeug.utils import secure_filename
 
 # 创建蓝图实例
 application_bp = Blueprint('application', __name__, url_prefix='/api')
+
+# 辅助函数：更新学生的统计数据
+def update_student_statistics(student_id):
+    """
+    根据学生的已通过申请更新其统计数据
+    :param student_id: 学生ID
+    :return: 更新后的统计数据
+    """
+    from extensions import db
+    
+    # 查询学生的所有已通过申请
+    applications = Application.query.filter_by(
+        student_id=student_id,
+        status='approved'
+    ).all()
+    
+    # 按申请类型分类统计
+    academic_score_calculated = sum(app.final_score for app in applications if app.final_score is not None and app.application_type == 'academic')
+    comprehensive_score = sum(app.final_score for app in applications if app.final_score is not None and app.application_type == 'comprehensive')
+    
+    # 获取学生对象
+    student = Student.query.filter_by(student_id=student_id).first()
+    if not student:
+        return None
+    
+    # 更新学生统计数据
+    student.academic_specialty_total = academic_score_calculated  # 学术专长总分
+    student.comprehensive_performance_total = comprehensive_score  # 综合表现总分
+    
+    # 保存更改到数据库
+    db.session.commit()
+    
+    return {
+        'academic_specialty_total': student.academic_specialty_total,
+        'comprehensive_performance_total': student.comprehensive_performance_total
+    }
 
 # 获取所有申请
 @application_bp.route('/applications', methods=['GET'])
@@ -118,7 +154,7 @@ def get_applications():
     # 获取所有规则信息
     rule_ids = {app.rule_id for app in applications if app.rule_id}
     rules = Rule.query.filter(Rule.id.in_(rule_ids)).all()
-    rule_dict = {r.id: {'id': r.id, 'name': r.name, 'score': r.score} for r in rules}
+    rule_dict = {r.id: {'id': r.id, 'name': r.name, 'score': r.score, 'description': r.description} for r in rules}
     
     for app in applications:
         # 转换文件路径格式
@@ -252,7 +288,8 @@ def get_application(id):
             rule_info = {
                 'id': rule.id,
                 'name': rule.name,
-                'score': rule.score
+                'score': rule.score,
+                'description': rule.description
             }
     
     app_data = {
@@ -795,6 +832,9 @@ def review_application(id):
     from app import db
     db.session.commit()
     
+    # 更新学生的统计数据
+    update_student_statistics(application.student_id)
+    
     return jsonify({'message': '申请审核成功'}), 200
 
 # 删除申请
@@ -802,9 +842,15 @@ def review_application(id):
 def delete_application(id):
     application = Application.query.get_or_404(id)
     
+    # 获取学生ID，用于后续更新统计数据
+    student_id = application.student_id
+    
     from app import db
     db.session.delete(application)
     db.session.commit()
+    
+    # 更新学生的统计数据
+    update_student_statistics(student_id)
     
     return jsonify({'message': '申请删除成功'}), 200
 
@@ -922,22 +968,31 @@ def get_application_statistics():
     if not student_id:
         return jsonify({'error': '缺少学生ID参数'}), 400
     
+    # 首先查询Student模型获取统计数据
+    student = Student.query.filter_by(student_id=student_id).first()
+    
+    if student:
+        # 从Student模型获取统计数据
+        academic_score = student.academic_score or 0.0
+        gpa = student.gpa or 0.0
+        specialty_score = student.academic_specialty_total or 0.0
+        comprehensive_score = student.comprehensive_performance_total or 0.0
+        total_score = student.total_score or 0.0
+        ranking = student.major_ranking or '-'
+    else:
+        # 如果Student模型中没有数据，初始化默认值
+        academic_score = 0.0
+        gpa = 0.0
+        specialty_score = 0.0
+        comprehensive_score = 0.0
+        total_score = 0.0
+        ranking = '-'
+    
     # 查询学生的所有已通过申请
     applications = Application.query.filter_by(
         student_id=student_id,
         status='approved'
     ).all()
-    
-    # 按申请类型分类统计
-    academic_score_calculated = sum(app.final_score for app in applications if app.final_score is not None and app.application_type == 'academic')
-    comprehensive_score = sum(app.final_score for app in applications if app.final_score is not None and app.application_type == 'comprehensive')
-    
-    # 计算学术专长总分（对应前端的specialtyScore）
-    specialty_score = academic_score_calculated
-    
-    # 学业综合成绩和推免综合成绩暂时设置为0（根据需求）
-    academic_score = 0.0
-    total_score = 0.0
     
     # 构建响应数据
     # 注意：这里使用下划线命名以匹配前端期望的格式
@@ -945,10 +1000,10 @@ def get_application_statistics():
         'student_id': student_id,
         'total_score': round(total_score, 2),
         'academic_score': round(academic_score, 2),
-        'gpa': 0.0,  # 暂时硬编码，后续可从数据库获取
+        'gpa': round(gpa, 2),
         'specialty_score': round(specialty_score, 2),
         'comprehensive_score': round(comprehensive_score, 2),
-        'ranking': '-',  # 暂时硬编码，后续可从数据库获取
+        'ranking': ranking,
         'approved_count': len(applications)
     }
     
@@ -1079,15 +1134,23 @@ def get_students_ranking():
                 'sequence': 0
             }
     
-        # 获取学术专长详情 - 使用PerformanceDetail模型，type='academic'
+        # 获取学术专长详情 - 使用Application模型，application_type属于学术专长类型
         for student_id in student_stats:
-            # 使用学生学号(字符串)而不是学生ID(整数)进行查询
+            # 使用学生学号(字符串)进行查询
             student_number = student_stats[student_id]['student_id']
             # 确保student_number是字符串类型
             student_number_str = str(student_number)
-            academic_details = PerformanceDetail.query.filter_by(student_id=student_number_str, type='academic').all()
+            # 学术专长包括科研成果、学业竞赛、创新创业训练，同时兼容旧的'academic'类型，只显示已批准的申请
+            # 学术专长包括科研成果、学业竞赛、创新创业训练，同时兼容旧的'academic'类型，只显示已批准的申请
+            academic_details = Application.query.filter_by(student_id=student_number_str, status='approved').filter(
+                (Application.application_type.in_(['research', 'competition', 'innovation'])) | 
+                (Application.application_type == 'academic')
+            ).all()
             academic_items = []
+            academic_score = 0.0
             for detail in academic_details:
+                item_score = detail.final_score or 0.0
+                academic_score += item_score
                 academic_items.append({
                     'project_name': detail.project_name,
                     'award_time': detail.award_date.strftime('%Y-%m-%d') if detail.award_date else '',
@@ -1095,21 +1158,32 @@ def get_students_ranking():
                     'individual_collective': detail.award_type,
                     'author_order': detail.author_order,
                     'self_eval_score': detail.self_score,
-                    'score_basis': detail.score_basis,
-                    'college_approved_score': detail.approved_score,
-                    'total_score': detail.approved_score or 0.0
+                    'score_basis': '',  # Application模型没有score_basis字段，可根据需要添加
+                    'college_approved_score': detail.final_score,
+                    'total_score': item_score
                 })
             student_stats[student_id]['academic_items'] = academic_items
+            # 更新学术专长总分
+            student_stats[student_id]['specialty_score'] = academic_score
+            student_stats[student_id]['academic_specialty_total'] = academic_score
     
-        # 获取综合表现详情 - 使用PerformanceDetail模型，type='comprehensive'
+        # 获取综合表现详情 - 使用Application模型，application_type属于综合表现类型，同时兼容旧的'comprehensive'类型
         for student_id in student_stats:
-            # 使用学生学号(字符串)而不是学生ID(整数)进行查询
+            # 使用学生学号(字符串)进行查询
             student_number = student_stats[student_id]['student_id']
             # 确保student_number是字符串类型
             student_number_str = str(student_number)
-            comprehensive_details = PerformanceDetail.query.filter_by(student_id=student_number_str, type='comprehensive').all()
+            # 综合表现包括国际实习、兵役、志愿服务、社会工作、体育、荣誉称号等，同时兼容旧的'comprehensive'类型，只显示已批准的申请
+            # 综合表现包括国际实习、兵役、志愿服务、社会工作、体育、荣誉称号等，同时兼容旧的'comprehensive'类型，只显示已批准的申请
+            comprehensive_details = Application.query.filter_by(student_id=student_number_str, status='approved').filter(
+                (Application.application_type.in_(['international_internship', 'military_service', 'volunteer', 'social_work', 'sports', 'honor_title'])) | 
+                (Application.application_type == 'comprehensive')
+            ).all()
             comprehensive_items = []
+            comprehensive_score = 0.0
             for detail in comprehensive_details:
+                item_score = detail.final_score or 0.0
+                comprehensive_score += item_score
                 comprehensive_items.append({
                     'project_name': detail.project_name,
                     'award_time': detail.award_date.strftime('%Y-%m-%d') if detail.award_date else '',
@@ -1117,11 +1191,15 @@ def get_students_ranking():
                     'individual_collective': detail.award_type,
                     'author_order': detail.author_order,
                     'self_eval_score': detail.self_score,
-                    'score_basis': detail.score_basis,
-                    'college_approved_score': detail.approved_score,
-                    'total_score': detail.approved_score or 0.0
+                    'score_basis': '',  # Application模型没有score_basis字段，可根据需要添加
+                    'college_approved_score': detail.final_score,
+                    'total_score': item_score
                 })
             student_stats[student_id]['comprehensive_items'] = comprehensive_items
+            # 更新综合表现总分
+            student_stats[student_id]['comprehensive_score'] = comprehensive_score
+            student_stats[student_id]['comprehensive_performance_total'] = comprehensive_score
+            student_stats[student_id]['total_comprehensive_score'] = academic_score + comprehensive_score
     
         # 如果Student模型没有数据，回退到Application模型并生成模拟数据
         if not students:
@@ -1156,9 +1234,11 @@ def get_students_ranking():
                         'student_id': app.student_id,
                         'student_name': app.student_name,
                         'departmentId': app.department_id,
-                        'department': app.department.name,
+                        'department': app.department.name if app.department else '未知系别',
                         'majorId': app.major_id,
-                        'major': app.major.name,
+                        'major': app.major.name if app.major else '未知专业',
+                        'facultyId': app.faculty_id,  # 添加学院ID
+                        'faculty': app.faculty.name if app.faculty else '未知学院',  # 添加学院名称
                         'specialty_score': 0.0,
                         'comprehensive_score': 0.0,
                         'total_score': 0.0,
@@ -1169,18 +1249,45 @@ def get_students_ranking():
                         'gpa': None,  # 推免绩点
                         'academic_score': None,  # 换算后的学业成绩
                         'major_ranking': None,  # 专业成绩排名
-                        'major_total_students': None  # 排名人数
+                        'major_total_students': None,  # 排名人数
+                        'academic_items': [],  # 添加学术专长项目列表
+                        'comprehensive_items': [],  # 添加综合表现项目列表
+                        'final_score': 0.0  # 添加最终成绩字段
                     }
                 
-                # 累加学术专长分数
+                # 按项目类型添加到对应的列表
+                app_item = {
+                    'project_name': app.project_name,
+                    'award_time': app.award_date.strftime('%Y-%m-%d') if app.award_date else '',
+                    'award_level': app.award_level,
+                    'individual_collective': app.award_type,
+                    'author_order': app.author_order,
+                    'self_eval_score': app.self_score,
+                    'score_basis': '',  # Application模型没有score_basis字段
+                    'college_approved_score': app.final_score,
+                    'total_score': app.final_score or 0.0
+                }
+                
+                # 累加学术专长分数并添加到学术专长列表
+                if app.application_type in ['research', 'competition', 'innovation'] and app.final_score is not None:
+                    student_stats[student_id]['specialty_score'] += app.final_score
+                    student_stats[student_id]['academic_items'].append(app_item)
+                
+                # 累加综合表现分数并添加到综合表现列表
+                if app.application_type in ['international_internship', 'military_service', 'volunteer', 'social_work', 'sports', 'honor_title'] and app.final_score is not None:
+                    student_stats[student_id]['comprehensive_score'] += app.final_score
+                    student_stats[student_id]['comprehensive_items'].append(app_item)
+                
+                # 兼容旧的application_type值
                 if app.application_type == 'academic' and app.final_score is not None:
                     student_stats[student_id]['specialty_score'] += app.final_score
+                    student_stats[student_id]['academic_items'].append(app_item)
                 
-                # 累加综合表现分数
                 if app.application_type == 'comprehensive' and app.final_score is not None:
                     student_stats[student_id]['comprehensive_score'] += app.final_score
+                    student_stats[student_id]['comprehensive_items'].append(app_item)
             
-            # 为了演示，添加一些模拟数据
+            # 为了演示，添加一些模拟数据（仅当没有实际数据时）
             for student_id in student_stats:
                 stats = student_stats[student_id]
                 # A-H: 学生基本信息
@@ -1199,32 +1306,34 @@ def get_students_ranking():
                 stats['academic_weighted'] = stats['academic_score'] * 0.8  # 学业综合成绩（80%）
                 
                 # K-S: 学术专长成绩（占总分12%）
-                # 学术专长项目数组
-                stats['academic_items'] = [{
-                    'project_name': '全国大学生计算机设计大赛',  # K: 项目
-                    'award_time': '2023-12-15',  # L: 获奖时间
-                    'award_level': '国家级',  # M: 奖项级别
-                    'individual_collective': '个人',  # N: 个人或集体奖项
-                    'author_order': '第一作者',  # O: 集体奖项中第几作者/参赛者
-                    'self_eval_score': 12.0,  # P: 自评加分
-                    'score_basis': '国家级A类一等奖',  # Q: 加分依据
-                    'college_approved_score': 12.0,  # R: 学院核定加分
-                    'total_score': stats['specialty_score']  # S: 学院核定总分
-                }]
+                # 学术专长项目数组 - 仅当没有实际项目时添加模拟数据
+                if not stats['academic_items']:
+                    stats['academic_items'] = [{
+                        'project_name': '全国大学生计算机设计大赛',  # K: 项目
+                        'award_time': '2023-12-15',  # L: 获奖时间
+                        'award_level': '国家级',  # M: 奖项级别
+                        'individual_collective': '个人',  # N: 个人或集体奖项
+                        'author_order': '第一作者',  # O: 集体奖项中第几作者/参赛者
+                        'self_eval_score': 12.0,  # P: 自评加分
+                        'score_basis': '国家级A类一等奖',  # Q: 加分依据
+                        'college_approved_score': 12.0,  # R: 学院核定加分
+                        'total_score': stats['specialty_score']  # S: 学院核定总分
+                    }]
                 
                 # T-AB: 综合表现加分（占总分8%）
-                # 综合表现项目数组
-                stats['comprehensive_items'] = [{
-                    'project_name': '优秀学生干部',  # T: 项目
-                    'award_time': '2024-03-10',  # U: 获奖时间
-                    'award_level': '校级',  # V: 奖项级别
-                    'individual_collective': '个人',  # W: 个人或集体奖项
-                    'author_order': '',  # X: 集体奖项中第几作者/参赛者
-                    'self_eval_score': 8.0,  # Y: 自评加分
-                    'score_basis': '连续两年担任班长',  # Z: 加分依据
-                    'college_approved_score': 8.0,  # AA: 学院核定加分
-                    'total_score': stats['comprehensive_score']  # AB: 学院核定总分
-                }]
+                # 综合表现项目数组 - 仅当没有实际项目时添加模拟数据
+                if not stats['comprehensive_items']:
+                    stats['comprehensive_items'] = [{
+                        'project_name': '优秀学生干部',  # T: 项目
+                        'award_time': '2024-03-10',  # U: 获奖时间
+                        'award_level': '校级',  # V: 奖项级别
+                        'individual_collective': '个人',  # W: 个人或集体奖项
+                        'author_order': '',  # X: 集体奖项中第几作者/参赛者
+                        'self_eval_score': 8.0,  # Y: 自评加分
+                        'score_basis': '连续两年担任班长',  # Z: 加分依据
+                        'college_approved_score': 8.0,  # AA: 学院核定加分
+                        'total_score': stats['comprehensive_score']  # AB: 学院核定总分
+                    }]
                 
                 # AC-AF: 总分与排名
                 stats['total_comprehensive_score'] = stats['specialty_score'] + stats['comprehensive_score']  # AC: 考核综合成绩总分

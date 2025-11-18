@@ -228,7 +228,7 @@
 import { ref, computed, onMounted, onActivated, watch } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useApplicationsStore } from '../../stores/applications'
-import ApplicationDetailModal from './ApplicationDetailModal.vue'
+import ApplicationDetailModal from '../common/ApplicationDetailModal.vue'
 
 // 定义事件，用于通知父组件切换页面和编辑申请
 const emit = defineEmits(['switch-page', 'edit-application'])

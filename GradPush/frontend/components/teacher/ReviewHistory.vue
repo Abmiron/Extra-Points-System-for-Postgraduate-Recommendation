@@ -90,7 +90,7 @@
               <th>自评分数</th>
               <th>核定分数</th>
               <th>审核状态</th>
-              <th>操作</th>
+              <th class="action-column">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -109,7 +109,7 @@
                   {{ getStatusText(application.status) }}
                 </span>
               </td>
-              <td>
+              <td class="action-column">
                 <div class="action-buttons">
                   <button class="btn-outline btn small-btn" @click="viewApplication(application)" title="查看">
                     <font-awesome-icon :icon="['fas', 'eye']" /> 
@@ -142,19 +142,18 @@
     </div>
 
     <!-- 查看申请详情模态框 -->
-    <TeacherViewDetailModal v-if="selectedApplication" :application="selectedApplication"
-      @close="closeDetailModal" />
+    <ApplicationDetailModal v-if="selectedApplication" :application="selectedApplication"
+      @close="closeDetailModal" :is-review-mode="false" />
 
     <!-- 编辑申请详情模态框 -->
-    <TeacherEditDetailModal v-if="editingApplication" :application="editingApplication"
-      @close="closeEditDialog" @approve="handleApproveApplication" @reject="handleRejectApplication" />
+    <ApplicationDetailModal v-if="editingApplication" :application="editingApplication"
+      @close="closeEditDialog" @approve="handleApproveApplication" @reject="handleRejectApplication" :is-review-mode="true" />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import TeacherViewDetailModal from './TeacherViewDetailModal.vue'
-import TeacherEditDetailModal from './TeacherEditDetailModal.vue'
+import ApplicationDetailModal from '../common/ApplicationDetailModal.vue'
 import { useApplicationsStore } from '../../stores/applications'
 import { useAuthStore } from '../../stores/auth'
 
@@ -478,6 +477,14 @@ onMounted(async () => {
 
 .form-control.small {
   width: 120px;
+}
+
+/* 操作列样式 */
+.application-table th.action-column,
+.application-table td.action-column {
+  text-align: center;
+  width: 120px;
+  min-width: 120px;
 }
 
 /* 操作按钮样式 */

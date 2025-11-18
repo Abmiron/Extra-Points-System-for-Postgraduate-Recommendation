@@ -103,8 +103,8 @@
     </div>
 
     <!-- 审核详情模态框 -->
-    <TeacherEditDetailModal v-if="selectedApplication" :application="selectedApplication" @approve="handleApprove"
-      @reject="handleReject" @close="closeReviewModal" />
+    <ApplicationDetailModal v-if="selectedApplication" :application="selectedApplication" @approve="handleApprove"
+      @reject="handleReject" @close="closeReviewModal" :is-review-mode="true" />
   </div>
 </template>
 
@@ -112,7 +112,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useApplicationsStore } from '../../stores/applications'
-import TeacherEditDetailModal from './TeacherEditDetailModal.vue'
+import ApplicationDetailModal from '../common/ApplicationDetailModal.vue'
 
 const authStore = useAuthStore()
 const applicationsStore = useApplicationsStore()

@@ -170,27 +170,7 @@ class Application(db.Model):
     def __repr__(self):
         return f'<Application {self.id}>'
 
-# 合并学术专长详情和综合表现详情为统一的表现详情模型
-class PerformanceDetail(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.String(20), db.ForeignKey('student.student_id'), nullable=False)
-    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=True)  # 关联评分规则
-    type = db.Column(db.String(50), nullable=False)  # performance_type: academic, comprehensive
-    project_name = db.Column(db.String(200), nullable=False)  # 项目名称
-    award_date = db.Column(db.Date, nullable=False)  # 获奖时间
-    award_level = db.Column(db.String(50), nullable=True)  # 奖项级别
-    award_type = db.Column(db.String(50), nullable=True)  # 个人或集体奖项
-    author_order = db.Column(db.String(20), nullable=True)  # 集体奖项中第几作者/参赛者
-    self_score = db.Column(db.Float, nullable=False)  # 自评加分
-    score_basis = db.Column(db.Text, nullable=True)  # 加分依据
-    approved_score = db.Column(db.Float, nullable=True)  # 学院核定加分
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # 外键关联已定义，不使用ORM关系
-    
-    def __repr__(self):
-        return f'<PerformanceDetail {self.id} ({self.type})>'
+
 
 # 合并学生模型和学生总评模型
 class Student(db.Model):

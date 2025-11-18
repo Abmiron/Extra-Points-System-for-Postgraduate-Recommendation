@@ -237,19 +237,21 @@
     </div>
 
     <!-- 查看详情模态框 -->
-    <AdminViewDetailModal
+    <ApplicationDetailModal
       v-if="viewDetailModalVisible"
       :application="selectedApplication"
       @close="closeViewDetailModal"
+      :is-review-mode="false"
     />
 
     <!-- 审核操作模态框 -->
-    <AdminReviewDetailModal
+    <ApplicationDetailModal
       v-if="reviewDetailModalVisible"
       :application="selectedApplication"
       @approve="handleApproveApplication"
       @reject="handleRejectApplication"
       @close="closeReviewDetailModal"
+      :is-review-mode="true"
     />
 
 
@@ -258,8 +260,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import AdminViewDetailModal from './AdminViewDetailModal.vue'
-import AdminReviewDetailModal from './AdminReviewDetailModal.vue'
+import ApplicationDetailModal from '../common/ApplicationDetailModal.vue'
 import { useApplicationsStore } from '../../stores/applications'
 import { useAuthStore } from '../../stores/auth'
 

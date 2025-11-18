@@ -43,17 +43,23 @@ from routes import main_bp
 # 配置静态文件服务
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    response = send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    return response
 
 # 配置头像文件的静态服务
 @app.route('/uploads/avatars/<path:filename>')
 def uploaded_avatar(filename):
-    return send_from_directory(app.config['AVATAR_FOLDER'], filename)
+    response = send_from_directory(app.config['AVATAR_FOLDER'], filename)
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    return response
 
 # 配置普通文件的静态服务
 @app.route('/uploads/files/<path:filename>')
 def uploaded_app_file(filename):
-    return send_from_directory(app.config['FILE_FOLDER'], filename)
+    response = send_from_directory(app.config['FILE_FOLDER'], filename)
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    return response
 
 # 注册蓝图
 app.register_blueprint(auth_bp)
@@ -62,6 +68,8 @@ app.register_blueprint(application_bp)
 app.register_blueprint(rule_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(main_bp)
+
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001, use_reloader=False)
