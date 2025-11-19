@@ -28,6 +28,7 @@ export const useApplicationsStore = defineStore('applications', () => {
       const queryParams = new URLSearchParams()
       if (filters.studentId) queryParams.append('studentId', filters.studentId)
       if (filters.studentName) queryParams.append('studentName', filters.studentName)
+      if (filters.faculty) queryParams.append('facultyId', filters.faculty)
       if (filters.department) queryParams.append('department', filters.department)
       if (filters.major) queryParams.append('major', filters.major)
       if (filters.status) queryParams.append('status', filters.status)
@@ -74,6 +75,7 @@ export const useApplicationsStore = defineStore('applications', () => {
     
     try {
       const queryParams = new URLSearchParams()
+      if (filters.faculty) queryParams.append('facultyId', filters.faculty)
       if (filters.department) queryParams.append('department', filters.department)
       if (filters.major) queryParams.append('major', filters.major)
       if (filters.applicationType) queryParams.append('applicationType', filters.applicationType)
@@ -370,6 +372,11 @@ export const useApplicationsStore = defineStore('applications', () => {
   // 过滤申请（按多种条件）
   const filterApplications = (filters = {}) => {
     return applications.value.filter(application => {
+      // 按学院筛选
+      if (filters.faculty && filters.faculty !== 'all' && application.facultyId !== filters.faculty) {
+        return false
+      }
+      
       // 按部门筛选
       if (filters.department && filters.department !== 'all' && application.department !== filters.department) {
         return false

@@ -31,7 +31,7 @@
         <button class="btn btn-outline" @click="resetFilter">清空筛选</button>
       </div>
       <div class="filter-group">
-        <button class="btn btn-primary" @click="recalculateComprehensiveScores">重新计算综合成绩</button>
+        <button class="btn btn-primary btn-outline" @click="recalculateComprehensiveScores">重新计算综合成绩</button>
       </div>
     </div>
 

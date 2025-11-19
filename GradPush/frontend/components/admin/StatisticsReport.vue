@@ -21,7 +21,7 @@
           <option value="2021">2021-2022</option>
         </select>
       </div>
-      <button class="btn" @click="generateReport">生成报表</button>
+      <button class="btn btn-outline" @click="generateReport">生成报表</button>
     </div>
 
     <!-- 成绩分布总表 -->

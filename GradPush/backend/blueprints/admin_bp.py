@@ -94,7 +94,7 @@ def delete_faculty(faculty_id):
         return jsonify({'message': '学院不存在'}), 404
     
     # 级联删除：学院 -> 系 -> 专业 -> 学生 -> 用户
-    from models import Student, Department, Major, Application
+    from models import Student, Department, Major, Application, User
     
     # 1. 先获取所有关联的申请记录
     applications = Application.query.filter_by(faculty_id=faculty.id).all()
@@ -110,17 +110,23 @@ def delete_faculty(faculty_id):
         # 删除学生记录
         db.session.delete(student)
     
-    # 3. 再获取所有关联的专业
+    # 3. 处理直接关联到学院的非学生用户（如教师、管理员）
+    non_student_users = User.query.filter_by(faculty_id=faculty.id).filter(User.role != 'student').all()
+    for user in non_student_users:
+        # 清除用户的学院关联，而不是删除用户
+        user.faculty_id = None
+    
+    # 4. 再获取所有关联的专业
     majors = Major.query.join(Department).filter(Department.faculty_id == faculty.id).all()
     for major in majors:
         db.session.delete(major)
     
-    # 4. 再获取所有关联的系
+    # 5. 再获取所有关联的系
     departments = Department.query.filter_by(faculty_id=faculty.id).all()
     for department in departments:
         db.session.delete(department)
     
-    # 5. 最后删除学院
+    # 6. 最后删除学院
     db.session.delete(faculty)
     
     try:

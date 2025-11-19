@@ -113,6 +113,7 @@ def get_all_users():
     role = request.args.get('role')
     status = request.args.get('status')
     search = request.args.get('search')
+    faculty = request.args.get('faculty')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
     
@@ -127,9 +128,26 @@ def get_all_users():
     if status:
         query = query.filter_by(status=status)
     
+    # 根据学院名称或ID筛选
+    if faculty and faculty != 'all':
+        # 先尝试根据学院名称查询
+        faculty_obj = Faculty.query.filter_by(name=faculty).first()
+        if faculty_obj:
+            query = query.filter_by(faculty_id=faculty_obj.id)
+        else:
+            # 如果找不到学院，也可以尝试直接根据faculty_id筛选
+            try:
+                faculty_id = int(faculty)
+                query = query.filter_by(faculty_id=faculty_id)
+            except ValueError:
+                pass
+    
     # 根据search关键词搜索
     if search:
         query = query.filter((User.name.like(f'%{search}%')) | (User.username.like(f'%{search}%')))
+    
+    # 按账号（username）排序
+    query = query.order_by(User.username)
     
     # 分页查询
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)

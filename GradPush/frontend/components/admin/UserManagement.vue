@@ -452,7 +452,8 @@ const loadUsersFromAPI = async () => {
       per_page: pageSize,
       role: role,
       status: status,
-      search: search
+      search: search,
+      faculty: filters.faculty
     })
     
     const response = await fetch(`http://localhost:5001/api/admin/users?${params}`)
@@ -882,6 +883,16 @@ const activeTabChanged = () => {
   currentPage.value = 1
   loadUsersFromAPI()
 }
+
+// 监听筛选条件变化
+watch(
+  filters,
+  () => {
+    currentPage.value = 1
+    loadUsersFromAPI()
+  },
+  { deep: true }
+)
 
 // 生命周期
 onMounted(() => {

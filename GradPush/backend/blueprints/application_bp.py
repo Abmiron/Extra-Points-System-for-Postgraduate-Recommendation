@@ -89,6 +89,7 @@ def get_applications():
     reviewed_by = request.args.get('reviewedBy')
     reviewed_start_date = request.args.get('reviewedStartDate')
     reviewed_end_date = request.args.get('reviewedEndDate')
+    faculty_id = request.args.get('facultyId')
     department_id = request.args.get('departmentId')
     major_id = request.args.get('majorId')
     department_name = request.args.get('department')
@@ -96,6 +97,10 @@ def get_applications():
     
     # 构建查询
     query = Application.query
+    
+    # 按学院筛选
+    if faculty_id:
+        query = query.filter_by(faculty_id=faculty_id)
     
     if student_id:
         query = query.filter(Application.student_id.like(f'%{student_id}%'))
@@ -208,6 +213,7 @@ def get_applications():
             'id': app.id,
             'studentId': app.student_id,
             'studentName': app.student_name,
+            'facultyId': app.faculty_id,
             'departmentId': app.department_id,
             'department': department_dict.get(app.department_id, '未知系'),
             'majorId': app.major_id,
@@ -923,6 +929,7 @@ def delete_application(id):
 @application_bp.route('/applications/pending', methods=['GET'])
 def get_pending_applications():
     # 获取查询参数
+    faculty_id = request.args.get('facultyId')
     department_id = request.args.get('departmentId')
     major_id = request.args.get('majorId')
     application_type = request.args.get('applicationType')
@@ -931,6 +938,10 @@ def get_pending_applications():
     
     # 构建查询
     query = Application.query.filter_by(status='pending')
+    
+    # 按学院筛选
+    if faculty_id:
+        query = query.filter_by(faculty_id=faculty_id)
     
     if department_id:
         query = query.filter_by(department_id=department_id)
@@ -989,6 +1000,7 @@ def get_pending_applications():
             'id': app.id,
             'studentId': app.student_id,
             'studentName': app.student_name,
+            'facultyId': app.faculty_id,
             'departmentId': app.department_id,
             'department': department_dict.get(app.department_id, '未知系'),
             'majorId': app.major_id,

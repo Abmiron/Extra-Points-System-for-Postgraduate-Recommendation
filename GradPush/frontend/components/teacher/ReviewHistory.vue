@@ -8,28 +8,37 @@
     <div class="filters">
       <div class="filter-group">
         <span class="filter-label">学号:</span>
-        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="输入学生学号">
+        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="输入学生学号" @input="filterApplications">
       </div>
       <div class="filter-group">
         <span class="filter-label">姓名:</span>
-        <input type="text" class="form-control small" v-model="filters.studentName" placeholder="输入学生姓名">
+        <input type="text" class="form-control small" v-model="filters.studentName" placeholder="输入学生姓名" @input="filterApplications">
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">学院:</span>
+        <select v-model="filters.faculty" @change="filterApplications">
+          <option value="all">全部</option>
+          <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
+            {{ faculty.name }}
+          </option>
+        </select>
       </div>
       <div class="filter-group">
         <span class="filter-label">所在系:</span>
         <select v-model="filters.department" @change="filterApplications">
           <option value="all">全部</option>
-          <option value="cs">计算机科学系</option>
-          <option value="se">软件工程系</option>
-          <option value="ai">人工智能系</option>
+          <option v-for="department in departments" :key="department.id" :value="department.name">
+            {{ department.name }}
+          </option>
         </select>
       </div>
       <div class="filter-group">
         <span class="filter-label">专业:</span>
         <select v-model="filters.major" @change="filterApplications">
           <option value="all">全部</option>
-          <option value="cs">计算机科学与技术</option>
-          <option value="se">软件工程</option>
-          <option value="ai">人工智能</option>
+          <option v-for="major in majors" :key="major.id" :value="major.name">
+            {{ major.name }}
+          </option>
         </select>
       </div>
       <div class="filter-group">
@@ -50,24 +59,24 @@
       </div>
       <div class="filter-group">
         <span class="filter-label">审核人:</span>
-        <input type="text" class="form-control small" v-model="filters.reviewedBy" placeholder="输入审核人姓名">
+        <input type="text" class="form-control small" v-model="filters.reviewedBy" placeholder="输入审核人姓名" @input="filterApplications">
       </div>
       <div class="filter-group checkbox-filter">
         <label>
-          <input type="checkbox" v-model="filters.myReviewsOnly">
+          <input type="checkbox" v-model="filters.myReviewsOnly" @change="filterApplications">
           <span>只显示我审核的</span>
         </label>
       </div>
       <!-- 申请时间和审核时间放在第二行 -->
       <div class="filter-group date-range-group">
         <span class="filter-label">申请时间:</span>
-        <input type="date" class="form-control small" v-model="filters.startDate">
-        至 <input type="date" class="form-control small" v-model="filters.endDate">
+        <input type="date" class="form-control small" v-model="filters.startDate" @change="filterApplications">
+        至 <input type="date" class="form-control small" v-model="filters.endDate" @change="filterApplications">
       </div>
       <div class="filter-group date-range-group">
         <span class="filter-label">审核时间:</span>
-        <input type="date" class="form-control small" v-model="filters.reviewedStartDate">
-        至 <input type="date" class="form-control small" v-model="filters.reviewedEndDate">
+        <input type="date" class="form-control small" v-model="filters.reviewedStartDate" @change="filterApplications">
+        至 <input type="date" class="form-control small" v-model="filters.reviewedEndDate" @change="filterApplications">
       </div>
       <div class="filter-group">
         <button class="btn btn-outline" @click="clearFilters">清空筛选</button>
@@ -156,6 +165,7 @@ import { ref, computed, onMounted } from 'vue'
 import ApplicationDetailModal from '../common/ApplicationDetailModal.vue'
 import { useApplicationsStore } from '../../stores/applications'
 import { useAuthStore } from '../../stores/auth'
+import api from '../../utils/api'
 
 const applicationsStore = useApplicationsStore()
 const authStore = useAuthStore()
@@ -166,6 +176,7 @@ const editingApplication = ref(null)
 
 // 筛选条件
 const filters = ref({
+  faculty: 'all',
   department: 'all',
   major: 'all',
   type: 'all',
@@ -179,6 +190,13 @@ const filters = ref({
   studentId: '',
   studentName: ''
 })
+
+// 学院、系和专业数据
+const faculties = ref([])
+const departments = ref([])
+const majors = ref([])
+const loadingDepartments = ref(false)
+const loadingMajors = ref(false)
 
 // 分页
 const pagination = ref({
@@ -196,6 +214,7 @@ const paginatedApplications = computed(() => {
   
   // 先筛选
   let filtered = applicationsStore.filterApplications({
+    faculty: filters.value.faculty !== 'all' ? filters.value.faculty : undefined,
     department: filters.value.department !== 'all' ? filters.value.department : undefined,
     major: filters.value.major !== 'all' ? filters.value.major : undefined,
     type: filters.value.type !== 'all' ? filters.value.type : undefined,
@@ -251,6 +270,7 @@ const totalApplications = computed(() => {
   const currentTeacherName = authStore.user?.name
   
   let filtered = applicationsStore.filterApplications({
+    faculty: filters.value.faculty !== 'all' ? filters.value.faculty : undefined,
     department: filters.value.department !== 'all' ? filters.value.department : undefined,
     major: filters.value.major !== 'all' ? filters.value.major : undefined,
     type: filters.value.type !== 'all' ? filters.value.type : undefined,
@@ -294,6 +314,11 @@ const endIndex = computed(() => Math.min(startIndex.value + pagination.value.pag
 
 // 方法
 const getDepartmentText = (department) => {
+  // 如果已经是完整名称，则直接返回
+  if (department === '计算机科学系' || department === '软件工程系' || department === '人工智能系') {
+    return department
+  }
+  // 否则尝试映射缩写
   const departments = {
     cs: '计算机科学系',
     se: '软件工程系',
@@ -303,6 +328,11 @@ const getDepartmentText = (department) => {
 }
 
 const getMajorText = (major) => {
+  // 如果已经是完整名称，则直接返回
+  if (major === '计算机科学与技术' || major === '软件工程' || major === '人工智能') {
+    return major
+  }
+  // 否则尝试映射缩写
   const majors = {
     cs: '计算机科学与技术',
     se: '软件工程',
@@ -440,11 +470,82 @@ const resetFilters = () => {
 
 // 生命周期
 onMounted(async () => {
-  // 确保数据已加载
-  if (applicationsStore.applications.length === 0) {
-    await applicationsStore.fetchApplications()
+  try {
+    // 并行获取数据
+    await Promise.all([
+      loadApplications(),
+      loadFaculties(),
+      loadDepartments(),
+      loadMajors()
+    ])
+  } catch (error) {
+    console.error('数据加载失败:', error)
+    alert('数据加载失败，请稍后重试')
   }
 })
+
+// 加载已审核申请
+const loadApplications = async () => {
+  try {
+    await applicationsStore.fetchApplications()
+  } catch (error) {
+    console.error('获取已审核申请失败:', error)
+    throw error
+  }
+}
+
+// 从后端获取所有系
+const loadDepartments = async () => {
+  try {
+    loadingDepartments.value = true
+    // 这里使用管理员接口，因为老师也需要查看所有系
+    const response = await api.getDepartmentsAdmin()
+    departments.value = response.departments || []
+  } catch (error) {
+    console.error('获取系列表失败:', error)
+    // 如果管理员接口不可用，尝试使用普通接口
+    try {
+      // 假设facultyId为1（信息学院）
+      const response = await api.getDepartmentsByFaculty(1)
+      departments.value = response.departments || []
+    } catch (error) {
+      console.error('获取系列表失败:', error)
+      // 如果都失败，使用默认值
+      departments.value = []
+    }
+  } finally {
+    loadingDepartments.value = false
+  }
+}
+
+// 从后端获取所有学院
+const loadFaculties = async () => {
+  try {
+    // 获取所有学院
+    const response = await api.getFaculties()
+    faculties.value = response.faculties || []
+  } catch (error) {
+    console.error('获取学院列表失败:', error)
+    // 如果都失败，使用默认值
+    faculties.value = []
+  }
+}
+
+// 从后端获取所有专业
+const loadMajors = async () => {
+  try {
+    loadingMajors.value = true
+    // 获取所有专业
+    const response = await api.getMajors()
+    majors.value = response.majors || []
+  } catch (error) {
+    console.error('获取专业列表失败:', error)
+    // 如果都失败，使用默认值
+    majors.value = []
+  } finally {
+    loadingMajors.value = false
+  }
+}
 </script>
 
 <style scoped>

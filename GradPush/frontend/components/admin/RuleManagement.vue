@@ -370,7 +370,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">分值</label>
-                <input type="number" class="form-control" v-model="ruleForm.score" step="0.1" min="0" max="20" required>
+                <input type="number" class="form-control" v-model="ruleForm.score" step="0.1" min="0" max="30" required>
               </div>
               <div class="form-group">
                 <label class="form-label">状态</label>
