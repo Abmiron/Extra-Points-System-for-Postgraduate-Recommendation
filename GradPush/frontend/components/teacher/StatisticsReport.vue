@@ -467,7 +467,7 @@ const getFacultyText = (facultyId) => {
 
 const generateReport = () => {
   if (filteredStudents.value.length === 0) {
-    alert('当前没有数据可导出');
+    //alert('当前没有数据可导出');
     return;
   }
 
@@ -628,7 +628,7 @@ const generateReport = () => {
   // 导出文件
   XLSX.writeFile(wb, fileName);
   
-  alert(`报表已成功生成并下载：${fileName}`);
+  //alert(`报表已成功生成并下载：${fileName}`);
 }
 
 

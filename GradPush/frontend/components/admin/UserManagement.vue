@@ -525,7 +525,7 @@ const toggleSelectAll = () => {
 }
 
 const importUsers = () => {
-  alert('用户导入功能开发中...')
+  //alert('用户导入功能开发中...')
 }
 
 const editUser = async (user) => {
@@ -609,7 +609,7 @@ const saveUser = async () => {
       throw new Error(errorData.message || '操作失败')
     }
     
-    alert(editingUser.value ? '用户信息更新成功' : '用户添加成功')
+    //alert(editingUser.value ? '用户信息更新成功' : '用户添加成功')
     closeModal()
     loadUsersFromAPI() // 重新加载用户列表
   } catch (error) {
@@ -637,7 +637,7 @@ const toggleUserStatus = async (userId, status) => {
       throw new Error(errorData.message || '操作失败')
     }
     
-    alert(`用户已${status === 'active' ? '启用' : '禁用'}`)
+    //alert(`用户已${status === 'active' ? '启用' : '禁用'}`)
     loadUsersFromAPI() // 重新加载用户列表
   } catch (error) {
     console.error('更新用户状态失败:', error)
@@ -666,7 +666,7 @@ const resetPassword = async (userId) => {
         throw new Error(errorData.message || '操作失败')
       }
       
-      alert('密码重置成功')
+      //alert('密码重置成功')
     } catch (error) {
       console.error('重置密码失败:', error)
       alert(error.message || '重置密码失败，请稍后重试')
@@ -689,7 +689,7 @@ const deleteUser = async (userId) => {
         throw new Error('删除用户失败')
       }
       
-      alert('用户已删除')
+      //alert('用户已删除')
       loadUsersFromAPI() // 重新加载用户列表
     } catch (error) {
       console.error('删除用户失败:', error)
@@ -727,7 +727,7 @@ const batchDisable = async () => {
       
       selectedUsers.value = []
       selectAll.value = false
-      alert('选中用户已禁用')
+      //alert('选中用户已禁用')
       loadUsersFromAPI() // 重新加载用户列表
     } catch (error) {
       console.error('批量禁用失败:', error)
@@ -765,7 +765,7 @@ const batchEnable = async () => {
       
       selectedUsers.value = []
       selectAll.value = false
-      alert('选中用户已启用')
+      //alert('选中用户已启用')
       loadUsersFromAPI() // 重新加载用户列表
     } catch (error) {
       console.error('批量启用失败:', error)
@@ -804,7 +804,7 @@ const batchResetPassword = async () => {
       
       selectedUsers.value = []
       selectAll.value = false
-      alert('选中用户的密码已重置')
+      //alert('选中用户的密码已重置')
     } catch (error) {
       console.error('批量重置密码失败:', error)
       alert('操作失败，请稍后重试')
@@ -837,7 +837,7 @@ const batchDelete = async () => {
       
       selectedUsers.value = []
       selectAll.value = false
-      alert('选中用户已删除')
+      //alert('选中用户已删除')
       loadUsersFromAPI() // 重新加载用户列表
     } catch (error) {
       console.error('批量删除失败:', error)

@@ -217,7 +217,7 @@ const saveAcademicSettings = async () => {
       applicationStart: settings.applicationStart,
       applicationEnd: settings.applicationEnd
     })
-    alert('设置已保存')
+    //alert('设置已保存')
   } catch (error) {
     console.error('保存设置失败:', error)
     alert('保存设置失败')
@@ -231,7 +231,7 @@ const saveStorageSettings = async () => {
       totalFileSizeLimit: settings.totalFileSizeLimit,
       allowedFileTypes: settings.allowedFileTypes
     })
-    alert('设置已保存')
+    //alert('设置已保存')
   } catch (error) {
     console.error('保存设置失败:', error)
     alert('保存设置失败')
@@ -245,7 +245,7 @@ const saveScoreWeightSettings = async () => {
       specialtyMaxScore: settings.specialtyMaxScore,
       performanceMaxScore: settings.performanceMaxScore
     })
-    alert('设置已保存')
+    //alert('设置已保存')
   } catch (error) {
     console.error('保存设置失败:', error)
     alert('保存设置失败')
@@ -253,7 +253,7 @@ const saveScoreWeightSettings = async () => {
 }
 
 const publishAnnouncement = () => {
-  alert('公告发布功能正在开发中...')
+  //alert('公告发布功能正在开发中...')
 }
 
 const backupDatabase = async () => {
@@ -263,7 +263,7 @@ const backupDatabase = async () => {
       lastBackup: new Date().toISOString()
     })
     settings.lastBackup = new Date().toLocaleString('zh-CN')
-    alert('数据库备份完成')
+    //alert('数据库备份完成')
   } catch (error) {
     console.error('数据库备份失败:', error)
     alert('数据库备份失败')
@@ -271,11 +271,11 @@ const backupDatabase = async () => {
 }
 
 const viewSystemLogs = () => {
-  alert('系统日志查看功能开发中...')
+  //alert('系统日志查看功能开发中...')
 }
 
 const clearCache = () => {
-  alert('缓存清理功能正在开发中...')
+  //alert('缓存清理功能正在开发中...')
 }
 
 const toggleSystemStatus = async () => {
@@ -286,14 +286,14 @@ const toggleSystemStatus = async () => {
         await api.updateSystemSettings({
           systemStatus: systemStatusApiValue.value
         })
-        alert('系统已进入维护模式')
+        //alert('系统已进入维护模式')
       }
     } else {
       systemStatus.value = 'online'
       await api.updateSystemSettings({
         systemStatus: systemStatusApiValue.value
       })
-      alert('系统已恢复正常运行')
+      //alert('系统已恢复正常运行')
     }
   } catch (error) {
     console.error('切换系统状态失败:', error)

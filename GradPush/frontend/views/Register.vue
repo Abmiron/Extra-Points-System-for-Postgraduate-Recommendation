@@ -312,7 +312,7 @@ const handleRegister = async () => {
     })
     
     // 注册成功后跳转到登录页面
-    alert('注册成功！请使用您的账号密码登录')
+    // alert('注册成功！请使用您的账号密码登录')
     router.push('/login')
   } catch (error) {
     console.error('注册错误:', error)

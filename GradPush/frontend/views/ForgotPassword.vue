@@ -104,7 +104,7 @@ const handleResetPassword = async () => {
     // 调用密码重置函数
     const message = await authStore.resetPassword(resetForm.username, resetForm.newPassword)
     
-    alert('密码重置成功！请使用新密码登录')
+    // alert('密码重置成功！请使用新密码登录')
     router.push('/login')
   } catch (error) {
     console.error('密码重置错误:', error)

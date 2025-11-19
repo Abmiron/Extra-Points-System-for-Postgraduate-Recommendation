@@ -426,7 +426,7 @@ const handleApproveApplication = async (approveData) => {
     const { applicationId, finalScore, approveComment } = approveData
     const success = await applicationsStore.approveApplication(applicationId, finalScore, approveComment, authStore.userName)
     if (success) {
-      alert('审核通过成功')
+      // alert('审核通过成功')
       closeEditDialog()
     } else {
       alert('审核通过失败')
@@ -442,7 +442,7 @@ const handleRejectApplication = async (rejectData) => {
     const { applicationId, rejectComment } = rejectData
     const success = await applicationsStore.rejectApplication(applicationId, rejectComment, authStore.userName)
     if (success) {
-      alert('驳回成功')
+      // alert('驳回成功')
       closeEditDialog()
     } else {
       alert('驳回失败')

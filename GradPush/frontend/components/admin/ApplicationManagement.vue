@@ -444,7 +444,7 @@ const toggleSelectAll = () => {
 }
 
 const exportData = () => {
-  alert('数据导出功能开发中...')
+  //alert('数据导出功能开发中...')
 }
 
 const batchDelete = async () => {
@@ -469,7 +469,7 @@ const batchDelete = async () => {
       selectAll.value = false
       
       // 显示结果
-      alert(`批量删除完成：成功 ${successCount} 条，失败 ${failCount} 条`)
+      //alert(`批量删除完成：成功 ${successCount} 条，失败 ${failCount} 条`)
     } catch (error) {
       console.error('批量删除失败:', error)
       alert('批量删除过程中发生错误，请重试')
@@ -494,7 +494,7 @@ const handleApproveApplication = async (reviewData) => {
     isLoading.value = true
     const success = await applicationsStore.updateApplicationStatus(reviewData.applicationId, 'approved', reviewData.approveComment, reviewData.finalScore, authStore.userName)
     if (success) {
-      alert('审核通过成功')
+      // alert('审核通过成功')
       reviewDetailModalVisible.value = false
       selectedApplication.value = null
     } else {
@@ -513,7 +513,7 @@ const handleRejectApplication = async (reviewData) => {
     isLoading.value = true
     const success = await applicationsStore.updateApplicationStatus(reviewData.applicationId, 'rejected', reviewData.rejectComment, 0, authStore.userName)
     if (success) {
-      alert('驳回成功')
+      // alert('驳回成功')
       reviewDetailModalVisible.value = false
       selectedApplication.value = null
     } else {
@@ -537,7 +537,7 @@ const deleteApplication = async (applicationId) => {
     try {
       const success = await applicationsStore.deleteApplication(applicationId)
       if (success) {
-        alert('删除成功')
+        // alert('删除成功')
       } else {
         alert('删除失败')
       }

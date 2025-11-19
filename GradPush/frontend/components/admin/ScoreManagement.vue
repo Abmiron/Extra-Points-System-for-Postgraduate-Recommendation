@@ -70,8 +70,8 @@
               <td>{{ student.student_name }}</td>
               <td>{{ student.cet4_score || '-' }}</td>
               <td>{{ student.cet6_score || '-' }}</td>
-              <td>{{ student.gpa || '-' }}</td>
-              <td>{{ student.academic_score || '-' }}</td>
+              <td>{{ student.gpa ? student.gpa.toFixed(4) : '-' }}</td>
+              <td>{{ student.academic_score ? student.academic_score.toFixed(4) : '-' }}</td>
               <td>{{ student.academic_specialty_total || '-' }}</td>
               <td>{{ student.comprehensive_performance_total || '-' }}</td>
               <td>{{ student.total_score || '-' }}</td>
@@ -168,12 +168,12 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">GPA</label>
-                <input type="number" class="form-control" v-model="formData.gpa" placeholder="请输入GPA" min="0" max="4" step="0.01" />
+                <input type="number" class="form-control" v-model="formData.gpa" placeholder="请输入GPA" min="0" max="4" step="0.0001" />
                 <div v-if="errors.gpa" class="error-message">{{ errors.gpa }}</div>
               </div>
               <div class="form-group">
                 <label class="form-label">学业成绩</label>
-                <input type="number" class="form-control" v-model="formData.academic_score" placeholder="请输入学业成绩" min="0" max="100" step="0.01" />
+                <input type="number" class="form-control" v-model="formData.academic_score" placeholder="请输入学业成绩" min="0" max="100" step="0.0001" />
                 <div v-if="errors.academic_score" class="error-message">{{ errors.academic_score }}</div>
               </div>
             </div>
@@ -440,7 +440,7 @@ export default {
           // 关闭模态框并刷新数据
           this.dialogVisible = false
           this.loadScoresFromAPI()
-          alert('成绩信息更新成功')
+          // alert('成绩信息更新成功')
         } catch (error) {
           alert('更新成绩信息失败')
           console.error('Error submitting student form:', error)
@@ -464,7 +464,7 @@ export default {
           // 刷新成绩数据
           await this.loadScoresFromAPI()
           
-          alert('综合成绩重新计算完成')
+          //alert('综合成绩重新计算完成')
         }
       } catch (error) {
         console.error('Error recalculating comprehensive scores:', error)

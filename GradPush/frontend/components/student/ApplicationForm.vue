@@ -1244,7 +1244,7 @@ const saveDraft = async () => {
     }
     
     if (success) {
-      alert('草稿已保存')
+      //alert('草稿已保存')
       // 保存成功后继续留在当前页面
     } else {
       alert('保存草稿失败，请稍后重试')
@@ -1386,7 +1386,7 @@ const submitForm = async () => {
       }
 
       if (success) {
-        alert('申请已提交，等待审核中...')
+        //alert('申请已提交，等待审核中...')
 
         // 重置表单，但保持默认的加分申请类型
         Object.assign(formData, {

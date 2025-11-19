@@ -698,11 +698,11 @@ const saveRule = async () => {
     if (editingRule.value) {
       // 更新规则
       await api.updateRule(editingRule.value.id, ruleData)
-      alert('规则更新成功')
+      // alert('规则更新成功')
     } else {
       // 添加新规则
       await api.createRule(ruleData)
-      alert('规则添加成功')
+      // alert('规则添加成功')
     }
 
     closeModal()
@@ -732,7 +732,7 @@ const deleteRule = async (rule) => {
       if (paginatedRules.value.length === 0 && currentPage.value > 1) {
         currentPage.value--
       }
-      alert('规则删除成功')
+      // alert('规则删除成功')
     } catch (error) {
       console.error('删除规则失败:', error)
       alert('删除规则失败')

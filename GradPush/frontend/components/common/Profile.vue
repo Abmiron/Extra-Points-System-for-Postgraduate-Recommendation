@@ -277,7 +277,7 @@ const handleAvatarChange = async (event) => {
     // 更新本地profile中的头像
     profile.avatar = response.user.avatar
     
-    alert('头像上传成功')
+    // alert('头像上传成功')
   } catch (error) {
     console.error('头像上传失败:', error)
     alert(`头像上传失败: ${error.message || '请稍后重试'}`)
@@ -307,7 +307,7 @@ const resetAvatar = async () => {
     // 更新本地profile中的头像
     profile.avatar = response.user.avatar
     
-    alert('已恢复默认头像')
+    //alert('已恢复默认头像')
   } catch (error) {
     console.error('恢复默认头像失败:', error)
     alert(`恢复默认头像失败: ${error.message || '请稍后重试'}`)
@@ -342,7 +342,7 @@ const saveProfile = async () => {
       await authStore.getCurrentUser()
     }
 
-    alert('个人信息已更新')
+    //alert('个人信息已更新')
     isEditing.value = false
   } catch (error) {
     console.error('保存失败:', error)
@@ -374,7 +374,7 @@ const changePassword = async () => {
     // 调用API修改密码
     await api.changePassword(passwordData)
     
-    alert('密码修改成功')
+    // alert('密码修改成功')
 
     closePasswordModal()
 

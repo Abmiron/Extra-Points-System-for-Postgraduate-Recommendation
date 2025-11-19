@@ -305,7 +305,7 @@ const handleApprove = async (approveData) => {
     // 重新加载数据
     await applicationsStore.fetchApplications()
     closeReviewModal()
-    alert('申请已通过审核')
+    //alert('申请已通过审核')
   } catch (error) {
     console.error('批准申请失败:', error)
     alert('批准申请失败，请稍后重试')
@@ -325,7 +325,7 @@ const handleReject = async (rejectData) => {
     // 重新加载数据
     await applicationsStore.fetchApplications()
     closeReviewModal()
-    alert('申请已驳回')
+    //alert('申请已驳回')
   } catch (error) {
     console.error('拒绝申请失败:', error)
     alert('拒绝申请失败，请稍后重试')

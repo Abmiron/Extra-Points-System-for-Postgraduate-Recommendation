@@ -55,7 +55,7 @@ const notificationCount = computed(() => {
 
 
 const showNotifications = () => {
-  alert(`您有${notificationCount.value}条未读通知`)
+  //alert(`您有${notificationCount.value}条未读通知`)
 }
 
 const goToProfile = () => {

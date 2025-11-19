@@ -13,7 +13,7 @@
 """
 
 from flask import Blueprint, request, jsonify, current_app
-from models import User, Faculty, Department, Major, Student
+from models import User, Faculty, Department, Major, Student, Application
 import os
 import uuid
 from werkzeug.utils import secure_filename
@@ -204,8 +204,11 @@ def delete_user(user_id):
     if not user:
         return jsonify({'message': '用户不存在'}), 404
     
-    # 如果是学生用户，同时删除关联的Student记录
+    # 如果是学生用户，同时删除关联的Student记录和申请数据
     if user.role == 'student' and user.student:
+        # 删除该学生的所有申请数据
+        Application.query.filter_by(student_id=user.student.student_id).delete()
+        # 删除Student记录
         db.session.delete(user.student)
     
     db.session.delete(user)
@@ -710,6 +713,9 @@ def delete_student(student_id):
     
     if not student:
         return jsonify({'message': '学生不存在'}), 404
+    
+    # 删除该学生的所有申请数据
+    Application.query.filter_by(student_id=student.student_id).delete()
     
     # 先将关联的User记录的student_id设置为None
     user = User.query.filter_by(student_id=student.student_id).first()

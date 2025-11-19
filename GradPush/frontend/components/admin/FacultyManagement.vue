@@ -719,7 +719,7 @@ export default {
         showAddFacultyModal.value = false
         newFaculty.value = { name: '', description: '' }
         loadFaculties()
-        alert('学院添加成功')
+        // alert('学院添加成功')
       } catch (error) {
         console.error('添加学院失败:', error)
         alert('添加学院失败')
@@ -736,7 +736,7 @@ export default {
         await api.updateFacultyAdmin(editingFaculty.value.id, editingFaculty.value)
         showEditFacultyModal.value = false
         loadFaculties()
-        alert('学院更新成功')
+        // alert('学院更新成功')
       } catch (error) {
         console.error('更新学院失败:', error)
         alert('更新学院失败')
@@ -750,7 +750,7 @@ export default {
           loadFaculties()
           loadDepartments()
           loadMajors()
-          alert('学院删除成功')
+          // alert('学院删除成功')
         } catch (error) {
           console.error('删除学院失败:', error)
           alert('删除学院失败')
@@ -765,7 +765,7 @@ export default {
         showAddDepartmentModal.value = false
         newDepartment.value = { name: '', faculty_id: '', description: '' }
         loadDepartments()
-        alert('系添加成功')
+        // alert('系添加成功')
       } catch (error) {
         console.error('添加系失败:', error)
         alert('添加系失败')
@@ -783,7 +783,7 @@ export default {
         showEditDepartmentModal.value = false
         loadDepartments()
         loadMajors()
-        alert('系更新成功')
+        // alert('系更新成功')
       } catch (error) {
         console.error('更新系失败:', error)
         alert('更新系失败')
@@ -796,7 +796,7 @@ export default {
           await api.deleteDepartmentAdmin(id)
           loadDepartments()
           loadMajors()
-          alert('系删除成功')
+          // alert('系删除成功')
         } catch (error) {
           console.error('删除系失败:', error)
           alert('删除系失败')
@@ -811,7 +811,7 @@ export default {
         showAddMajorModal.value = false
         newMajor.value = { name: '', faculty_id: '', department_id: '', description: '' }
         loadMajors()
-        alert('专业添加成功')
+        // alert('专业添加成功')
       } catch (error) {
         console.error('添加专业失败:', error)
         alert('添加专业失败')
@@ -858,7 +858,7 @@ export default {
         await api.updateMajorAdmin(editingMajor.value.id, editingMajor.value)
         showEditMajorModal.value = false
         loadMajors()
-        alert('专业更新成功')
+        // alert('专业更新成功')
       } catch (error) {
         console.error('更新专业失败:', error)
         alert('更新专业失败')
@@ -870,7 +870,7 @@ export default {
         try {
           await api.deleteMajorAdmin(id)
           loadMajors()
-          alert('专业删除成功')
+          // alert('专业删除成功')
         } catch (error) {
           console.error('删除专业失败:', error)
           alert('删除专业失败')
