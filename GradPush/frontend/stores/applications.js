@@ -195,9 +195,12 @@ export const useApplicationsStore = defineStore('applications', () => {
     error.value = null
     
     try {
+      // 处理不同组件传递的不同字段名（reviewComment vs approveComment/rejectComment）
+      const comment = reviewComment.comment || reviewComment.approveComment || reviewComment.rejectComment || reviewComment
+      
       const updatedData = {
         status,
-        reviewComment,
+        reviewComment: comment,
         finalScore,
         reviewedBy
       }

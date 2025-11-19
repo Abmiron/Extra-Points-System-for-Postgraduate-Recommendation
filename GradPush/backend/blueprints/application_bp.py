@@ -103,7 +103,7 @@ def get_applications():
         query = query.filter_by(faculty_id=faculty_id)
     
     if student_id:
-        query = query.filter(Application.student_id.like(f'%{student_id}%'))
+        query = query.filter_by(student_id=student_id)
     
     if student_name:
         query = query.filter(Application.student_name.like(f'%{student_name}%'))
@@ -953,7 +953,7 @@ def get_pending_applications():
         query = query.filter_by(application_type=application_type)
     
     if student_id:
-        query = query.filter(Application.student_id.like(f'%{student_id}%'))
+        query = query.filter_by(student_id=student_id)
     
     if student_name:
         query = query.filter(Application.student_name.like(f'%{student_name}%'))

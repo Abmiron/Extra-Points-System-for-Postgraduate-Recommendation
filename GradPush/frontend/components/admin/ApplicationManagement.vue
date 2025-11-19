@@ -489,10 +489,10 @@ const closeViewDetailModal = () => {
   selectedApplication.value = null
 }
 
-const handleApproveApplication = async (applicationId, finalScore, comment) => {
+const handleApproveApplication = async (reviewData) => {
   try {
     isLoading.value = true
-    const success = await applicationsStore.updateApplicationStatus(applicationId, 'approved', comment, finalScore, authStore.userName)
+    const success = await applicationsStore.updateApplicationStatus(reviewData.applicationId, 'approved', reviewData.approveComment, reviewData.finalScore, authStore.userName)
     if (success) {
       alert('审核通过成功')
       reviewDetailModalVisible.value = false
@@ -508,10 +508,10 @@ const handleApproveApplication = async (applicationId, finalScore, comment) => {
   }
 }
 
-const handleRejectApplication = async (applicationId, comment) => {
+const handleRejectApplication = async (reviewData) => {
   try {
     isLoading.value = true
-    const success = await applicationsStore.updateApplicationStatus(applicationId, 'rejected', comment, 0, authStore.userName)
+    const success = await applicationsStore.updateApplicationStatus(reviewData.applicationId, 'rejected', reviewData.rejectComment, 0, authStore.userName)
     if (success) {
       alert('驳回成功')
       reviewDetailModalVisible.value = false

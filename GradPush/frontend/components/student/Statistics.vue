@@ -141,14 +141,27 @@ const systemSettings = reactive({
 
 // 计算属性
 const academicApplications = computed(() => {
+  // 学术专长包括：academic(旧类型)、research、competition、innovation
   return applications.value.filter(app =>
-    app.applicationType === 'academic' && app.status === 'approved'
+    (app.applicationType === 'academic' || 
+     app.applicationType === 'research' || 
+     app.applicationType === 'competition' || 
+     app.applicationType === 'innovation') && 
+    app.status === 'approved'
   )
 })
 
 const comprehensiveApplications = computed(() => {
+  // 综合表现包括：comprehensive(旧类型)、international_internship、military_service、volunteer、social_work、sports、honor_title
   return applications.value.filter(app =>
-    app.applicationType === 'comprehensive' && app.status === 'approved'
+    (app.applicationType === 'comprehensive' || 
+     app.applicationType === 'international_internship' || 
+     app.applicationType === 'military_service' || 
+     app.applicationType === 'volunteer' || 
+     app.applicationType === 'social_work' || 
+     app.applicationType === 'sports' || 
+     app.applicationType === 'honor_title') && 
+    app.status === 'approved'
   )
 })
 
@@ -215,8 +228,8 @@ const loadStatistics = async () => {
     
     // 获取学生的所有申请
     //console.log('开始获取申请记录...')
-    await applicationsStore.fetchApplications({ studentId })
-    applications.value = applicationsStore.applications
+    const appData = await applicationsStore.fetchApplications({ studentId })
+    applications.value = appData
     //console.log('获取到的申请记录:', applications.value)
     
     // 获取加分统计数据
