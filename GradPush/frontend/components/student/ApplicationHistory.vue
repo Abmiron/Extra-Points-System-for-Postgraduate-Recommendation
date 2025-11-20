@@ -189,13 +189,7 @@ import api from '../../utils/api'
 
 // 定义事件，用于通知父组件切换页面和编辑申请
 const emit = defineEmits(['switch-page', 'edit-application'])
-// 导入Font Awesome图标组件和样式（如果项目中已配置）
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { library } from '@fortawesome/fontawesome-svg-core'
-import { fas } from '@fortawesome/free-solid-svg-icons'
-
-// 注册所有solid图标
-library.add(fas)
+// FontAwesome图标已在main.js中全局注册，此处无需重复导入
 
 const authStore = useAuthStore()
 const applicationsStore = useApplicationsStore()

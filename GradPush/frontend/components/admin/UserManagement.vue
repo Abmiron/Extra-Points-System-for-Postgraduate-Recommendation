@@ -541,8 +541,8 @@ const loadUsersFromAPI = async () => {
     }
     
     // 调试日志
-    console.log('API Request URL:', `http://localhost:5001/api/admin/users?${params}`)
-    console.log('Filters:', filters)
+    //console.log('API Request URL:', `http://localhost:5001/api/admin/users?${params}`)
+    //console.log('Filters:', filters)
     
     const response = await fetch(`http://localhost:5001/api/admin/users?${params}`)
     

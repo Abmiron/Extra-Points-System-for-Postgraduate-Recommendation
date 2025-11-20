@@ -3,6 +3,53 @@ import { ref, computed } from 'vue'
 import api from '../utils/api.js'
 
 export const useApplicationsStore = defineStore('applications', () => {
+  // 辅助函数：字段名转换
+  const transformFieldNames = (data) => {
+    // 字段名转换：将前端的驼峰式命名转换为后端的下划线命名
+    const fieldMapping = {
+      'studentId': 'student_id',
+      'studentName': 'student_name',
+      'name': 'student_name', // 兼容前端使用name字段的情况
+      'facultyId': 'faculty_id',
+      'department': 'department',
+      'major': 'major',
+      'applicationType': 'application_type',
+      'selfScore': 'self_score',
+      'projectName': 'project_name',
+      'awardDate': 'award_date',
+      'awardLevel': 'award_level',
+      'awardType': 'award_type',
+      'academicType': 'academic_type',
+      'researchType': 'research_type',
+      'innovationLevel': 'innovation_level',
+      'innovationRole': 'innovation_role',
+      'awardGrade': 'award_grade',
+      'awardCategory': 'award_category',
+      'authorRankType': 'author_rank_type',
+      'authorOrder': 'author_order',
+      'performanceType': 'performance_type',
+      'performanceLevel': 'performance_level',
+      'performanceParticipation': 'performance_participation',
+      'teamRole': 'team_role',
+      'finalScore': 'final_score',
+      'reviewComment': 'review_comment',
+      'reviewedAt': 'reviewed_at',
+      'reviewedBy': 'reviewed_by',
+      'appliedAt': 'applied_at',
+      'createdAt': 'created_at',
+      'updatedAt': 'updated_at'
+    }
+    
+    // 转换数据字段
+    const transformedData = {};
+    for (const [key, value] of Object.entries(data)) {
+      const newKey = fieldMapping[key] || key;
+      transformedData[newKey] = value;
+    }
+    
+    return transformedData;
+  }
+
   // 状态定义
   const applications = ref([])
   const loading = ref(false)
@@ -122,47 +169,8 @@ export const useApplicationsStore = defineStore('applications', () => {
       // 保存原始files数组用于单独处理File实例
       const files = application.files || []
       
-      // 字段名转换：将前端的驼峰式命名转换为后端的下划线命名
-      const fieldMapping = {
-        'studentId': 'student_id',
-        'studentName': 'student_name',
-        'name': 'student_name', // 兼容前端使用name字段的情况
-        'facultyId': 'faculty_id',
-        'department': 'department',
-        'major': 'major',
-        'applicationType': 'application_type',
-        'selfScore': 'self_score',
-        'projectName': 'project_name',
-        'awardDate': 'award_date',
-        'awardLevel': 'award_level',
-        'awardType': 'award_type',
-        'academicType': 'academic_type',
-        'researchType': 'research_type',
-        'innovationLevel': 'innovation_level',
-        'innovationRole': 'innovation_role',
-        'awardGrade': 'award_grade',
-        'awardCategory': 'award_category',
-        'authorRankType': 'author_rank_type',
-        'authorOrder': 'author_order',
-        'performanceType': 'performance_type',
-        'performanceLevel': 'performance_level',
-        'performanceParticipation': 'performance_participation',
-        'teamRole': 'team_role',
-        'finalScore': 'final_score',
-        'reviewComment': 'review_comment',
-        'reviewedAt': 'reviewed_at',
-        'reviewedBy': 'reviewed_by',
-        'appliedAt': 'applied_at',
-        'createdAt': 'created_at',
-        'updatedAt': 'updated_at'
-      }
-      
-      // 转换数据字段
-      const transformedData = {};
-      for (const [key, value] of Object.entries(applicationData)) {
-        const newKey = fieldMapping[key] || key;
-        transformedData[newKey] = value;
-      }
+      // 使用辅助函数转换字段名
+      const transformedData = transformFieldNames(applicationData)
       
       // 将转换后的application数据作为JSON字符串添加到FormData
       formData.append('application', JSON.stringify(transformedData))
@@ -290,47 +298,8 @@ export const useApplicationsStore = defineStore('applications', () => {
       // 保存原始files数组用于单独处理File实例
       const files = applicationData.files || []
       
-      // 字段名转换：将前端的驼峰式命名转换为后端的下划线命名
-      const fieldMapping = {
-        'studentId': 'student_id',
-        'studentName': 'student_name',
-        'name': 'student_name', // 兼容前端使用name字段的情况
-        'facultyId': 'faculty_id',
-        'department': 'department',
-        'major': 'major',
-        'applicationType': 'application_type',
-        'selfScore': 'self_score',
-        'projectName': 'project_name',
-        'awardDate': 'award_date',
-        'awardLevel': 'award_level',
-        'awardType': 'award_type',
-        'academicType': 'academic_type',
-        'researchType': 'research_type',
-        'innovationLevel': 'innovation_level',
-        'innovationRole': 'innovation_role',
-        'awardGrade': 'award_grade',
-        'awardCategory': 'award_category',
-        'authorRankType': 'author_rank_type',
-        'authorOrder': 'author_order',
-        'performanceType': 'performance_type',
-        'performanceLevel': 'performance_level',
-        'performanceParticipation': 'performance_participation',
-        'teamRole': 'team_role',
-        'finalScore': 'final_score',
-        'reviewComment': 'review_comment',
-        'reviewedAt': 'reviewed_at',
-        'reviewedBy': 'reviewed_by',
-        'appliedAt': 'applied_at',
-        'createdAt': 'created_at',
-        'updatedAt': 'updated_at'
-      }
-      
-      // 转换数据字段
-      const transformedData = {};
-      for (const [key, value] of Object.entries(data)) {
-        const newKey = fieldMapping[key] || key;
-        transformedData[newKey] = value;
-      }
+      // 使用辅助函数转换字段名
+      const transformedData = transformFieldNames(data)
       
       // 将转换后的application数据作为JSON字符串添加到FormData
       formData.append('application', JSON.stringify(transformedData))

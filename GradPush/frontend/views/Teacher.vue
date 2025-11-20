@@ -26,7 +26,7 @@ import Sidebar from '../components/common/Sidebar.vue'
 import PendingReview from '../components/teacher/PendingReview.vue'
 import ReviewHistory from '../components/teacher/ReviewHistory.vue'
 import StatisticsReport from '../components/common/StatisticsReport.vue'
-import TeacherProfile from '../components/teacher/TeacherProfile.vue'
+import Profile from '../components/common/Profile.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -40,7 +40,7 @@ const pageComponents = {
   'pending-review': PendingReview,
   'review-history': ReviewHistory,
   'statistics-report': StatisticsReport,
-  'profile': TeacherProfile
+  'profile': Profile
 }
 
 const currentPageComponent = computed(() => pageComponents[currentPage.value])

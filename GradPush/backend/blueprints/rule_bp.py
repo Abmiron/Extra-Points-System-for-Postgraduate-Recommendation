@@ -11,13 +11,11 @@
 - 切换规则状态（启用/禁用）
 """
 
-from flask import Blueprint, request, jsonify, abort
+from flask import Blueprint, request, jsonify
 from models import Rule
-from datetime import datetime
 from extensions import db
 import traceback
 import sys
-import os
 
 # 设置默认编码为UTF-8
 sys.stdout.reconfigure(encoding='utf-8')

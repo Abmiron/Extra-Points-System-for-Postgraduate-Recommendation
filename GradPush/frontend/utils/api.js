@@ -65,7 +65,6 @@ export default {
   // 用户相关
   getCurrentUser: (username) => apiRequest(`/user/current?username=${username}`),
   getUser: (username) => apiRequest(`/user/${username}`),
-  updateUserInfo: (data) => apiRequest('/user/profile', 'PUT', data),
   updateProfile: (data) => apiRequest('/user/profile', 'PUT', data),
   uploadAvatar: (username, avatarFile) => {
     const formData = new FormData();

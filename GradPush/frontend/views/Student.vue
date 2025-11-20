@@ -27,7 +27,7 @@ import Sidebar from '../components/common/Sidebar.vue'
 import ApplicationForm from '../components/student/ApplicationForm.vue'
 import ApplicationHistory from '../components/student/ApplicationHistory.vue'
 import Statistics from '../components/student/Statistics.vue'
-import Profile from '../components/student/Profile.vue'
+import Profile from '../components/common/Profile.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()

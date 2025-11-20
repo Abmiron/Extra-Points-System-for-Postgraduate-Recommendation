@@ -27,7 +27,7 @@ import ApplicationManagement from '../components/admin/ApplicationManagement.vue
 import RuleManagement from '../components/admin/RuleManagement.vue'
 import StatisticsReport from '../components/common/StatisticsReport.vue'
 import SystemSettings from '../components/admin/SystemSettings.vue'
-import AdminProfile from '../components/admin/AdminProfile.vue'
+import Profile from '../components/common/Profile.vue'
 import FacultyManagement from '../components/admin/FacultyManagement.vue'
 import ScoreManagement from '../components/admin/ScoreManagement.vue'
 
@@ -46,7 +46,7 @@ const pageComponents = {
   'faculty-management': FacultyManagement,
   'statistics-report': StatisticsReport,
   'system-settings': SystemSettings,
-  'profile': AdminProfile
+  'profile': Profile
 }
 
 const currentPageComponent = computed(() => pageComponents[currentPage.value])

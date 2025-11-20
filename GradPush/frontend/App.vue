@@ -12,10 +12,7 @@ import { useApplicationsStore } from './stores/applications'
 const authStore = useAuthStore()
 const applicationsStore = useApplicationsStore()
 
-onMounted(() => {
-  // 初始化认证状态
-  authStore.initialize()
-})
+// 认证状态初始化已在main.js中处理，无需在此处重复调用
 </script>
 
 <style>

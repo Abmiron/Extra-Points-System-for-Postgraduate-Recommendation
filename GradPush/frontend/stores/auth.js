@@ -51,18 +51,19 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const updateUserInfo = async (userData) => {
-    try {
-      const response = await api.updateUserInfo(userData)
-      // 确保提取正确的用户数据结构
-      const updatedUser = response.user || response
-      user.value = updatedUser
-      localStorage.setItem('user', JSON.stringify(updatedUser))
-      return updatedUser
-    } catch (error) {
-      console.error('更新用户信息失败:', error)
-      throw error
-    }
+  try {
+    // 使用updateProfile替代updateUserInfo
+    const response = await api.updateProfile(userData)
+    // 确保提取正确的用户数据结构
+    const updatedUser = response.user || response
+    user.value = updatedUser
+    localStorage.setItem('user', JSON.stringify(updatedUser))
+    return updatedUser
+  } catch (error) {
+    console.error('更新用户信息失败:', error)
+    throw error
   }
+}
 
   // 登录
   const login = async (username, password) => {

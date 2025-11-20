@@ -12,15 +12,14 @@
 - 获取待审核申请
 """
 
-from flask import Blueprint, request, jsonify, abort, current_app
+from flask import Blueprint, request, jsonify, current_app
 from models import Application, Student, Rule, Department, Major, SystemSettings
-from datetime import datetime, timezone
+from datetime import datetime
 import pytz
 import json
 import os
 import traceback
 import uuid
-from werkzeug.utils import secure_filename
 from extensions import db
 # 不再直接导入app，而是使用current_app
 
@@ -34,9 +33,6 @@ def update_student_statistics(student_id):
     :param student_id: 学生ID
     :return: 更新后的统计数据
     """
-    from extensions import db
-    from models import SystemSettings
-    
     # 查询学生的所有已通过申请
     applications = Application.query.filter_by(
         student_id=student_id,
