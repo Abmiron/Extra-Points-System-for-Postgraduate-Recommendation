@@ -109,10 +109,10 @@
                     <font-awesome-icon :icon="['fas', 'edit']" />
                   </button>
                   <button v-if="rule.status === 'active'" class="btn-outline btn small-btn"
-                    @click="toggleRuleStatus(rule.id, 'disabled')" title="禁用">
+                    @click="toggleRuleStatus(rule.id)" title="禁用">
                     <font-awesome-icon :icon="['fas', 'ban']" />
                   </button>
-                  <button v-else class="btn-outline btn small-btn" @click="toggleRuleStatus(rule.id, 'active')"
+                  <button v-else class="btn-outline btn small-btn" @click="toggleRuleStatus(rule.id)"
                     title="启用">
                     <font-awesome-icon :icon="['fas', 'check']" />
                   </button>

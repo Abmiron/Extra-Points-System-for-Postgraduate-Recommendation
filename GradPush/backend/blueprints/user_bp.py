@@ -114,8 +114,13 @@ def get_all_users():
     status = request.args.get('status')
     search = request.args.get('search')
     faculty = request.args.get('faculty')
+    department = request.args.get('department')
+    major = request.args.get('major')
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
+    
+    # 调试日志
+    print(f"筛选参数: role={role}, status={status}, faculty={faculty}, department={department}, major={major}, search={search}")
     
     # 构建查询
     query = User.query
@@ -128,19 +133,38 @@ def get_all_users():
     if status:
         query = query.filter_by(status=status)
     
-    # 根据学院名称或ID筛选
+    # 根据学院ID筛选
     if faculty and faculty != 'all':
-        # 先尝试根据学院名称查询
-        faculty_obj = Faculty.query.filter_by(name=faculty).first()
-        if faculty_obj:
-            query = query.filter_by(faculty_id=faculty_obj.id)
-        else:
-            # 如果找不到学院，也可以尝试直接根据faculty_id筛选
-            try:
-                faculty_id = int(faculty)
-                query = query.filter_by(faculty_id=faculty_id)
-            except ValueError:
-                pass
+        try:
+            faculty_id = int(faculty)
+            query = query.filter_by(faculty_id=faculty_id)
+        except ValueError:
+            # 如果不是有效的ID，尝试根据学院名称查询
+            faculty_obj = Faculty.query.filter_by(name=faculty).first()
+            if faculty_obj:
+                query = query.filter_by(faculty_id=faculty_obj.id)
+    
+    # 根据系ID筛选
+    if department and department != 'all':
+        try:
+            department_id = int(department)
+            query = query.filter_by(department_id=department_id)
+        except ValueError:
+            # 如果不是有效的ID，尝试根据系名称查询
+            department_obj = Department.query.filter_by(name=department).first()
+            if department_obj:
+                query = query.filter_by(department_id=department_obj.id)
+    
+    # 根据专业ID筛选
+    if major and major != 'all':
+        try:
+            major_id = int(major)
+            query = query.filter_by(major_id=major_id)
+        except ValueError:
+            # 如果不是有效的ID，尝试根据专业名称查询
+            major_obj = Major.query.filter_by(name=major).first()
+            if major_obj:
+                query = query.filter_by(major_id=major_obj.id)
     
     # 根据search关键词搜索
     if search:

@@ -20,14 +20,22 @@ from extensions import db
 from datetime import datetime
 import bcrypt
 from sqlalchemy import event
+import pytz
+
+# 设置上海时区
+shanghai_tz = pytz.timezone('Asia/Shanghai')
+
+# 获取当前时间（上海时区）
+def get_current_time():
+    return datetime.now(shanghai_tz)
 
 # 学院模型
 class Faculty(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)  # 学院名称
     description = db.Column(db.Text, nullable=True)  # 学院描述
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 创建时间
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 更新时间
+    created_at = db.Column(db.DateTime, default=get_current_time)  # 创建时间
+    updated_at = db.Column(db.DateTime, default=get_current_time, onupdate=get_current_time)  # 更新时间
     
     # 关系
     departments = db.relationship('Department', backref='faculty', lazy=True)
@@ -41,8 +49,8 @@ class Department(db.Model):
     name = db.Column(db.String(100), nullable=False)  # 系名称
     faculty_id = db.Column(db.Integer, db.ForeignKey('faculty.id'), nullable=False)  # 所属学院
     description = db.Column(db.Text, nullable=True)  # 系描述
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 创建时间
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 更新时间
+    created_at = db.Column(db.DateTime, default=get_current_time)  # 创建时间
+    updated_at = db.Column(db.DateTime, default=get_current_time, onupdate=get_current_time)  # 更新时间
     
     # 关系
     majors = db.relationship('Major', backref='department', lazy=True)
@@ -56,8 +64,8 @@ class Major(db.Model):
     name = db.Column(db.String(100), nullable=False)  # 专业名称
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False)  # 所属系
     description = db.Column(db.Text, nullable=True)  # 专业描述
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 创建时间
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 更新时间
+    created_at = db.Column(db.DateTime, default=get_current_time)  # 创建时间
+    updated_at = db.Column(db.DateTime, default=get_current_time, onupdate=get_current_time)  # 更新时间
     
     def __repr__(self):
         return f'<Major {self.name}>'
@@ -81,8 +89,8 @@ class User(db.Model):
     role_name = db.Column(db.String(50), nullable=True)
     status = db.Column(db.String(20), default='active')  # active, disabled
     last_login = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_current_time)
+    updated_at = db.Column(db.DateTime, default=get_current_time, onupdate=get_current_time)
     
     # 与Student模型建立一对一关系
     student = db.relationship('Student', backref=db.backref('user', uselist=False), foreign_keys=[student_id])
@@ -121,7 +129,7 @@ class Application(db.Model):
     department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False)
     major_id = db.Column(db.Integer, db.ForeignKey('major.id'), nullable=False)
     application_type = db.Column(db.String(50), nullable=False)  # academic, comprehensive
-    applied_at = db.Column(db.DateTime, default=datetime.utcnow)
+    applied_at = db.Column(db.DateTime, default=get_current_time)
     self_score = db.Column(db.Float, nullable=True)
     status = db.Column(db.String(20), default='pending')  # pending, approved, rejected, draft
     project_name = db.Column(db.String(200), nullable=False)
@@ -164,8 +172,8 @@ class Application(db.Model):
     department = db.relationship('Department', backref=db.backref('applications', lazy=True))
     major = db.relationship('Major', backref=db.backref('applications', lazy=True))
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_current_time)
+    updated_at = db.Column(db.DateTime, default=get_current_time, onupdate=get_current_time)
     
     def __repr__(self):
         return f'<Application {self.id}>'
@@ -203,8 +211,8 @@ class Student(db.Model):
     major_ranking = db.Column(db.Integer, nullable=True)  # 专业成绩排名
     total_students = db.Column(db.Integer, nullable=True)  # 排名人数
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_current_time)
+    updated_at = db.Column(db.DateTime, default=get_current_time, onupdate=get_current_time)
     
     def __repr__(self):
         return f'<Student {self.student_name} ({self.student_id})>'
@@ -257,8 +265,8 @@ class Rule(db.Model):
     is_special = db.Column(db.Boolean, default=False)  # 是否为特殊规则（如Nature/Science论文）
     status = db.Column(db.String(20), default='active')  # 状态: active, disabled
     description = db.Column(db.Text, nullable=True)  # 规则描述
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 创建时间
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 更新时间
+    created_at = db.Column(db.DateTime, default=get_current_time)  # 创建时间
+    updated_at = db.Column(db.DateTime, default=get_current_time, onupdate=get_current_time)  # 更新时间
     
     def __repr__(self):
         return f'<Rule {self.name}>'
@@ -286,8 +294,8 @@ class SystemSettings(db.Model):
     system_status = db.Column(db.String(20), default='online')  # online, maintenance
     last_backup = db.Column(db.DateTime, nullable=True)
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_current_time)
+    updated_at = db.Column(db.DateTime, default=get_current_time, onupdate=get_current_time)
     
     def __repr__(self):
         return f'<SystemSettings id={self.id}>'

@@ -8,24 +8,40 @@
     <div class="filters">
       <div class="filter-group">
         <span class="filter-label">所在学院:</span>
-        <select class="form-control" v-model="filters.faculty" @change="refreshData">
-          <option value="all">全部</option>
+        <select class="form-control" v-model="filters.faculty" @change="handleFacultyChange">
+          <option value="">请选择学院</option>
           <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">{{ faculty.name }}</option>
         </select>
       </div>
       <div class="filter-group">
-        <span class="filter-label">学年:</span>
-        <select class="form-control" v-model="filters.academicYear" @change="refreshData">
-          <option value="2023">2023-2024</option>
-          <option value="2022">2022-2023</option>
-          <option value="2021">2021-2022</option>
+        <span class="filter-label">所在系:</span>
+        <select class="form-control" v-model="filters.department" @change="handleDepartmentChange" :disabled="!filters.faculty">
+          <option value="">请选择系</option>
+          <option v-for="department in departments" :key="department.id" :value="department.id">{{ department.name }}</option>
         </select>
       </div>
+      <div class="filter-group">
+        <span class="filter-label">所在专业:</span>
+        <select class="form-control" v-model="filters.major" @change="handleMajorChange" :disabled="!filters.department">
+          <option value="">请选择专业</option>
+          <option v-for="major in majors" :key="major.id" :value="major.id">{{ major.name }}</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">当前学年:</span>
+        <span class="form-control">{{ currentYear }}-{{ currentYear ? parseInt(currentYear) + 1 : '' }}</span>
+      </div>
+      <button class="btn btn-outline" @click="clearFilters">清空筛选</button>
       <button class="btn btn-outline" @click="generateReport">生成报表</button>
     </div>
 
     <!-- 成绩分布总表 -->
     <div class="card">
+      <!-- 加载状态指示器 -->
+      <div v-if="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">数据加载中...</div>
+      </div>
       <div class="card-title">学生成绩分布总表</div>
       <div class="table-wrapper">
         <!-- 顶部滚动条辅助容器 -->
@@ -34,12 +50,11 @@
         </div>
         <!-- 主表格容器 -->
         <div class="table-container" ref="tableContainer">
-          <!-- 加载状态指示器 -->
-          <div v-if="loading" class="loading-overlay">
-            <div class="loading-spinner"></div>
-            <div class="loading-text">数据加载中...</div>
+          <!-- 未选择专业时显示提示 -->
+          <div v-if="!filters.major" class="no-data">
+            请选择专业
           </div>
-          <table class="application-table comprehensive-table" ref="dataTable">
+          <table v-else class="application-table comprehensive-table" ref="dataTable">
             <thead>
               <tr>
                 <!-- A-H: 学生基本信息 -->
@@ -212,12 +227,21 @@ import api from '../../utils/api'
 
 const applicationsStore = useApplicationsStore()
 const filters = reactive({
-  faculty: 'all',
-  academicYear: '2023'
+  faculty: '',
+  department: '',
+  major: '',
+  academicYear: ''
 })
+
+// 当前学年
+const currentYear = ref('2023')
 
 // 学院列表
 const faculties = ref([])
+// 系列表
+const departments = ref([])
+// 专业列表
+const majors = ref([])
 // 学生排名数据
 const studentsRanking = ref([])
 // 所有申请记录
@@ -232,10 +256,6 @@ const loadFaculties = async () => {
     const response = await api.getFacultiesAdmin()
 
     faculties.value = response.faculties || []
-    // 如果成功加载到学院列表且当前选择的是'全部'，则默认选择第一个学院
-    if (faculties.value.length > 0 && filters.faculty === 'all') {
-      filters.faculty = faculties.value[0].id
-    }
   } catch (error) {
     console.error('加载学院数据失败:', error)
     // 添加默认学院数据作为备选
@@ -246,10 +266,6 @@ const loadFaculties = async () => {
       { id: 4, name: '经济管理学院' },
       { id: 5, name: '外国语学院' }
     ]
-    // 使用默认数据时，默认选择第一个学院
-    if (faculties.value.length > 0 && filters.faculty === 'all') {
-      filters.faculty = faculties.value[0].id
-    }
   } finally {
     loading.value = false
   }
@@ -261,7 +277,9 @@ const fetchStudentsRanking = async () => {
   try {
     // 直接使用后端学生排名API
     const responseData = await applicationsStore.fetchStudentsRanking({
-      faculty: filters.faculty
+      faculty: filters.faculty,
+      department: filters.department,
+      major: filters.major
     })
     
     // 转换为表格行数据
@@ -363,6 +381,8 @@ const fetchStudentsRanking = async () => {
           const row = {
             ...formattedStudent,
             faculty_id: formattedStudent.facultyId, // 确保字段名一致
+            department_id: formattedStudent.departmentId, // 确保字段名一致
+            major_id: formattedStudent.majorId, // 确保字段名一致
             isFirstRow: i === 0, // 只有第一行显示基本信息
             itemType: 'both', // 每一行都可能同时显示两种类型的项目
             academicItem,
@@ -385,9 +405,19 @@ const fetchStudentsRanking = async () => {
 const filteredStudents = computed(() => {
   let students = studentsRanking.value
   
-  if (filters.faculty !== 'all') {
+  if (filters.faculty) {
     const facultyId = parseInt(filters.faculty)
     students = students.filter(student => student.faculty_id === facultyId)
+  }
+  
+  if (filters.department) {
+    const departmentId = parseInt(filters.department)
+    students = students.filter(student => student.department_id === departmentId)
+  }
+  
+  if (filters.major) {
+    const majorId = parseInt(filters.major)
+    students = students.filter(student => student.major_id === majorId)
   }
   
   // 按专业成绩排名显示
@@ -444,13 +474,6 @@ const totalStats = computed(() => {
 
 // 方法
 const getFacultyText = (facultyId) => {
-
-  
-  // 处理'all'值
-  if (facultyId === 'all') {
-    return '所有学院'
-  }
-  
   // 确保输入的facultyId是数字类型
   const id = typeof facultyId === 'string' ? parseInt(facultyId) : facultyId
   
@@ -465,6 +488,72 @@ const getFacultyText = (facultyId) => {
   return faculty ? faculty.name : '未知学院'
 }
 
+// 学院选择变化时的处理函数
+const handleFacultyChange = async () => {
+  // 重置系和专业选择
+  filters.department = ''
+  filters.major = ''
+  departments.value = []
+  majors.value = []
+  
+  // 如果选择了学院，加载对应的系列表
+  if (filters.faculty) {
+    try {
+      const response = await api.getDepartmentsAdmin(filters.faculty)
+      departments.value = response.departments || []
+    } catch (error) {
+      console.error('加载系列表失败:', error)
+      departments.value = []
+    }
+  }
+  
+  // 刷新数据
+  refreshData()
+}
+
+// 系选择变化时的处理函数
+const handleDepartmentChange = async () => {
+  // 重置专业选择
+  filters.major = ''
+  majors.value = []
+  
+  // 如果选择了系，加载对应的专业列表
+  if (filters.department) {
+    try {
+      const response = await api.getMajorsAdmin(filters.department)
+      majors.value = response.majors || []
+    } catch (error) {
+      console.error('加载专业列表失败:', error)
+      majors.value = []
+    }
+  }
+  
+  // 刷新数据
+  refreshData()
+}
+
+// 专业选择变化时的处理函数
+const handleMajorChange = () => {
+  // 刷新数据
+  refreshData()
+}
+
+// 清空所有筛选条件
+const clearFilters = () => {
+  filters.faculty = ''
+  filters.department = ''
+  filters.major = ''
+  // 保持当前学年不变
+  filters.academicYear = currentYear.value
+  
+  // 清空系和专业列表
+  departments.value = []
+  majors.value = []
+  
+  // 刷新数据
+  refreshData()
+}
+
 const generateReport = () => {
   if (filteredStudents.value.length === 0) {
     alert('当前没有数据可导出');
@@ -476,7 +565,7 @@ const generateReport = () => {
   
   // 添加表头
   const headers = [
-    '序号', '学院', '学号', '姓名', '性别', 'CET4成绩', 'CET6成绩',
+    '序号', '学院', '系', '专业', '学号', '姓名', '性别', 'CET4成绩', 'CET6成绩',
     '推免绩点(满分4分)', '换算后的成绩(满分100分)',
     '学术专长项目', '学术专长获奖时间', '学术专长奖项级别', '学术专长个人或集体',
     '学术专长集体奖项排序', '学术专长自评加分', '学术专长加分依据',
@@ -512,9 +601,11 @@ const generateReport = () => {
   });
 
   // 将分组后的数据转换为Excel行
-  studentMap.forEach(student => {
+  const studentEntries = Array.from(studentMap.entries());
+  studentEntries.forEach(([studentId, student], index) => {
     const { studentData, academicItems, comprehensiveItems } = student;
-    const maxItems = Math.max(academicItems.length, comprehensiveItems.length);
+    // 确保即使没有项目也至少生成一行数据
+    const maxItems = Math.max(academicItems.length, comprehensiveItems.length, 1);
     
     for (let i = 0; i < maxItems; i++) {
       const row = [];
@@ -523,6 +614,8 @@ const generateReport = () => {
       if (i === 0) {
         row.push(studentData.sequence);
         row.push(getFacultyText(studentData.faculty_id));
+        row.push(studentData.department);
+        row.push(studentData.major);
         row.push(studentData.studentId);
         row.push(studentData.studentName);
         row.push(studentData.gender);
@@ -532,7 +625,7 @@ const generateReport = () => {
         row.push(studentData.academicScore ? studentData.academicScore.toFixed(2) : 0);
       } else {
         // 非第一行基本信息留空
-        for (let j = 0; j < 9; j++) {
+        for (let j = 0; j < 11; j++) {
           row.push('');
         }
       }
@@ -576,6 +669,13 @@ const generateReport = () => {
       
       exportData.push(row);
     }
+    
+    // 在每个学生的行数据之后添加一个空行，最后一个学生除外
+    if (index < studentEntries.length - 1) {
+      // 创建一个与表头长度相同的空行
+      const emptyRow = new Array(headers.length).fill('');
+      exportData.push(emptyRow);
+    }
   });
 
   // 创建工作簿
@@ -588,6 +688,8 @@ const generateReport = () => {
   ws['!cols'] = [
     { wch: 6 },  // 序号
     { wch: 15 }, // 学院
+    { wch: 15 }, // 系
+    { wch: 15 }, // 专业
     { wch: 15 }, // 学号
     { wch: 8 },  // 姓名
     { wch: 6 },  // 性别
@@ -619,11 +721,26 @@ const generateReport = () => {
     { wch: 10 }  // 排名人数
   ];
   
+  // 为所有单元格应用靠右对齐样式
+  for (const cellAddress in ws) {
+    // 跳过特殊属性
+    if (cellAddress.startsWith('!')) continue;
+    
+    // 获取单元格对象
+    const cell = ws[cellAddress];
+    
+    // 设置单元格格式为文本并靠右对齐
+    // 使用XLSX库的数字格式和对齐方式
+    cell.z = '@'; // 文本格式
+    cell.s = cell.s || {};
+    cell.s.alignment = { horizontal: 'right' };
+  }
+  
   // 添加工作表到工作簿
   XLSX.utils.book_append_sheet(wb, ws, '学生成绩分布');
   
   // 生成文件名
-  const fileName = `统计报表_${filters.academicYear}学年_${getFacultyText(filters.faculty)}_${new Date().toISOString().split('T')[0]}.xlsx`;
+  const fileName = `统计报表_${filters.academicYear}-${parseInt(filters.academicYear) + 1}学年_${getFacultyText(filters.faculty)}_${new Date().toISOString().split('T')[0]}.xlsx`;
   
   // 导出文件
   XLSX.writeFile(wb, fileName);
@@ -632,6 +749,21 @@ const generateReport = () => {
 }
 
 
+
+// 加载当前学年
+const loadCurrentYear = async () => {
+  try {
+    const response = await api.getSystemSettings()
+    const settings = response.settings
+    currentYear.value = settings.academicYear
+    filters.academicYear = settings.academicYear
+  } catch (error) {
+    console.error('加载当前学年失败:', error)
+    // 如果获取失败，使用默认值2023
+    currentYear.value = '2023'
+    filters.academicYear = '2023'
+  }
+}
 
 // 重新加载数据
 const refreshData = () => {
@@ -681,9 +813,10 @@ const updateTopScrollWidth = () => {
     }
   }
 }
-
 // 生命周期
 onMounted(async () => {
+  // 获取当前学年
+  await loadCurrentYear()
   await loadFaculties()
   await fetchStudentsRanking()
   
@@ -850,7 +983,6 @@ onMounted(async () => {
   padding-bottom: 10px;
   border-bottom: 1px solid #e9ecef;
 }
-
 
 </style>
 

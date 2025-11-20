@@ -11,6 +11,7 @@
 from flask import Blueprint, request, jsonify, make_response
 from models import User, Faculty, Department, Major, Student
 from datetime import datetime
+import pytz
 from extensions import db
 
 # 创建蓝图
@@ -43,7 +44,7 @@ def login():
         return jsonify({'message': '密码错误'}), 401
     
     # 更新最后登录时间
-    user.last_login = datetime.utcnow()
+    user.last_login = datetime.now(pytz.timezone('Asia/Shanghai'))
     db.session.commit()
     
     # 获取学院、系和专业名称

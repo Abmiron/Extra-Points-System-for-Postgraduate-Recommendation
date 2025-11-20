@@ -25,14 +25,34 @@
         <input type="text" class="form-control" v-model="filters.keyword" placeholder="搜索姓名或学号/工号" @keyup.enter="searchUsers">
       </div>
       <div class="filter-group">
-        <span class="filter-label">学院:</span>
-        <select class="form-control" v-model="filters.faculty">
-          <option value="all">全部</option>
-          <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.name">
-            {{ faculty.name }}
-          </option>
-        </select>
-      </div>
+      <span class="filter-label">学院:</span>
+      <select class="form-control" v-model="filters.faculty">
+        <option value="all">全部</option>
+        <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
+          {{ faculty.name }}
+        </option>
+      </select>
+    </div>
+      <!-- 系筛选（仅学生显示） -->
+    <div class="filter-group" v-if="activeTab === 'student'">
+      <span class="filter-label">系:</span>
+      <select class="form-control" v-model="filters.department">
+        <option value="all">全部</option>
+        <option v-for="department in departments" :key="department.id" :value="department.id">
+          {{ department.name }}
+        </option>
+      </select>
+    </div>
+      <!-- 专业筛选（仅学生显示） -->
+    <div class="filter-group" v-if="activeTab === 'student'">
+      <span class="filter-label">专业:</span>
+      <select class="form-control" v-model="filters.major">
+        <option value="all">全部</option>
+        <option v-for="major in majors" :key="major.id" :value="major.id">
+          {{ major.name }}
+        </option>
+      </select>
+    </div>
       <div class="filter-group">
         <span class="filter-label">状态:</span>
         <select class="form-control" v-model="filters.status">
@@ -75,6 +95,7 @@
               <th>账号</th>
               <th>姓名</th>
               <th>学院</th>
+              <th v-if="activeTab === 'student'">系</th>
               <th>专业/角色</th>
               <th>状态</th>
               <th>最后登录</th>
@@ -88,6 +109,9 @@
               <td>{{ user.username }}</td>
               <td>{{ user.name }}</td>
               <td>{{ user.faculty?.name || getFacultyText(user.faculty) }}</td>
+              <td v-if="activeTab === 'student'">
+                {{ user.department?.name || user.department || '-' }}
+              </td>
               <td>{{ user.role === 'student' ? (user.major?.name || user.major) : (user.role === 'teacher' ? user.roleName : user.roleName || '管理员') }}</td>
               <td>
                 <span :class="`status-badge status-${user.status === 'active' ? 'approved' : 'rejected'}`">
@@ -121,7 +145,7 @@
               </td>
             </tr>
             <tr v-if="paginatedUsers.length === 0">
-              <td :colspan="activeTab === 'admin' ? 8 : 7" class="no-data">暂无用户数据</td>
+              <td :colspan="activeTab === 'admin' ? 8 : (activeTab === 'student' ? 8 : 7)" class="no-data">暂无用户数据</td>
             </tr>
           </tbody>
         </table>
@@ -304,6 +328,8 @@ const authStore = useAuthStore()
 const filters = reactive({
   keyword: '',
   faculty: 'all',
+  department: 'all',
+  major: 'all',
   status: 'all'
 })
 
@@ -331,8 +357,21 @@ const totalUsers = ref(0)
 const totalPages = ref(0)
 
 // 组件挂载时加载学院列表
-onMounted(() => {
-  loadFaculties()
+onMounted(async () => {
+  await loadFaculties()
+  // 如果当前选中的是学生选项卡，并且已经选择了学院，加载对应的系列表
+  if (activeTab.value === 'student' && filters.faculty && filters.faculty !== 'all') {
+    await loadDepartments(filters.faculty)
+    // 如果已经选择了系，加载对应的专业列表
+    if (filters.department && filters.department !== 'all') {
+      const department = departments.value.find(d => d.name === filters.department)
+      if (department) {
+        await loadMajors(department.id)
+      }
+    }
+  }
+  // 加载用户数据
+  loadUsersFromAPI()
 })
 
 // 加载学院列表
@@ -351,20 +390,34 @@ const loadFaculties = async () => {
 }
 
 // 加载系列表
-const loadDepartments = async (facultyId) => {
+const loadDepartments = async (facultyId = null) => {
   try {
     loadingOptions.value = true
     if (facultyId) {
-      // 使用管理员API端点获取系数据
+      // 使用管理员API端点获取指定学院的系数据
       const response = await api.getDepartmentsAdmin(facultyId)
       departments.value = response.departments
       // 保留当前的系和专业选择
       // 如果当前选择的系不在新加载的列表中，则重置
-      const departmentExists = departments.value.some(dept => dept.id === userForm.departmentId)
+      const departmentExists = departments.value.some(dept => dept.name === filters.department)
       if (!departmentExists) {
-        userForm.departmentId = ''
-        userForm.majorId = ''
+        filters.department = 'all'
+        filters.major = 'all'
         majors.value = []
+      }
+    } else {
+      // 加载所有系（类似审核记录组件的实现）
+      try {
+        const response = await api.getDepartmentsAdmin()
+        departments.value = response.departments || []
+      } catch (error) {
+        console.error('获取所有系列表失败:', error)
+        // 尝试使用默认学院的系
+        const defaultFaculty = faculties.value[0]
+        if (defaultFaculty) {
+          const response = await api.getDepartmentsAdmin(defaultFaculty.id)
+          departments.value = response.departments || []
+        }
       }
     }
   } catch (error) {
@@ -376,18 +429,35 @@ const loadDepartments = async (facultyId) => {
 }
 
 // 加载专业列表
-const loadMajors = async (departmentId) => {
+const loadMajors = async (departmentId = null) => {
   try {
     loadingOptions.value = true
     if (departmentId) {
-      // 使用管理员API端点获取专业数据
+      // 使用管理员API端点获取指定系的专业数据
       const response = await api.getMajorsAdmin(departmentId)
       majors.value = response.majors
       // 保留当前的专业选择
       // 如果当前选择的专业不在新加载的列表中，则重置
-      const majorExists = majors.value.some(major => major.id === userForm.majorId)
+      const majorExists = majors.value.some(major => major.name === filters.major)
       if (!majorExists) {
-        userForm.majorId = ''
+        filters.major = 'all'
+      }
+    } else {
+      // 加载所有专业（类似审核记录组件的实现）
+      try {
+        // 获取所有系，然后获取每个系的专业
+        const allMajors = []
+        for (const dept of departments.value) {
+          const response = await api.getMajorsAdmin(dept.id)
+          if (response.majors) {
+            allMajors.push(...response.majors)
+          }
+        }
+        majors.value = allMajors
+      } catch (error) {
+        console.error('获取所有专业列表失败:', error)
+        // 如果都失败，使用空数组
+        majors.value = []
       }
     }
   } catch (error) {
@@ -452,9 +522,27 @@ const loadUsersFromAPI = async () => {
       per_page: pageSize,
       role: role,
       status: status,
-      search: search,
-      faculty: filters.faculty
+      search: search
     })
+    
+    // 添加学院筛选条件（排除'all'）
+    if (filters.faculty && filters.faculty !== 'all') {
+      params.append('faculty', filters.faculty)
+    }
+    
+    // 仅当学生选项卡时添加系和专业筛选条件
+    if (role === 'student') {
+      if (filters.department !== 'all') {
+        params.append('department', filters.department)
+      }
+      if (filters.major !== 'all') {
+        params.append('major', filters.major)
+      }
+    }
+    
+    // 调试日志
+    console.log('API Request URL:', `http://localhost:5001/api/admin/users?${params}`)
+    console.log('Filters:', filters)
     
     const response = await fetch(`http://localhost:5001/api/admin/users?${params}`)
     
@@ -508,7 +596,12 @@ const resetFilters = () => {
   // 重置筛选条件
   filters.keyword = ''
   filters.faculty = 'all'
+  filters.department = 'all'
+  filters.major = 'all'
   filters.status = 'all'
+  // 重置系和专业下拉列表
+  departments.value = []
+  majors.value = []
   // 重新加载用户数据
   searchUsers()
 }
@@ -878,31 +971,107 @@ const nextPage = () => {
   }
 }
 
-// 监听选项卡变化
-const activeTabChanged = () => {
+// 切换选项卡
+const activeTabChanged = async () => {
+  filters.faculty = 'all'
+  filters.department = 'all'
+  filters.major = 'all'
+  filters.keyword = ''
+  filters.status = 'all'
   currentPage.value = 1
+  // 如果是学生选项卡，加载系和专业数据
+  if (activeTab.value === 'student') {
+    try {
+      await loadDepartments()
+      await loadMajors()
+    } catch (error) {
+      console.error('切换到学生选项卡时加载系专业数据失败:', error)
+    }
+  } else {
+    departments.value = []
+    majors.value = []
+  }
+  // 重新加载用户数据
   loadUsersFromAPI()
 }
 
-// 监听筛选条件变化
+// 监听学院筛选条件变化，加载对应的系列表
 watch(
-  filters,
+  () => filters.faculty,
+  async (newFacultyId) => {
+    if (activeTab.value === 'student' && newFacultyId && newFacultyId !== 'all') {
+      await loadDepartments(newFacultyId)
+    } else {
+      // 重置系和专业筛选
+      filters.department = 'all'
+      filters.major = 'all'
+      departments.value = []
+      majors.value = []
+    }
+    // 重新加载用户数据
+    currentPage.value = 1
+    loadUsersFromAPI()
+  }
+)
+
+// 监听系筛选条件变化，加载对应的专业列表
+  watch(
+    () => filters.department,
+    async (newDepartmentId) => {
+      if (activeTab.value === 'student' && newDepartmentId && newDepartmentId !== 'all') {
+        await loadMajors(newDepartmentId)
+      } else {
+        // 重置专业筛选
+        filters.major = 'all'
+        majors.value = []
+      }
+      // 重新加载用户数据
+      currentPage.value = 1
+      loadUsersFromAPI()
+    }
+  )
+
+// 监听其他筛选条件变化
+watch(
+  [() => filters.keyword, () => filters.status, () => filters.major],
   () => {
     currentPage.value = 1
     loadUsersFromAPI()
-  },
-  { deep: true }
+  }
 )
 
 // 生命周期
-onMounted(() => {
-  // 从后端API加载用户数据
-  loadUsersFromAPI()
+onMounted(async () => {
+  try {
+    // 并行加载数据
+    await Promise.all([
+      loadFaculties(),
+      loadUsersFromAPI()
+    ])
+    
+    // 如果当前是学生选项卡，加载系和专业数据
+    if (activeTab.value === 'student') {
+      await loadDepartments()
+      await loadMajors()
+    }
+  } catch (error) {
+    console.error('初始化数据加载失败:', error)
+  }
 })
 
 // 监听activeTab变化
-watch(activeTab, () => {
+watch(activeTab, async (newTab, oldTab) => {
   activeTabChanged()
+  // 当切换到学生选项卡时，如果已经选择了学院，加载对应的系列表
+  if (newTab === 'student' && oldTab !== 'student' && filters.faculty && filters.faculty !== 'all') {
+    await loadDepartments(filters.faculty)
+  } else if (newTab !== 'student') {
+    // 切换到其他选项卡时，重置系和专业筛选
+    filters.department = 'all'
+    filters.major = 'all'
+    departments.value = []
+    majors.value = []
+  }
 })
 </script>
 

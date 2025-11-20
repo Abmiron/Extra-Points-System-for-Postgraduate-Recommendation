@@ -33,6 +33,7 @@ export const useApplicationsStore = defineStore('applications', () => {
       if (filters.major) queryParams.append('major', filters.major)
       if (filters.status) queryParams.append('status', filters.status)
       if (filters.applicationType) queryParams.append('applicationType', filters.applicationType)
+      if (filters.rule) queryParams.append('ruleId', filters.rule)
       if (filters.reviewedBy) queryParams.append('reviewedBy', filters.reviewedBy)
       if (filters.reviewedStartDate) queryParams.append('reviewedStartDate', filters.reviewedStartDate)
       if (filters.reviewedEndDate) queryParams.append('reviewedEndDate', filters.reviewedEndDate)
@@ -79,6 +80,7 @@ export const useApplicationsStore = defineStore('applications', () => {
       if (filters.department) queryParams.append('department', filters.department)
       if (filters.major) queryParams.append('major', filters.major)
       if (filters.applicationType) queryParams.append('applicationType', filters.applicationType)
+      if (filters.rule) queryParams.append('ruleId', filters.rule)
       if (filters.studentId) queryParams.append('studentId', filters.studentId)
       if (filters.studentName) queryParams.append('studentName', filters.studentName)
       
@@ -395,6 +397,11 @@ export const useApplicationsStore = defineStore('applications', () => {
         return false
       }
       
+      // 按规则筛选
+      if (filters.rule && filters.rule !== 'all' && application.ruleId !== filters.rule) {
+        return false
+      }
+      
       // 按学生学号筛选（模糊匹配）
       if (filters.studentId) {
         const searchTerm = filters.studentId.toLowerCase()
@@ -475,17 +482,17 @@ export const useApplicationsStore = defineStore('applications', () => {
     
     try {
       const queryParams = new URLSearchParams()
-      if (filters.faculty && filters.faculty !== 'all') {
+      if (filters.faculty) {
         // 确保facultyId是数字类型
         const facultyId = parseInt(filters.faculty, 10)
         if (!isNaN(facultyId)) queryParams.append('facultyId', facultyId)
       }
-      if (filters.department && filters.department !== 'all') {
+      if (filters.department) {
         // 确保departmentId是数字类型
         const departmentId = parseInt(filters.department, 10)
         if (!isNaN(departmentId)) queryParams.append('departmentId', departmentId)
       }
-      if (filters.major && filters.major !== 'all') {
+      if (filters.major) {
         // 确保majorId是数字类型
         const majorId = parseInt(filters.major, 10)
         if (!isNaN(majorId)) queryParams.append('majorId', majorId)

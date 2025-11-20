@@ -6,14 +6,16 @@
 
     <!-- 筛选区域 -->
     <div class="filters">
-      <div class="filter-group">
-        <span class="filter-label">学号:</span>
-        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="请输入学号" @input="filterApplications">
-      </div>
+
       <div class="filter-group">
         <span class="filter-label">姓名:</span>
         <input type="text" class="form-control small" v-model="filters.studentName" placeholder="请输入姓名" @input="filterApplications">
       </div>
+      <div class="filter-group">
+        <span class="filter-label">学号:</span>
+        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="请输入学号" @input="filterApplications">
+      </div>
+      
       <div class="filter-group">
         <span class="filter-label">学院:</span>
         <select v-model="filters.faculty" @change="filterApplications">
@@ -50,6 +52,15 @@
         </select>
       </div>
       <div class="filter-group">
+        <span class="filter-label">规则:</span>
+        <select v-model="filters.rule" @change="filterApplications">
+          <option value="all">全部规则</option>
+          <option v-for="rule in availableRules" :key="rule.id" :value="rule.id">
+            {{ rule.name }}
+          </option>
+        </select>
+      </div>
+      <div class="filter-group">
         <span class="filter-label">申请时间:</span>
         <input type="date" class="form-control small" v-model="filters.startDate" @change="filterApplications">
         至 <input type="date" class="form-control small" v-model="filters.endDate" @change="filterApplications">
@@ -68,9 +79,9 @@
               <th>所在系</th>
               <th>专业</th>
               <th>申请类型</th>
+              <th>选择规则</th>
               <th>申请时间</th>
               <th>自评分数</th>
-              <th>选择规则</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -81,9 +92,9 @@
               <td>{{ getDepartmentText(application.department) }}</td>
               <td>{{ getMajorText(application.major) }}</td>
               <td>{{ getTypeText(application.applicationType) }}</td>
+              <td>{{ application.rule?.name || '未选择' }}</td>
               <td>{{ formatDate(application.appliedAt) }}</td>
               <td>{{ application.selfScore }}</td>
-              <td>{{ application.rule?.name || '未选择' }}</td>
               <td>
                 <button class="btn-outline btn small-btn" @click="reviewApplication(application)">
                   <font-awesome-icon :icon="['fas', 'eye']" /> 审核
@@ -133,6 +144,7 @@ const filters = ref({
   department: 'all',
   major: 'all',
   type: 'all',
+  rule: 'all',
   studentId: '',
   studentName: '',
   startDate: '',
@@ -145,6 +157,9 @@ const departments = ref([])
 const majors = ref([])
 const loadingDepartments = ref(false)
 const loadingMajors = ref(false)
+
+// 规则列表
+const availableRules = ref([])
 
 // 分页
 const pagination = ref({
@@ -166,6 +181,7 @@ const filteredAndPaginatedApplications = computed(() => {
     department: filters.value.department !== 'all' ? filters.value.department : undefined,
     major: filters.value.major !== 'all' ? filters.value.major : undefined,
     type: filters.value.type !== 'all' ? filters.value.type : undefined,
+    rule: filters.value.rule !== 'all' ? filters.value.rule : undefined,
     studentId: filters.value.studentId,
     studentName: filters.value.studentName,
     startDate: filters.value.startDate,
@@ -188,6 +204,7 @@ const totalApplications = computed(() => {
     department: filters.value.department !== 'all' ? filters.value.department : undefined,
     major: filters.value.major !== 'all' ? filters.value.major : undefined,
     type: filters.value.type !== 'all' ? filters.value.type : undefined,
+    rule: filters.value.rule !== 'all' ? filters.value.rule : undefined,
     studentId: filters.value.studentId,
     studentName: filters.value.studentName,
     startDate: filters.value.startDate,
@@ -249,9 +266,11 @@ const formatDate = (dateString) => {
 // 清空筛选条件
 const clearFilters = async () => {
   filters.value = {
+    faculty: 'all',
     department: 'all',
     major: 'all',
     type: 'all',
+    rule: 'all',
     studentId: '',
     studentName: '',
     startDate: '',
@@ -339,9 +358,11 @@ const closeReviewModal = () => {
 // 重置筛选条件
 const resetFilters = () => {
   filters.value = {
+    faculty: 'all',
     department: 'all',
     major: 'all',
     type: 'all',
+    rule: 'all',
     studentId: '',
     studentName: '',
     startDate: '',
@@ -364,7 +385,8 @@ onMounted(async () => {
       loadPendingApplications(),
       loadFaculties(),
       loadDepartments(),
-      loadMajors()
+      loadMajors(),
+      fetchRules()
     ])
   } catch (error) {
     console.error('数据加载失败:', error)
@@ -431,6 +453,17 @@ const loadMajors = async () => {
     majors.value = []
   } finally {
     loadingMajors.value = false
+  }
+}
+
+// 从后端获取规则列表
+const fetchRules = async () => {
+  try {
+    const response = await api.getRules()
+    availableRules.value = response.rules.filter(rule => rule.status === 'active')
+  } catch (error) {
+    console.error('获取规则列表失败:', error)
+    availableRules.value = []
   }
 }
 </script>

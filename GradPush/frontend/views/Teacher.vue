@@ -25,7 +25,7 @@ import Sidebar from '../components/common/Sidebar.vue'
 // 导入教师端组件
 import PendingReview from '../components/teacher/PendingReview.vue'
 import ReviewHistory from '../components/teacher/ReviewHistory.vue'
-import StatisticsReport from '../components/teacher/StatisticsReport.vue'
+import StatisticsReport from '../components/common/StatisticsReport.vue'
 import TeacherProfile from '../components/teacher/TeacherProfile.vue'
 
 const router = useRouter()

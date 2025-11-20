@@ -55,6 +55,14 @@
                   刷新
                 </button>
               </div>
+              
+              <!-- 规则说明显示区域 -->
+              <div v-if="formData.ruleId" class="rule-description">
+                <label class="form-label">规则说明</label>
+                <div class="description-content">
+                  {{ availableRules.find(rule => rule.id === formData.ruleId)?.description || '暂无规则说明' }}
+                </div>
+              </div>
             </div>
 
           </div>
@@ -621,7 +629,7 @@ const formData = reactive({
   academicType: '',
   // 科研成果特有字段
   researchType: '',       // 成果类型
-  // 创新创业特有字段
+  // 创新特有字段
   innovationLevel: '',    // 项目级别
   innovationRole: '', // 存储组长(leader)/组员(member)
   // 学术专长特有字段
@@ -858,16 +866,17 @@ const fetchMatchingRules = async () => {
   try {
     // 始终获取所有规则，不进行类型过滤
     const response = await api.getRules()
-    availableRules.value = response.rules
+    // 过滤掉禁用的规则，只显示状态为'active'的规则
+    availableRules.value = response.rules.filter(rule => rule.status === 'active')
     
     // 如果当前选择的规则不在列表中，清除选择
-    if (formData.ruleId && !response.rules.some(rule => rule.id === formData.ruleId)) {
+    if (formData.ruleId && !availableRules.value.some(rule => rule.id === formData.ruleId)) {
       formData.ruleId = ''
     }
     
     // 如果只有一个规则，自动选择
-    if (response.rules.length === 1 && !formData.ruleId) {
-      formData.ruleId = response.rules[0].id
+    if (availableRules.value.length === 1 && !formData.ruleId) {
+      formData.ruleId = availableRules.value[0].id
     }
     
     // 重新计算预估分数
@@ -1244,7 +1253,7 @@ const saveDraft = async () => {
     }
     
     if (success) {
-      //alert('草稿已保存')
+      alert('草稿已保存')
       // 保存成功后继续留在当前页面
     } else {
       alert('保存草稿失败，请稍后重试')
@@ -1386,7 +1395,7 @@ const submitForm = async () => {
       }
 
       if (success) {
-        //alert('申请已提交，等待审核中...')
+        alert('申请已提交，等待审核中...')
 
         // 重置表单，但保持默认的加分申请类型
         Object.assign(formData, {
@@ -1566,6 +1575,30 @@ const submitForm = async () => {
   font-size: 1.2rem;
 }
 
+/* 规则说明区域样式 */
+.rule-description {
+  margin-top: 15px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+}
+
+.rule-description .form-label {
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: block;
+  color: #495057;
+}
+
+.rule-description .description-content {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #6c757d;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* 响应式调整 */
 @media (max-width: 768px) {
   .form-actions {
@@ -1593,6 +1626,14 @@ const submitForm = async () => {
   }
 
   .file-preview {
+    .rule-description {
+      margin-top: 12px;
+      padding: 12px;
+    }
+
+    .rule-description .description-content {
+      font-size: 13px;
+    }
     padding: 30px 15px;
   }
 

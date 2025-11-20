@@ -17,15 +17,30 @@
       </div>
       <div class="filter-group">
         <span class="filter-label">学院:</span>
-        <input type="text" class="form-control small" v-model="filters.faculty" placeholder="输入学院名称">
+        <select class="form-control small" v-model="filters.faculty" @change="onFacultyChange">
+          <option value="">全部学院</option>
+          <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.name">
+            {{ faculty.name }}
+          </option>
+        </select>
       </div>
       <div class="filter-group">
         <span class="filter-label">系:</span>
-        <input type="text" class="form-control small" v-model="filters.department" placeholder="输入系名称">
+        <select class="form-control small" v-model="filters.department" @change="onDepartmentChange">
+          <option value="">全部系</option>
+          <option v-for="dept in departments" :key="dept.id" :value="dept.name">
+            {{ dept.name }}
+          </option>
+        </select>
       </div>
       <div class="filter-group">
         <span class="filter-label">专业:</span>
-        <input type="text" class="form-control small" v-model="filters.major" placeholder="输入专业名称">
+        <select class="form-control small" v-model="filters.major">
+          <option value="">全部专业</option>
+          <option v-for="major in majors" :key="major.id" :value="major.name">
+            {{ major.name }}
+          </option>
+        </select>
       </div>
       <div class="filter-group">
         <button class="btn btn-outline" @click="resetFilter">清空筛选</button>
@@ -251,6 +266,10 @@ export default {
         department: '',
         major: ''
       },
+      // 下拉选项数据
+      faculties: [],
+      departments: [],
+      majors: [],
       // 模态框
       dialogVisible: false,
       // 表单数据
@@ -317,6 +336,7 @@ export default {
   },
   mounted() {
     this.loadScoresFromAPI()
+    this.loadDropdownData()
   },
   methods: {
     // 从API加载成绩数据
@@ -367,6 +387,55 @@ export default {
       }
     },
 
+    // 加载下拉选项数据
+    async loadDropdownData() {
+      try {
+        // 加载学院列表
+        const facultiesResponse = await api.getFacultiesAdmin()
+        this.faculties = facultiesResponse.faculties || []
+        
+        // 加载所有系列表（后续可以优化为按学院筛选）
+        const departmentsResponse = await api.getDepartmentsAdmin()
+        this.departments = departmentsResponse.departments || []
+        
+        // 加载所有专业列表（后续可以优化为按系筛选）
+        const majorsResponse = await api.getMajorsAdmin()
+        this.majors = majorsResponse.majors || []
+      } catch (error) {
+        console.error('加载下拉数据失败:', error)
+      }
+    },
+    
+    // 学院选择变化时的处理
+    onFacultyChange() {
+      this.filters.department = ''
+      this.filters.major = ''
+      
+      // 如果选择了学院，根据学院筛选系列表
+      if (this.filters.faculty) {
+        const selectedFaculty = this.faculties.find(f => f.name === this.filters.faculty)
+        if (selectedFaculty) {
+          // 可以在这里添加根据学院筛选系的逻辑
+          // 目前暂时显示所有系
+        }
+      }
+      
+      this.currentPage = 1
+    },
+    
+    // 系选择变化时的处理
+    onDepartmentChange() {
+      this.filters.major = ''
+      
+      // 如果选择了系，根据系筛选专业列表
+      if (this.filters.department) {
+        // 可以在这里添加根据系筛选专业的逻辑
+        // 目前暂时显示所有专业
+      }
+      
+      this.currentPage = 1
+    },
+    
     // 重置筛选条件
     resetFilter() {
       Object.assign(this.filters, {

@@ -11,19 +11,7 @@
     </div>
     
     <!-- 高级筛选区域 -->
-    <div class="card">
-      <div class="card-title">筛选条件</div>
-      <div class="filters" style="padding: 15px;">
-        <div class="filter-group">
-          <span class="filter-label">状态筛选：</span>
-          <select v-model="filters.status" class="form-control">
-            <option value="all">全部状态</option>
-            <option value="draft">草稿</option>
-            <option value="pending">待审核</option>
-            <option value="approved">已通过</option>
-            <option value="rejected">已拒绝</option>
-          </select>
-        </div>
+    <div class="filters">
         
         <div class="filter-group">
           <span class="filter-label">申请类型：</span>
@@ -31,17 +19,6 @@
             <option value="all">全部类型</option>
             <option value="academic">学术专长</option>
             <option value="comprehensive">综合表现</option>
-          </select>
-        </div>
-        
-        <div class="filter-group">
-          <span class="filter-label">奖项级别：</span>
-          <select v-model="filters.level" class="form-control">
-            <option value="all">全部级别</option>
-            <option value="national">国家级</option>
-            <option value="provincial">省级</option>
-            <option value="municipal">市级</option>
-            <option value="school">校级</option>
           </select>
         </div>
         
@@ -55,6 +32,17 @@
             placeholder="输入项目名称关键词"
           />
         </div>
+
+        <div class="filter-group">
+          <span class="filter-label">规则：</span>
+          <select v-model="filters.rule" class="form-control">
+            <option value="all">全部规则</option>
+            <option v-for="rule in availableRules" :key="rule.id" :value="rule.id">
+              {{ rule.name }}
+            </option>
+          </select>
+        </div>
+        
         
         <div class="filter-group">
           <span class="filter-label">时间范围：</span>
@@ -64,12 +52,22 @@
             <input type="date" v-model="filters.dateRange.end" class="form-control" style="width: 140px;" />
           </div>
         </div>
-        
+
+        <div class="filter-group">
+          <span class="filter-label">状态筛选：</span>
+          <select v-model="filters.status" class="form-control">
+            <option value="all">全部状态</option>
+            <option value="draft">草稿</option>
+            <option value="pending">待审核</option>
+            <option value="approved">已通过</option>
+            <option value="rejected">已拒绝</option>
+          </select>
+        </div>
+
         <div class="filter-group">
           <button class="btn btn-outline" @click="clearFilters">清空筛选</button>
         </div>
       </div>
-    </div>
     
     <!-- 申请列表 -->
     <div class="card">
@@ -94,17 +92,17 @@
               <th @click="sortBy('projectName')" class="sortable">
                 项目名称 <font-awesome-icon :icon="getSortIcon('projectName')" />
               </th>
-              <th @click="sortBy('awardLevel')" class="sortable">
-                奖项级别 <font-awesome-icon :icon="getSortIcon('awardLevel')" />
+              <th @click="sortBy('ruleId')" class="sortable">
+                规则 <font-awesome-icon :icon="getSortIcon('ruleId')" />
+              </th>
+              <th @click="sortBy('appliedAt')" class="sortable">
+                申请时间 <font-awesome-icon :icon="getSortIcon('appliedAt')" />
               </th>
               <th @click="sortBy('selfScore')" class="sortable">
                 自评分数 <font-awesome-icon :icon="getSortIcon('selfScore')" />
               </th>
               <th @click="sortBy('finalScore')" class="sortable">
                 核定分数 <font-awesome-icon :icon="getSortIcon('finalScore')" />
-              </th>
-              <th @click="sortBy('appliedAt')" class="sortable">
-                申请时间 <font-awesome-icon :icon="getSortIcon('appliedAt')" />
               </th>
               <th @click="sortBy('status')" class="sortable">
                 状态 <font-awesome-icon :icon="getSortIcon('status')" />
@@ -116,10 +114,10 @@
             <tr v-for="application in paginatedApplications" :key="application.id">
               <td>{{ getApplicationTypeText(application.applicationType || application.type) }}</td>
               <td style="white-space: normal; max-width: 200px; word-break: break-word;">{{ application.eventName || application.projectName || '未命名' }}</td>
-              <td>{{ getAwardLevelText(application.awardLevel) }}</td>
-              <td>{{ application.selfScore || '-' }}</td>
-              <td>{{ application.finalScore || '-' }}</td>
+              <td>{{ getRuleName(application.ruleId) }}</td>
               <td>{{ formatDate(application.appliedAt || application.createdAt) }}</td>
+              <td>{{ application.selfScore || '-' }}</td>
+              <td>{{ application.finalScore ?? '-' }}</td>
               <td>
                 <span :class="['status-badge', getStatusClass(application.status)]">
                   {{ getStatusText(application.status) }}
@@ -159,57 +157,15 @@
     </div>
     
     <!-- 分页控件 -->
-    <div class="pagination" v-if="totalPages > 1 && !loading">
-      <div class="pagination-info">
-        显示 {{ startItemIndex }} - {{ endItemIndex }} 条，共 {{ totalItems }} 条记录
-      </div>
+    <div class="pagination">
+      <div>显示 {{ startItemIndex }}-{{ endItemIndex }} 条，共 {{ totalItems }} 条记录</div>
       <div class="pagination-controls">
-        <button 
-          class="btn btn-outline small-btn" 
-          :disabled="currentPage === 1" 
-          @click="currentPage = 1"
-        >
-          <font-awesome-icon :icon="['fas', 'angle-double-left']" />
+        <button class="btn-outline btn" :disabled="currentPage === 1" @click="currentPage--">
+          <font-awesome-icon :icon="['fas', 'chevron-left']" /> 上一页
         </button>
-        <button 
-          class="btn btn-outline small-btn" 
-          :disabled="currentPage === 1" 
-          @click="currentPage--"
-        >
-          <font-awesome-icon :icon="['fas', 'angle-left']" />
+        <button class="btn-outline btn" :disabled="currentPage >= totalPages" @click="currentPage++">
+          下一页 <font-awesome-icon :icon="['fas', 'chevron-right']" />
         </button>
-        
-        <button 
-          v-for="page in visiblePages" 
-          :key="page" 
-          class="btn btn-outline small-btn" 
-          :style="{ backgroundColor: page === currentPage ? '#003366' : 'white', color: page === currentPage ? 'white' : '#003366' }"
-          @click="currentPage = page"
-        >
-          {{ page }}
-        </button>
-        
-        <button 
-          class="btn btn-outline small-btn" 
-          :disabled="currentPage === totalPages" 
-          @click="currentPage++"
-        >
-          <font-awesome-icon :icon="['fas', 'angle-right']" />
-        </button>
-        <button 
-          class="btn btn-outline small-btn" 
-          :disabled="currentPage === totalPages" 
-          @click="currentPage = totalPages"
-        >
-          <font-awesome-icon :icon="['fas', 'angle-double-right']" />
-        </button>
-        
-        <select v-model="pageSize" class="form-control" style="margin-left: 10px; padding: 6px;">
-          <option :value="5">5条/页</option>
-          <option :value="10">10条/页</option>
-          <option :value="20">20条/页</option>
-          <option :value="50">50条/页</option>
-        </select>
       </div>
     </div>
     
@@ -229,6 +185,7 @@ import { ref, computed, onMounted, onActivated, watch } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useApplicationsStore } from '../../stores/applications'
 import ApplicationDetailModal from '../common/ApplicationDetailModal.vue'
+import api from '../../utils/api'
 
 // 定义事件，用于通知父组件切换页面和编辑申请
 const emit = defineEmits(['switch-page', 'edit-application'])
@@ -247,7 +204,7 @@ const applicationsStore = useApplicationsStore()
 const filters = ref({
   status: 'all',
   type: 'all',
-  level: 'all',
+  rule: 'all',
   searchQuery: '',
   dateRange: {
     start: '',
@@ -261,6 +218,20 @@ const pageSize = ref(10)
 const sortField = ref('appliedAt')
 const sortOrder = ref('desc')
 const selectedApplication = ref(null)
+
+// 规则列表
+const availableRules = ref([])
+
+// 从后端获取规则列表
+const fetchRules = async () => {
+  try {
+    const response = await api.getRules()
+    availableRules.value = response.rules.filter(rule => rule.status === 'active')
+  } catch (error) {
+    console.error('获取规则列表失败:', error)
+    availableRules.value = []
+  }
+}
 
 // 加载状态
 const loading = computed(() => applicationsStore.loading)
@@ -283,10 +254,10 @@ const filteredApplications = computed(() => {
     )
   }
   
-  // 筛选奖项级别
-  if (filters.value.level !== 'all') {
-    applications = applications.filter(app => app.awardLevel === filters.value.level)
-  }
+  // 筛选规则
+    if (filters.value.rule !== 'all') {
+      applications = applications.filter(app => app.ruleId === filters.value.rule)
+    }
   
   // 搜索项目名称
   if (filters.value.searchQuery.trim()) {
@@ -302,18 +273,38 @@ const filteredApplications = computed(() => {
     const startDate = new Date(filters.value.dateRange.start)
     startDate.setHours(0, 0, 0, 0)
     applications = applications.filter(app => {
-      const appDate = app.appliedAt || app.createdAt
-      return appDate && new Date(appDate) >= startDate
-    })
+        const appDate = app.appliedAt || app.createdAt
+        if (!appDate) return false
+        
+        // 处理时区问题
+        const date = new Date(appDate)
+        const hasTimezone = /(Z|[+-]\d{2}:\d{2})$/.test(appDate)
+        if (!hasTimezone) {
+          // 如果日期字符串没有包含时区信息，假设它是UTC时间
+          date.setTime(date.getTime() + date.getTimezoneOffset() * 60 * 1000)
+        }
+        
+        return date >= startDate
+      })
   }
   
   if (filters.value.dateRange.end) {
     const endDate = new Date(filters.value.dateRange.end)
     endDate.setHours(23, 59, 59, 999)
     applications = applications.filter(app => {
-      const appDate = app.appliedAt || app.createdAt
-      return appDate && new Date(appDate) <= endDate
-    })
+        const appDate = app.appliedAt || app.createdAt
+        if (!appDate) return false
+        
+        // 处理时区问题
+        const date = new Date(appDate)
+        const hasTimezone = /(Z|[+-]\d{2}:\d{2})$/.test(appDate)
+        if (!hasTimezone) {
+          // 如果日期字符串没有包含时区信息，假设它是UTC时间
+          date.setTime(date.getTime() + date.getTimezoneOffset() * 60 * 1000)
+        }
+        
+        return date <= endDate
+      })
   }
   
   // 排序
@@ -323,9 +314,30 @@ const filteredApplications = computed(() => {
     
     // 处理日期类型
     if (sortField.value === 'appliedAt' || sortField.value === 'createdAt') {
-      aVal = aVal ? new Date(aVal).getTime() : 0
-      bVal = bVal ? new Date(bVal).getTime() : 0
-    }
+        if (aVal) {
+          const aDate = new Date(aVal)
+          const hasTimezoneA = /(Z|[+-]\d{2}:\d{2})$/.test(aVal)
+          if (!hasTimezoneA) {
+            // 如果日期字符串没有包含时区信息，假设它是UTC时间
+            aDate.setTime(aDate.getTime() + aDate.getTimezoneOffset() * 60 * 1000)
+          }
+          aVal = aDate.getTime()
+        } else {
+          aVal = 0
+        }
+        
+        if (bVal) {
+          const bDate = new Date(bVal)
+          const hasTimezoneB = /(Z|[+-]\d{2}:\d{2})$/.test(bVal)
+          if (!hasTimezoneB) {
+            // 如果日期字符串没有包含时区信息，假设它是UTC时间
+            bDate.setTime(bDate.getTime() + bDate.getTimezoneOffset() * 60 * 1000)
+          }
+          bVal = bDate.getTime()
+        } else {
+          bVal = 0
+        }
+      }
     
     // 处理数字类型
     if (sortField.value === 'selfScore' || sortField.value === 'finalScore') {
@@ -415,9 +427,11 @@ const getSortIcon = (field) => {
 
 // 格式化日期
 const formatDate = (dateString) => {
-  if (!dateString) return '-'
+  if (!dateString) return '-'  
   
+  // 直接使用本地时间显示，因为后端返回的已经是上海时间
   const date = new Date(dateString)
+  
   return date.toLocaleDateString('zh-CN', {
     year: 'numeric',
     month: '2-digit',
@@ -453,16 +467,11 @@ const getApplicationTypeText = (type) => {
   return typeMap[type] || type
 }
 
-// 获取奖项级别文本
-const getAwardLevelText = (level) => {
-  if (!level) return '-'
-  const levelMap = {
-    national: '国家级',
-    provincial: '省级',
-    municipal: '市级',
-    school: '校级'
-  }
-  return levelMap[level] || level
+// 获取规则名称
+const getRuleName = (ruleId) => {
+  if (!ruleId) return '-'
+  const rule = availableRules.value.find(r => r.id === ruleId)
+  return rule ? rule.name : '-'
 }
 
 // 查看申请详情
@@ -495,7 +504,7 @@ const clearFilters = () => {
   filters.value = {
     status: 'all',
     type: 'all',
-    level: 'all',
+    rule: 'all',
     searchQuery: '',
     dateRange: {
       start: '',
@@ -518,7 +527,7 @@ const refreshData = async () => {
 }
 
 // 监听筛选条件变化，重置到第一页
-watch([() => filters.value.status, () => filters.value.type, () => filters.value.level, () => filters.value.searchQuery, () => filters.value.dateRange.start, () => filters.value.dateRange.end], () => {
+watch([() => filters.value.status, () => filters.value.type, () => filters.value.rule, () => filters.value.searchQuery, () => filters.value.dateRange.start, () => filters.value.dateRange.end], () => {
   currentPage.value = 1
 }, { deep: true })
 
@@ -530,6 +539,8 @@ watch(totalPages, (newTotal) => {
 })
 
 onMounted(async () => {
+  // 加载规则列表
+  await fetchRules()
   // 确保数据已加载
   await applicationsStore.fetchApplications()
 })

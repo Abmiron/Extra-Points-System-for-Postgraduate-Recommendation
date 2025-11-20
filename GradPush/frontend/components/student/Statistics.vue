@@ -27,7 +27,7 @@
       <div class="stat-card">
         <div class="stat-label">推免综合成绩</div>
         <div class="stat-value">{{ statistics.totalScore }}</div>
-        <div class="stat-note">专业排名: {{ statistics.ranking }}</div>
+        <div class="stat-note">专业排名: {{ statistics.ranking }}/{{ statistics.majorTotalStudents }}</div>
       </div>
     </div>
 
@@ -52,7 +52,7 @@
               <td>{{ formatDate(item.awardDate) }}</td>
               <td>{{ getLevelText(item.awardLevel) }}</td>
               <td>{{ item.awardType === 'individual' ? '个人' : '团队' }}</td>
-              <td>{{ item.finalScore || item.selfScore }}</td>
+              <td>{{ item.status === 'rejected' ? 0 : (item.finalScore ?? item.selfScore) }}</td>
               <td>
                 <span :class="`status-badge status-${item.status}`">
                   {{ getStatusText(item.status) }}
@@ -88,7 +88,7 @@
               <td>{{ formatDate(item.awardDate) }}</td>
               <td>{{ getLevelText(item.awardLevel) }}</td>
               <td>{{ item.awardType === 'individual' ? '个人' : '团队' }}</td>
-              <td>{{ item.finalScore || item.selfScore }}</td>
+              <td>{{ item.status === 'rejected' ? 0 : (item.finalScore ?? item.selfScore) }}</td>
               <td>
                 <span :class="`status-badge status-${item.status}`">
                   {{ getStatusText(item.status) }}
@@ -130,7 +130,8 @@ const statistics = reactive({
   specialtyScore: 0,
   comprehensiveScore: 0,
   totalScore: 0,
-  ranking: '-' 
+  ranking: '-',
+  majorTotalStudents: 0 
 })
 
 const systemSettings = reactive({
@@ -187,8 +188,12 @@ const getStatusText = (status) => {
 }
 
 const formatDate = (dateString) => {
-  if (!dateString) return '-'
-  return new Date(dateString).toLocaleDateString('zh-CN')
+  if (!dateString) return '-'  
+  
+  // 直接使用本地时间显示，因为后端返回的已经是上海时间
+  const date = new Date(dateString)
+  
+  return date.toLocaleDateString('zh-CN')
 }
 
 const loadSystemSettings = async () => {
@@ -244,7 +249,8 @@ const loadStatistics = async () => {
     statistics.specialtyScore = statsData.specialty_score || 0
     statistics.comprehensiveScore = statsData.comprehensive_performance_total || 0
     statistics.totalScore = statsData.total_score || statsData.comprehensive_score || 0
-    statistics.ranking = statsData.ranking || '-'
+    statistics.ranking = statsData.ranking || '-'  
+    statistics.majorTotalStudents = statsData.major_total_students || 0
     
   } catch (err) {
     console.error('加载统计数据失败:', err)

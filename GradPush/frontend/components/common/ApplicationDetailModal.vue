@@ -133,6 +133,11 @@
               </div>
               
               <div class="compact-group">
+                <label>项目全称</label>
+                <span>{{ application.projectName || '未知项目' }}</span>
+              </div>
+              
+              <div class="compact-group">
                 <label>申请时间</label>
                 <span>{{ formatDate(application.appliedAt || application.createdAt) }}</span>
               </div>
@@ -158,6 +163,10 @@
                 <span>{{ application.status === 'pending' ? '-' : (application.status === 'rejected' ? 0 : application.finalScore || 0) }}</span>
               </div>
               
+            </div>
+            <div class="compact-group full-width">
+              <label>加分依据</label>
+              <p>{{ application.description || '无' }}</p>
             </div>
             <div class="compact-group full-width" v-if="application.reviewComment && !isReviewMode">
               <label>审核意见</label>
@@ -613,6 +622,8 @@ const rejectApplication = () => {
     alert('请填写驳回理由')
     return
   }
+  // 拒绝的申请将最终分数设置为0
+  reviewData.finalScore = 0;
   emit('reject', {
     ...reviewData,
     applicationId: props.application.id

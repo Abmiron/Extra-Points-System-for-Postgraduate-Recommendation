@@ -15,6 +15,7 @@
 from flask import Blueprint, request, jsonify, abort, current_app
 from models import Application, Student, Rule, Department, Major, SystemSettings
 from datetime import datetime, timezone
+import pytz
 import json
 import os
 import traceback
@@ -66,8 +67,8 @@ def update_student_statistics(student_id):
         calculated_score = (academic_score * system_settings.academic_score_weight / 100) + \
                           specialty_total + performance_total
         
-        # 更新综合成绩
-        student.comprehensive_score = calculated_score
+        # 更新综合成绩，保留四位小数
+        student.comprehensive_score = round(calculated_score, 4)
     
     # 保存更改到数据库
     db.session.commit()
@@ -470,7 +471,7 @@ def create_application():
                         # 生成唯一标识符
                         unique_id = uuid.uuid4().hex[:8]
                         # 使用时间戳和唯一ID确保文件名唯一性
-                        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+                        timestamp = datetime.now(pytz.timezone('Asia/Shanghai')).strftime('%Y%m%d%H%M%S')
                         # 保留原始文件名，仅移除路径分隔符防止目录遍历
                         safe_name = name.replace('/', '').replace('\\', '')
                         # 构建最终文件名
@@ -505,7 +506,7 @@ def create_application():
             department_id=data.get('department_id'),
             major_id=data.get('major_id'),
             application_type=data.get('application_type'),
-            applied_at=datetime.utcnow(),
+            applied_at=datetime.now(pytz.timezone('Asia/Shanghai')),
             self_score=data.get('self_score'),
             status=data.get('status', 'pending'),
             project_name=data.get('project_name'),
@@ -591,6 +592,7 @@ def update_application(id):
             'studentId': 'student_id',
             'studentName': 'student_name',
             'name': 'student_name',  # 兼容前端可能使用的name字段
+            'facultyId': 'faculty_id',
             'departmentId': 'department_id',
             'majorId': 'major_id',
             'applicationType': 'application_type',
@@ -687,7 +689,7 @@ def update_application(id):
                         # 生成唯一标识符
                         unique_id = uuid.uuid4().hex[:8]
                         # 使用时间戳和唯一ID确保文件名唯一性
-                        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+                        timestamp = datetime.now(pytz.timezone('Asia/Shanghai')).strftime('%Y%m%d%H%M%S')
                         # 保留原始文件名，仅移除路径分隔符防止目录遍历
                         safe_name = name.replace('/', '').replace('\\', '')
                         # 构建最终文件名
@@ -723,6 +725,7 @@ def update_application(id):
         application.description = data.get('description', application.description)
         application.student_id = data.get('student_id', application.student_id)
         application.student_name = data.get('student_name', application.student_name)
+        application.faculty_id = data.get('faculty_id', application.faculty_id)
         application.department_id = data.get('department_id', application.department_id)
         application.major_id = data.get('major_id', application.major_id)
         application.application_type = data.get('application_type', application.application_type)
@@ -899,7 +902,7 @@ def review_application(id):
         application.final_score = 0
     
     application.review_comment = data.get('reviewComment')
-    application.reviewed_at = datetime.utcnow()
+    application.reviewed_at = datetime.now(pytz.timezone('Asia/Shanghai'))
     application.reviewed_by = data.get('reviewedBy')
     
     db.session.commit()
@@ -1057,7 +1060,30 @@ def get_application_statistics():
         comprehensive_score = student.comprehensive_score or 0.0
         # 保持向后兼容，total_score使用comprehensive_score的值
         total_score = comprehensive_score
-        ranking = student.major_ranking or '-'
+        
+        # 确保排名和专业内人数已计算
+        if student.major_id and (student.major_ranking is None or student.total_students is None):
+            # 获取该专业的所有学生
+            major_students = Student.query.filter_by(major_id=student.major_id).all()
+            total_students = len(major_students)
+            
+            # 按综合成绩降序排序
+            major_students.sort(key=lambda s: s.comprehensive_score or 0.0, reverse=True)
+            
+            # 计算排名（处理并列情况）
+            for i, s in enumerate(major_students):
+                if i > 0 and s.comprehensive_score == major_students[i-1].comprehensive_score:
+                    s.major_ranking = major_students[i-1].major_ranking
+                else:
+                    s.major_ranking = i + 1
+                s.total_students = total_students
+            
+            # 保存更改到数据库
+            db.session.commit()
+        
+        ranking = student.major_ranking or '-' 
+        # 计算专业内人数
+        major_total_students = student.total_students or (Student.query.filter_by(major_id=student.major_id).count() if student.major_id else 0)
     else:
         # 如果Student模型中没有数据，初始化默认值
         academic_score = 0.0
@@ -1067,7 +1093,8 @@ def get_application_statistics():
         comprehensive_score = 0.0
         # 保持向后兼容，total_score使用comprehensive_score的值
         total_score = 0.0
-        ranking = '-'
+        ranking = '-' 
+        major_total_students = 0
     
     # 查询学生的所有已通过申请
     applications = Application.query.filter_by(
@@ -1086,6 +1113,7 @@ def get_application_statistics():
         'comprehensive_performance_total': round(performance_total, 2),
         'comprehensive_score': round(comprehensive_score, 2),
         'ranking': ranking,
+        'major_total_students': major_total_students,
         'approved_count': len(applications)
     }
     
@@ -1183,8 +1211,8 @@ def recalculate_comprehensive_scores():
             calculated_score = (academic_score * system_settings.academic_score_weight / 100) + \
                               specialty_total + performance_total
             
-            # 更新学生的综合成绩
-            student.comprehensive_score = calculated_score
+            # 更新学生的综合成绩，保留四位小数
+            student.comprehensive_score = round(calculated_score, 4)
             updated_count += 1
         
         # 保存所有更改到数据库
@@ -1243,6 +1271,29 @@ def get_students_ranking():
     
         # 获取所有符合条件的学生数据
         students = query.all()
+    
+        # 按专业分组学生
+        students_by_major = {}
+        for student in students:
+            major_id = student.major_id
+            if major_id not in students_by_major:
+                students_by_major[major_id] = []
+            students_by_major[major_id].append(student)
+    
+        # 计算每个专业内学生的排名
+        for major_id, major_students in students_by_major.items():
+            # 按综合成绩降序排序
+            major_students.sort(key=lambda s: s.comprehensive_score or 0.0, reverse=True)
+            
+            # 设置排名和总人数
+            total_students = len(major_students)
+            for i, student in enumerate(major_students):
+                # 计算排名（处理并列情况）
+                if i > 0 and student.comprehensive_score == major_students[i-1].comprehensive_score:
+                    student.major_ranking = major_students[i-1].major_ranking
+                else:
+                    student.major_ranking = i + 1
+                student.total_students = total_students
     
         # 按学生ID分组统计
         student_stats = {}

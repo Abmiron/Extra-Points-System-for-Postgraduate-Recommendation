@@ -6,14 +6,16 @@
 
     <!-- 筛选区域 -->
     <div class="filters">
-      <div class="filter-group">
-        <span class="filter-label">学号:</span>
-        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="输入学生学号" @input="filterApplications">
-      </div>
+
       <div class="filter-group">
         <span class="filter-label">姓名:</span>
         <input type="text" class="form-control small" v-model="filters.studentName" placeholder="输入学生姓名" @input="filterApplications">
       </div>
+      <div class="filter-group">
+        <span class="filter-label">学号:</span>
+        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="输入学生学号" @input="filterApplications">
+      </div>
+      
       <div class="filter-group">
         <span class="filter-label">学院:</span>
         <select v-model="filters.faculty" @change="filterApplications">
@@ -47,6 +49,15 @@
           <option value="all">全部</option>
           <option value="academic">学术专长</option>
           <option value="comprehensive">综合表现</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">规则:</span>
+        <select v-model="filters.rule" @change="filterApplications">
+          <option value="all">全部规则</option>
+          <option v-for="rule in availableRules" :key="rule.id" :value="rule.id">
+            {{ rule.name }} {{ rule.status === 'disabled' ? '(当前已禁用)' : '' }}
+          </option>
         </select>
       </div>
       <div class="filter-group">
@@ -91,9 +102,9 @@
             <tr>
               <th>学生姓名</th>
               <th>学号</th>
-              <th>所在系</th>
               <th>专业</th>
               <th>申请类型</th>
+              <th>规则</th>
               <th>申请时间</th>
               <th>审核时间</th>
               <th>自评分数</th>
@@ -106,13 +117,13 @@
             <tr v-for="application in paginatedApplications" :key="application.id">
               <td>{{ application.studentName }}</td>
               <td>{{ application.studentId }}</td>
-              <td>{{ getDepartmentText(application.department) }}</td>
               <td>{{ getMajorText(application.major) }}</td>
               <td>{{ getTypeText(application.applicationType) }}</td>
+              <td>{{ getRuleText(application.ruleId) }}</td>
               <td>{{ formatDate(application.appliedAt) }}</td>
               <td>{{ formatDate(application.reviewedAt) }}</td>
               <td>{{ application.selfScore }}</td>
-              <td>{{ application.finalScore || '-' }}</td>
+              <td>{{ application.finalScore ?? '-' }}</td>
               <td>
                 <span :class="`status-badge status-${application.status}`">
                   {{ getStatusText(application.status) }}
@@ -180,6 +191,7 @@ const filters = ref({
   department: 'all',
   major: 'all',
   type: 'all',
+  rule: 'all',
   status: 'all',
   startDate: '',
   endDate: '',
@@ -197,6 +209,9 @@ const departments = ref([])
 const majors = ref([])
 const loadingDepartments = ref(false)
 const loadingMajors = ref(false)
+
+// 规则列表
+const availableRules = ref([])
 
 // 分页
 const pagination = ref({
@@ -218,6 +233,7 @@ const paginatedApplications = computed(() => {
     department: filters.value.department !== 'all' ? filters.value.department : undefined,
     major: filters.value.major !== 'all' ? filters.value.major : undefined,
     type: filters.value.type !== 'all' ? filters.value.type : undefined,
+    rule: filters.value.rule !== 'all' ? filters.value.rule : undefined,
     startDate: filters.value.startDate,
     endDate: filters.value.endDate,
     reviewedBy: filters.value.reviewedBy || undefined,
@@ -274,6 +290,7 @@ const totalApplications = computed(() => {
     department: filters.value.department !== 'all' ? filters.value.department : undefined,
     major: filters.value.major !== 'all' ? filters.value.major : undefined,
     type: filters.value.type !== 'all' ? filters.value.type : undefined,
+    rule: filters.value.rule !== 'all' ? filters.value.rule : undefined,
     startDate: filters.value.startDate,
     endDate: filters.value.endDate,
     reviewedBy: filters.value.reviewedBy || undefined,
@@ -353,6 +370,18 @@ const getStatusText = (status) => {
   return statusText[status] || status
 }
 
+// 根据规则ID获取规则名称
+const getRuleText = (ruleId) => {
+  if (!ruleId) return '-'
+  // 使用类型转换确保ID匹配（处理字符串和数字类型不匹配的问题）
+  const rule = availableRules.value.find(r => r.id == ruleId)
+  if (rule) {
+    // 如果规则已禁用，添加提示信息
+    return rule.status === 'disabled' ? `${rule.name} (当前已禁用)` : rule.name
+  }
+  return ruleId
+}
+
 // 格式化日期
 const formatDate = (dateString) => {
   if (!dateString) return '-'  
@@ -362,9 +391,11 @@ const formatDate = (dateString) => {
 // 清空筛选条件
 const clearFilters = async () => {
   filters.value = {
+    faculty: 'all',
     department: 'all',
     major: 'all',
     type: 'all',
+    rule: 'all',
     status: 'all',
     startDate: '',
     endDate: '',
@@ -456,14 +487,20 @@ const handleRejectApplication = async (rejectData) => {
 // 重置筛选
 const resetFilters = () => {
   filters.value = {
+    faculty: 'all',
     department: 'all',
     major: 'all',
     type: 'all',
+    rule: 'all',
     status: 'all',
     startDate: '',
     endDate: '',
+    reviewedStartDate: '',
+    reviewedEndDate: '',
     reviewedBy: '',
-    myReviewsOnly: false
+    myReviewsOnly: false,
+    studentId: '',
+    studentName: ''
   }
   pagination.value.currentPage = 1
 }
@@ -476,7 +513,8 @@ onMounted(async () => {
       loadApplications(),
       loadFaculties(),
       loadDepartments(),
-      loadMajors()
+      loadMajors(),
+      fetchRules()
     ])
   } catch (error) {
     console.error('数据加载失败:', error)
@@ -544,6 +582,18 @@ const loadMajors = async () => {
     majors.value = []
   } finally {
     loadingMajors.value = false
+  }
+}
+
+// 从后端获取规则列表
+const fetchRules = async () => {
+  try {
+    const response = await api.getRules()
+    // 加载所有规则，包括已禁用的，确保历史申请能显示正确的规则名称
+    availableRules.value = response.rules
+  } catch (error) {
+    console.error('获取规则列表失败:', error)
+    availableRules.value = []
   }
 }
 </script>
