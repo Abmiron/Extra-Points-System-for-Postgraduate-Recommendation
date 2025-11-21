@@ -21,7 +21,6 @@ import os
 import traceback
 import uuid
 from extensions import db
-# 不再直接导入app，而是使用current_app
 
 # 创建蓝图实例
 application_bp = Blueprint('application', __name__, url_prefix='/api')

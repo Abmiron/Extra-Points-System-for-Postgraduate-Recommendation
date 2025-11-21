@@ -48,6 +48,7 @@ from blueprints.user_bp import user_bp
 from blueprints.application_bp import application_bp
 from blueprints.rule_bp import rule_bp
 from blueprints.admin_bp import admin_bp
+from blueprints.public_bp import public_bp
 from routes import main_bp
 
 
@@ -96,6 +97,7 @@ def uploaded_app_file(filename):
 
 
 # 注册蓝图
+app.register_blueprint(public_bp)  # 公开接口蓝图，无需认证
 app.register_blueprint(auth_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(application_bp)

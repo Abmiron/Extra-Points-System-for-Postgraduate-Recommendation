@@ -366,8 +366,8 @@ class SystemSettings(db.Model):
 
     # 学术年度设置
     academic_year = db.Column(db.String(10), default="2023")
-    application_start = db.Column(db.Date, nullable=True)
-    application_end = db.Column(db.Date, nullable=True)
+    application_start = db.Column(db.DateTime, nullable=True)
+    application_end = db.Column(db.DateTime, nullable=True)
 
     # 文件存储设置
     single_file_size_limit = db.Column(db.Integer, default=10)  # 单文件大小限制（MB）

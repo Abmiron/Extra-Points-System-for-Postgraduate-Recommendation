@@ -2,8 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
 import Login from '../views/Login.vue'
-import Register from '../views/Register.vue'
-import ForgotPassword from '../views/ForgotPassword.vue'
 import Student from '../views/Student.vue'
 import Teacher from '../views/Teacher.vue'
 import Admin from '../views/Admin.vue'
@@ -16,16 +14,6 @@ const routes = [
   {
     path: '/login',
     component: Login,
-    meta: { requiresAuth: false }
-  },
-  {
-    path: '/register',
-    component: Register,
-    meta: { requiresAuth: false }
-  },
-  {
-    path: '/forgot-password',
-    component: ForgotPassword,
     meta: { requiresAuth: false }
   },
   {

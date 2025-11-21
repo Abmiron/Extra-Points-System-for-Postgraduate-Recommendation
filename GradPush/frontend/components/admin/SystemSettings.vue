@@ -16,20 +16,18 @@
         </div>
         <div class="form-group">
           <label class="form-label">申请开始时间</label>
-          <input type="date" class="form-control" v-model="settings.applicationStart">
+          <input type="datetime-local" class="form-control" v-model="settings.applicationStart">
         </div>
         <div class="form-group">
           <label class="form-label">申请截止时间</label>
-          <input type="date" class="form-control" v-model="settings.applicationEnd">
+          <input type="datetime-local" class="form-control" v-model="settings.applicationEnd">
         </div>
       </div>
       <div class="form-actions">
         <button class="btn btn-outline" @click="saveAcademicSettings">保存设置</button>
       </div>
     </div>
-
-
-
+    
     <!-- 综合成绩设置 -->
     <div class="card">
       <div class="card-title">综合成绩设置</div>
@@ -215,14 +213,57 @@ const announcement = reactive({
 })
 
 // 方法
+// 处理时间格式，确保发送到API的是正确格式，保持用户输入的原始时区
+function prepareDateTimeForApi(dateTimeString) {
+  if (!dateTimeString) return ''
+  
+  try {
+    // 确保输入格式正确(YYYY-MM-DDThh:mm)
+    if (!dateTimeString.includes('T')) return ''
+    
+    // 构造ISO格式，但不进行时区转换
+    // 直接在用户输入的时间后面添加时区信息，假设用户输入的是本地时间(UTC+8)
+    const isoString = `${dateTimeString}:00+08:00`
+    
+    // 验证日期有效性
+    const date = new Date(isoString)
+    if (isNaN(date.getTime())) return ''
+    
+    return isoString
+  } catch (error) {
+    console.error('日期准备错误:', error)
+    return ''
+  }
+}
+
 const saveAcademicSettings = async () => {
   try {
-    await api.updateSystemSettings({
+    // 验证时间范围
+    if (settings.applicationStart && settings.applicationEnd) {
+      const startDate = new Date(settings.applicationStart)
+      const endDate = new Date(settings.applicationEnd)
+      
+      if (startDate >= endDate) {
+        toastStore.error('申请截止时间必须晚于申请开始时间')
+        return
+      }
+    } else if (settings.applicationStart || settings.applicationEnd) {
+      toastStore.error('请同时设置申请开始时间和截止时间')
+      return
+    }
+    
+    // 准备发送到API的数据，确保时间格式正确
+    const settingsToSave = {
       academicYear: settings.academicYear,
-      applicationStart: settings.applicationStart,
-      applicationEnd: settings.applicationEnd
-    })
+      applicationStart: prepareDateTimeForApi(settings.applicationStart),
+      applicationEnd: prepareDateTimeForApi(settings.applicationEnd)
+    }
+    
+    await api.updateSystemSettings(settingsToSave)
     toastStore.success('设置已保存')
+    
+    // 重新加载设置以验证保存结果
+    await loadSystemSettings()
   } catch (error) {
     console.error('保存设置失败:', error)
     toastStore.error('保存设置失败')
@@ -321,6 +362,31 @@ const systemStatusApiValue = computed(() => {
   return systemStatus.value === 'online' ? '正常' : '维护中'
 })
 
+// 格式化日期时间为datetime-local输入框所需格式，正确处理时区
+function formatDateTimeForInput(dateTimeString) {
+  if (!dateTimeString) return ''
+  
+  try {
+    const date = new Date(dateTimeString)
+    // 检查是否为有效日期
+    if (isNaN(date.getTime())) return ''
+    
+    // 创建上海时区(UTC+8)的Date对象，确保显示的是本地时间
+    // 注意：JavaScript Date对象内部存储为UTC，但这里我们直接格式化显示本地时间
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    
+    // 格式化为YYYY-MM-DDThh:mm格式，符合datetime-local输入框要求
+    return `${year}-${month}-${day}T${hours}:${minutes}`
+  } catch (error) {
+    console.error('日期格式化错误:', error)
+    return ''
+  }
+}
+
 // 加载系统设置
 async function loadSystemSettings() {
   try {
@@ -329,8 +395,9 @@ async function loadSystemSettings() {
 
     // 更新设置数据
     settings.academicYear = data.academicYear || ''
-    settings.applicationStart = data.applicationStart || ''
-    settings.applicationEnd = data.applicationEnd || ''
+    // 将日期时间格式化为datetime-local输入框所需的格式
+    settings.applicationStart = formatDateTimeForInput(data.applicationStart)
+    settings.applicationEnd = formatDateTimeForInput(data.applicationEnd)
     settings.singleFileSizeLimit = data.singleFileSizeLimit || ''
     settings.totalFileSizeLimit = data.totalFileSizeLimit || ''
     settings.allowedFileTypes = data.allowedFileTypes || ''
@@ -379,6 +446,19 @@ async function loadSystemSettings() {
   border-radius: 4px;
   font-size: 14px;
   transition: all 0.2s ease;
+}
+
+/* 优化datetime-local输入框的显示效果 */
+input[type="datetime-local"] {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 响应式设计下调整datetime-local输入框 */
+@media (max-width: 768px) {
+  input[type="datetime-local"] {
+    min-width: 220px;
+  }
 }
 
 .form-control:focus {

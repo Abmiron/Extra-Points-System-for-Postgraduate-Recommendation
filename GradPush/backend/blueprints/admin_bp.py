@@ -543,10 +543,10 @@ def update_system_settings():
     if "applicationStart" in data and data["applicationStart"]:
         settings.application_start = datetime.fromisoformat(
             data["applicationStart"]
-        ).date()
+        )
 
     if "applicationEnd" in data and data["applicationEnd"]:
-        settings.application_end = datetime.fromisoformat(data["applicationEnd"]).date()
+        settings.application_end = datetime.fromisoformat(data["applicationEnd"])
 
     if "singleFileSizeLimit" in data:
         settings.single_file_size_limit = data["singleFileSizeLimit"]

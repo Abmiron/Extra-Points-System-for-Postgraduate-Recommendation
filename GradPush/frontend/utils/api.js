@@ -121,6 +121,28 @@ getRules: (filters) => {
   getSystemSettings: () => apiRequest('/admin/system-settings', 'GET'),
   updateSystemSettings: (settingsData) => apiRequest('/admin/system-settings', 'PUT', settingsData),
   
+  // 公开的系统信息接口（无需登录权限）
+  getPublicSystemInfo: async () => {
+    // 直接请求公开接口，不使用API_BASE_URL中的/api前缀
+    const url = 'http://localhost:5001/public/system-info';
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      const responseData = await response.json();
+      if (!response.ok) {
+        throw new Error(responseData.message || '请求失败');
+      }
+      return responseData;
+    } catch (error) {
+      console.error('公开接口请求错误:', error);
+      throw error;
+    }
+  },
+  
   // 学院管理相关API
   getFacultiesAdmin: () => apiRequest('/admin/faculties'),
   getFacultyAdmin: (facultyId) => apiRequest(`/admin/faculties/${facultyId}`),
