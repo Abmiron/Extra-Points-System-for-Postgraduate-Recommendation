@@ -7,230 +7,304 @@
     </div>
 
     <div class="login-container">
-      <!-- 左侧信息显示区域 - 风格统一 -->
-      <div class="info-panel">
-        <div class="info-content">
-          <div class="info-card">
-            <div class="info-header">
-              <h3 class="info-title">推免申请开放时间</h3>
-              <div class="info-icon">
-                <font-awesome-icon :icon="['fas', 'calendar-check']" />
+      <!-- 合并后的登录内容区域 -->
+      <div class="login-content">
+        <!-- 左侧信息显示区域 - 风格统一 -->
+        <div class="info-panel">
+          <div class="info-content">
+            <div class="logo-area">
+              <div class="logo">
+                <img src="/images/logo(1).png" alt="系统logo" style="width: 260px; height: 60px;" />
+              </div>
+              <div class="logo-text">
+                <span class="system-name">推免加分系统</span>
+                <span class="auth-title">厦门大学</span>
               </div>
             </div>
-            <div class="info-item" style="display: flex; justify-content: space-between; min-height: 24px;">
-              <template v-if="settingsLoading">
-                <span class="info-value">开放: <span class="loading-spinner-small"></span></span>
-                <span class="info-value">截止: <span class="loading-spinner-small"></span></span>
-              </template>
-              <template v-else>
-                <span class="info-value">开放: {{ applicationTimeStart }}</span>
-                <span class="info-value">截止: {{ applicationTimeEnd }}</span>
-              </template>
+            
+            <div class="welcome-content">
+              <h1 class="welcome-title">欢迎使用推免加分系统</h1>
+              <p class="welcome-subtitle">便捷的在线申请平台</p>
+              <p class="welcome-subtitle">助您顺利完成推免加分申请流程</p>
+              
+              <div class="time-info">
+                <div class="time-title">
+                  <font-awesome-icon :icon="['fas', 'calendar-check']" />
+                  <span>推免申请开放时间</span>
+                </div>
+                <div class="time-dates">
+                  <div class="time-item">
+                    <span class="time-label">开放时间:</span>
+                    <span class="time-value">
+                      {{ applicationTimeStart }}
+                      <div v-if="settingsLoading" class="loading-spinner-small"></div>
+                    </span>
+                  </div>
+                  <div class="time-item">
+                    <span class="time-label">截止时间:</span>
+                    <span class="time-value">
+                      {{ applicationTimeEnd }}
+                      <div v-if="settingsLoading" class="loading-spinner-small"></div>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="features-list">
+                <div class="feature-item">
+                  <div class="feature-icon">
+                    <font-awesome-icon :icon="['fas', 'check']" />
+                  </div>
+                  <div class="feature-text">在线提交申请材料</div>
+                </div>
+                <div class="feature-item">
+                  <div class="feature-icon">
+                    <font-awesome-icon :icon="['fas', 'check']" />
+                  </div>
+                  <div class="feature-text">实时查看审核进度</div>
+                </div>
+                <div class="feature-item">
+                  <div class="feature-icon">
+                    <font-awesome-icon :icon="['fas', 'check']" />
+                  </div>
+                  <div class="feature-text">自动计算分数排名</div>
+                </div>
+              </div>
+
             </div>
           </div>
-          
-          <div class="info-features">
-            <div class="feature-item">
-              <font-awesome-icon :icon="['fas', 'check']" class="feature-icon" />
-              <span>在线提交申请材料</span>
-            </div>
-            <div class="feature-item">
-              <font-awesome-icon :icon="['fas', 'check']" class="feature-icon" />
-              <span>实时查看审核进度</span>
-            </div>
-            <div class="feature-item">
-              <font-awesome-icon :icon="['fas', 'check']" class="feature-icon" />
-              <span>自动计算分数排名</span>
-            </div>
+        </div>
+        
+        <!-- 右侧登录区域 -->
+        <div class="login-box">
+          <div class="login-header">
+            <h2 class="login-title">统一身份认证</h2>
+            <p class="login-subtitle">请使用您的学号/工号登录系统</p>
           </div>
-        </div>
-      </div>
-      
-      <!-- 右侧登录区域 -->
-      <div class="login-box">
-        <div class="logo-area">
-          <img src="/images/logo.png" alt="厦门大学校徽" class="xmu-logo">
-          <div class="logo-text">
-            <span class="auth-title">统一身份认证</span>
-            <span class="system-name">推免加分系统</span>
+
+          <div class="login-tabs">
+            <button class="tab-btn active">
+              {{ activeTab === 'login' ? '账号登录' : activeTab === 'register' ? '账号注册' : '密码重置' }}
+            </button>
           </div>
-        </div>
 
-        <div class="login-tabs">
-          <button class="tab-btn active">
-            {{ activeTab === 'login' ? '账号登录' : activeTab === 'register' ? '账号注册' : '密码重置' }}
-          </button>
-        </div>
+          <div class="form-container">
+            <!-- 登录表单 -->
+            <form v-if="activeTab === 'login'" class="login-form" @submit.prevent="handleLogin">
 
-        <div class="form-container">
-          <!-- 登录表单 -->
-          <form v-if="activeTab === 'login'" class="login-form" @submit.prevent="handleLogin">
-
-            <div class="input-group">
-              <font-awesome-icon :icon="['fas', 'user']" class="input-icon" />
-              <input type="text" v-model="loginForm.username" placeholder="请输入学号/工号" required>
-            </div>
-            <div class="input-group">
-              <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
-              <input type="password" v-model="loginForm.password" placeholder="请输入密码" required>
-            </div>
-            <div class="input-group captcha-group">
-              <font-awesome-icon :icon="['fas', 'shield-alt']" class="input-icon" />
-              <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
-                <input type="text" v-model="loginForm.captcha" placeholder="请输入验证码" required style="flex: 1; height: 50px;">
-                <img 
-                  :src="captchaImage" 
-                  alt="验证码" 
-                  style="max-height: 50px; height: auto; cursor: pointer; border-radius: 8px;" 
-                  @click="refreshCaptcha"
-                  title="点击刷新"
-                >
+              <div class="input-group">
+                <font-awesome-icon :icon="['fas', 'user']" class="input-icon" />
+                <input type="text" v-model="loginForm.username" placeholder="请输入学号/工号" required>
               </div>
-            </div>
-
-            <div class="form-actions">
-              <div class="links-container">
-                <a href="#" class="tab-link" @click.prevent="switchTab('forgot')">
-                  忘记密码?
-                </a>
-                <a href="#" class="tab-link" @click.prevent="switchTab('register')">
-                  注册账号
-                </a>
+              <div class="input-group">
+                <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
+                <input type="password" v-model="loginForm.password" placeholder="请输入密码" required>
               </div>
-              <button type="submit" class="login-btn" :class="{ loading }" :disabled="loading">
-                <span class="btn-text">登录</span>
-                <div class="btn-loading">
-                  <font-awesome-icon :icon="['fas', 'spinner']" spin />
+              <div class="input-group captcha-group">
+                <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                  <div style="flex: 1; position: relative;">
+                    <font-awesome-icon :icon="['fas', 'shield-alt']" class="input-icon" />
+                    <input type="text" v-model="loginForm.captcha" placeholder="请输入验证码" required>
+                  </div>
+                  <div style="position: relative; display: inline-block;">
+                    <img 
+                      :src="captchaImage" 
+                      alt="验证码" 
+                      style="max-height: 50px;max-width: 90px;width: 100%;height: auto; cursor: pointer; border-radius: 8px;" 
+                      @click="refreshCaptcha"
+                      title="点击刷新"
+                    >
+                    <div v-if="captchaLoading" class="captcha-loading-overlay">
+                      <div class="loading-spinner-small" style="width: 20px; height: 20px;"></div>
+                    </div>
+                  </div>
                 </div>
-              </button>
-            </div>
-          </form>
-
-          <!-- 注册表单 -->
-          <form v-else-if="activeTab === 'register'" class="register-form" @submit.prevent="handleRegister">
-            <div class="input-group">
-              <font-awesome-icon :icon="['fas', 'user']" class="input-icon" />
-              <input type="text" v-model="registerForm.username" placeholder="请输入学号/工号" required>
-            </div>
-
-            <div class="input-group">
-              <font-awesome-icon :icon="['fas', 'user-tag']" class="input-icon" />
-              <input type="text" v-model="registerForm.name" placeholder="请输入姓名" required>
-            </div>
-
-            <div class="input-group">
-              <font-awesome-icon :icon="['fas', 'user-shield']" class="input-icon" />
-              <select v-model="registerForm.role" required @change="handleRoleChange">
-                <option value="">请选择角色</option>
-                <option value="student">学生</option>
-                <option value="teacher">教师</option>
-              </select>
-            </div>
-
-            <!-- 学院选择 -->
-            <div class="input-group">
-              <font-awesome-icon :icon="['fas', 'university']" class="input-icon" />
-              <select v-model="registerForm.facultyId" required @change="handleFacultyChange">
-                <option value="">请选择学院</option>
-                <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
-                  {{ faculty.name }}
-                </option>
-              </select>
-            </div>
-
-            <!-- 系选择（仅学生显示） -->
-            <div class="input-group" v-if="registerForm.role === 'student'">
-              <font-awesome-icon :icon="['fas', 'building']" class="input-icon" />
-              <select v-model="registerForm.departmentId" required @change="handleDepartmentChange">
-                <option value="">请选择系</option>
-                <option v-for="department in departments" :key="department.id" :value="department.id">
-                  {{ department.name }}
-                </option>
-              </select>
-            </div>
-
-            <!-- 专业选择（仅学生显示） -->
-            <div class="input-group" v-if="registerForm.role === 'student'">
-              <font-awesome-icon :icon="['fas', 'graduation-cap']" class="input-icon" />
-              <select v-model="registerForm.majorId" required>
-                <option value="">请选择专业</option>
-                <option v-for="major in majors" :key="major.id" :value="major.id">
-                  {{ major.name }}
-                </option>
-              </select>
-            </div>
-
-            <div class="input-group">
-              <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
-              <input type="password" v-model="registerForm.password" placeholder="请设置密码" required minlength="6">
-            </div>
-
-            <div class="input-group">
-              <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
-              <input type="password" v-model="registerForm.confirmPassword" placeholder="请确认密码" required minlength="6">
-            </div>
-
-            <div class="form-actions">
-              <div class="links-container">
-                <a href="#" class="tab-link" @click.prevent="switchTab('login')">
-                  已有账号？立即登录
-                </a>
               </div>
-              <button type="submit" class="login-btn" :class="{ loading }" :disabled="loading">
-                <span class="btn-text">注册</span>
-                <div class="btn-loading">
-                  <font-awesome-icon :icon="['fas', 'spinner']" spin />
+
+              <div class="form-actions">
+                <div class="links-container">
+                  <a href="#" class="tab-link" @click.prevent="switchTab('forgot')">
+                    忘记密码?
+                  </a>
+                  <a href="#" class="tab-link" @click.prevent="switchTab('register')">
+                    注册账号
+                  </a>
                 </div>
-              </button>
-            </div>
-          </form>
-
-          <!-- 忘记密码表单 -->
-          <form v-else-if="activeTab === 'forgot'" class="login-form" @submit.prevent="handleResetPassword">
-            <div class="input-group">
-              <font-awesome-icon :icon="['fas', 'user']" class="input-icon" />
-              <input type="text" v-model="resetForm.username" placeholder="请输入学号/工号" required>
-            </div>
-
-            <div class="input-group">
-              <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
-              <input type="password" v-model="resetForm.newPassword" placeholder="请设置新密码" required minlength="6">
-            </div>
-
-            <div class="input-group">
-              <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
-              <input type="password" v-model="resetForm.confirmPassword" placeholder="请确认新密码" required minlength="6">
-            </div>
-
-            <div class="form-actions">
-              <div class="links-container">
-                <a href="#" class="tab-link" @click.prevent="switchTab('login')">
-                  返回登录
-                </a>
+                <button type="submit" class="login-btn" :class="{ loading }" :disabled="loading">
+                  <span class="btn-text">登录</span>
+                  <div class="btn-loading">
+                    <font-awesome-icon :icon="['fas', 'spinner']" spin />
+                  </div>
+                </button>
               </div>
-              <button type="submit" class="login-btn" :class="{ loading }" :disabled="loading">
-                <span class="btn-text">重置</span>
-                <div class="btn-loading">
-                  <font-awesome-icon :icon="['fas', 'spinner']" spin />
-                </div>
-              </button>
-            </div>
-          </form>
-        </div>
+            </form>
 
-        <div class="help-area">
-          <template v-if="activeTab === 'login'">
-            <p class="help-text">首次登录请点击"注册账号"进行设置</p>
-            <p class="help-text">学生校友账号禁用可通过"忘记密码"进行重置</p>
-          </template>
-          <template v-else-if="activeTab === 'register'">
-            <p class="help-text">管理员账号请联系系统管理员开通</p>
-            <p class="help-text">如有疑问，请联系系统技术支持</p>
-          </template>
-          <template v-else-if="activeTab === 'forgot'">
-            <p class="help-text">首次登录用户请输入学号/工号并设置密码</p>
-            <p class="help-text">请妥善保管您的密码信息</p>
-          </template>
+            <!-- 注册表单 -->
+            <form v-else-if="activeTab === 'register'" class="register-form" @submit.prevent="handleRegister">
+              <div class="input-group">
+                <font-awesome-icon :icon="['fas', 'user']" class="input-icon" />
+                <input type="text" v-model="registerForm.username" placeholder="请输入学号/工号" required>
+              </div>
+
+              <div class="input-group">
+                <font-awesome-icon :icon="['fas', 'user-tag']" class="input-icon" />
+                <input type="text" v-model="registerForm.name" placeholder="请输入姓名" required>
+              </div>
+
+              <div class="input-group">
+                <font-awesome-icon :icon="['fas', 'user-shield']" class="input-icon" />
+                <select v-model="registerForm.role" required @change="handleRoleChange">
+                  <option value="">请选择角色</option>
+                  <option value="student">学生</option>
+                  <option value="teacher">教师</option>
+                </select>
+              </div>
+
+              <!-- 学院选择 -->
+              <div class="input-group">
+                <font-awesome-icon :icon="['fas', 'university']" class="input-icon" />
+                <select v-model="registerForm.facultyId" required @change="handleFacultyChange">
+                  <option value="">请选择学院</option>
+                  <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
+                    {{ faculty.name }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- 系选择（仅学生显示） -->
+              <div class="input-group" v-if="registerForm.role === 'student'">
+                <font-awesome-icon :icon="['fas', 'building']" class="input-icon" />
+                <select v-model="registerForm.departmentId" required @change="handleDepartmentChange">
+                  <option value="">请选择系</option>
+                  <option v-for="department in departments" :key="department.id" :value="department.id">
+                    {{ department.name }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- 专业选择（仅学生显示） -->
+              <div class="input-group" v-if="registerForm.role === 'student'">
+                <font-awesome-icon :icon="['fas', 'graduation-cap']" class="input-icon" />
+                <select v-model="registerForm.majorId" required>
+                  <option value="">请选择专业</option>
+                  <option v-for="major in majors" :key="major.id" :value="major.id">
+                    {{ major.name }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="input-group">
+                <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
+                <input type="password" v-model="registerForm.password" placeholder="请设置密码" required minlength="6">
+              </div>
+
+              <div class="input-group">
+                <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
+                <input type="password" v-model="registerForm.confirmPassword" placeholder="请确认密码" required minlength="6">
+              </div>
+              <div class="input-group captcha-group">
+                <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                  <div style="flex: 1; position: relative;">
+                    <font-awesome-icon :icon="['fas', 'shield-alt']" class="input-icon" />
+                    <input type="text" v-model="registerForm.captcha" placeholder="请输入验证码" required>
+                  </div>
+                  <div style="position: relative; display: inline-block;">
+                    <img 
+                      :src="captchaImage" 
+                      alt="验证码" 
+                      style="max-height: 50px;max-width: 90px;width: 100%;height: auto; cursor: pointer; border-radius: 8px;" 
+                      @click="refreshCaptcha"
+                      title="点击刷新"
+                    >
+                    <div v-if="captchaLoading" class="captcha-loading-overlay">
+                      <div class="loading-spinner-small" style="width: 20px; height: 20px;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <div class="links-container">
+                  <a href="#" class="tab-link" @click.prevent="switchTab('login')">
+                    已有账号？立即登录
+                  </a>
+                </div>
+                <button type="submit" class="login-btn" :class="{ loading }" :disabled="loading">
+                  <span class="btn-text">注册</span>
+                  <div class="btn-loading">
+                    <font-awesome-icon :icon="['fas', 'spinner']" spin />
+                  </div>
+                </button>
+              </div>
+            </form>
+
+            <!-- 忘记密码表单 -->
+            <form v-else-if="activeTab === 'forgot'" class="login-form" @submit.prevent="handleResetPassword">
+              <div class="input-group">
+                <font-awesome-icon :icon="['fas', 'user']" class="input-icon" />
+                <input type="text" v-model="resetForm.username" placeholder="请输入学号/工号" required>
+              </div>
+
+              <div class="input-group">
+                <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
+                <input type="password" v-model="resetForm.newPassword" placeholder="请设置新密码" required minlength="6">
+              </div>
+
+              <div class="input-group">
+                <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
+                <input type="password" v-model="resetForm.confirmPassword" placeholder="请确认新密码" required minlength="6">
+              </div>
+              <div class="input-group captcha-group">
+                <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                  <div style="flex: 1; position: relative;">
+                    <font-awesome-icon :icon="['fas', 'shield-alt']" class="input-icon" />
+                    <input type="text" v-model="resetForm.captcha" placeholder="请输入验证码" required>
+                  </div>
+                  <div style="position: relative; display: inline-block;">
+                    <img 
+                      :src="captchaImage" 
+                      alt="验证码" 
+                      style="max-height: 50px;max-width: 90px;width: 100%;height: auto; cursor: pointer; border-radius: 8px;" 
+                      @click="refreshCaptcha"
+                      title="点击刷新"
+                    >
+                    <div v-if="captchaLoading" class="captcha-loading-overlay">
+                      <div class="loading-spinner-small" style="width: 20px; height: 20px;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <div class="links-container">
+                  <a href="#" class="tab-link" @click.prevent="switchTab('login')">
+                    返回登录
+                  </a>
+                </div>
+                <button type="submit" class="login-btn" :class="{ loading }" :disabled="loading">
+                  <span class="btn-text">重置</span>
+                  <div class="btn-loading">
+                    <font-awesome-icon :icon="['fas', 'spinner']" spin />
+                  </div>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="help-area">
+            <template v-if="activeTab === 'login'">
+              <p class="help-text">首次登录请点击"注册账号"进行设置</p>
+              <p class="help-text">学生校友账号禁用可通过"忘记密码"进行重置</p>
+            </template>
+            <template v-else-if="activeTab === 'register'">
+              <p class="help-text">管理员账号请联系系统管理员开通</p>
+              <p class="help-text">如有疑问，请联系系统技术支持</p>
+            </template>
+            <template v-else-if="activeTab === 'forgot'">
+              <p class="help-text">首次登录用户请输入学号/工号并设置密码</p>
+              <p class="help-text">请妥善保管您的密码信息</p>
+            </template>
+          </div>
         </div>
       </div>
     </div>
@@ -264,6 +338,19 @@ style.textContent = `
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+.captcha-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+}
 `
 document.head.appendChild(style)
 
@@ -284,6 +371,8 @@ const loadingOptions = ref(false)
 // 标签页切换函数
 const switchTab = (tab) => {
   activeTab.value = tab
+  // 切换标签页时刷新验证码
+  refreshCaptcha()
 }
 
 // 登录表单数据
@@ -296,9 +385,11 @@ const loginForm = reactive({
 // 验证码相关
 const captchaImage = ref('')
 const captchaToken = ref('')
+const captchaLoading = ref(false)
 
 // 获取验证码
 const refreshCaptcha = async () => {
+  captchaLoading.value = true
   try {
     // 使用项目已有的api模块获取验证码
     const response = await api.generateCaptcha()
@@ -309,6 +400,8 @@ const refreshCaptcha = async () => {
   } catch (error) {
     console.error('获取验证码失败:', error)
     toastStore.error('获取验证码失败，请刷新页面重试')
+  } finally {
+    captchaLoading.value = false
   }
 }
 
@@ -321,14 +414,16 @@ const registerForm = reactive({
   role: '',
   facultyId: '',
   departmentId: '',
-  majorId: ''
+  majorId: '',
+  captcha: ''
 })
 
 // 忘记密码表单数据
 const resetForm = reactive({
   username: '',
   newPassword: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  captcha: ''
 })
 
 // 下拉选项数据（注册用）
@@ -674,6 +769,15 @@ const handleRegister = async () => {
     toastStore.error('请选择专业')
     return
   }
+  // 验证码验证
+  if (!registerForm.captcha.trim()) {
+    toastStore.error('请输入验证码')
+    return
+  }
+  if (!captchaToken.value) {
+    toastStore.error('验证码已失效，请刷新验证码')
+    return
+  }
 
   // 密码一致性和长度验证
   if (registerForm.password !== registerForm.confirmPassword) {
@@ -688,7 +792,7 @@ const handleRegister = async () => {
   loading.value = true
 
   try {
-    // 使用auth store的注册方法
+    // 使用auth store的注册方法，包含验证码和验证码token
     await authStore.register({
       username: registerForm.username,
       name: registerForm.name,
@@ -696,7 +800,9 @@ const handleRegister = async () => {
       role: registerForm.role,
       facultyId: registerForm.facultyId,
       departmentId: registerForm.departmentId,
-      majorId: registerForm.majorId
+      majorId: registerForm.majorId,
+      captcha: registerForm.captcha,
+      captchaToken: captchaToken.value
     })
 
     // 注册成功后跳转到登录标签页
@@ -716,6 +822,8 @@ const handleRegister = async () => {
   } catch (error) {
     console.error('注册错误:', error)
     toastStore.error(`注册失败: ${error.message || '请稍后重试'}`)
+    // 注册失败后刷新验证码
+    refreshCaptcha()
   } finally {
     loading.value = false
   }
@@ -736,6 +844,15 @@ const handleResetPassword = async () => {
     toastStore.error('请确认新密码')
     return
   }
+  // 验证码验证
+  if (!resetForm.captcha.trim()) {
+    toastStore.error('请输入验证码')
+    return
+  }
+  if (!captchaToken.value) {
+    toastStore.error('验证码已失效，请刷新验证码')
+    return
+  }
 
   // 密码一致性和长度验证
   if (resetForm.newPassword !== resetForm.confirmPassword) {
@@ -750,8 +867,8 @@ const handleResetPassword = async () => {
   loading.value = true
 
   try {
-    // 调用密码重置函数
-    await authStore.resetPassword(resetForm.username, resetForm.newPassword)
+    // 调用密码重置函数，包含验证码和验证码token
+    await authStore.resetPassword(resetForm.username, resetForm.newPassword, resetForm.captcha, captchaToken.value)
 
     toastStore.success('密码重置成功！请使用新密码登录')
     switchTab('login')
@@ -764,6 +881,8 @@ const handleResetPassword = async () => {
   } catch (error) {
     console.error('密码重置错误:', error)
     toastStore.error(`密码重置失败: ${error.message || '请稍后重试'}`)
+    // 密码重置失败后刷新验证码
+    refreshCaptcha()
   } finally {
     loading.value = false
   }
@@ -814,184 +933,267 @@ const handleResetPassword = async () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 61, 134, 0.1);
+  background: rgba(170, 196, 229, 0.05);
   z-index: 1;
 }
 
-/* 登录表单容器样式 - 保持原有 */
+/* 主容器居中 */
 .login-container {
   width: 100%;
-  max-width: 1500px;
-  display: flex;
-  align-items: center;
-  gap: 40px;
-  padding: 20px;
-  position: relative;
-  z-index: 1;
-  margin: auto;
-}
-
-/* 左侧信息显示面板样式 - 与登录框风格统一 */
-.info-panel {
-  padding: 30px 25px;
-  flex: 1;
-  width: 100%;
-  max-width: 900px;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 12px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-}
-
-.info-content {
-  display: flex;
-  flex-direction: column;
-  gap: 25px;
-}
-
-.info-card {
-  padding: 25px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.info-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.info-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #003d86;
-  margin: 0;
-}
-
-.info-icon {
-  font-size: 20px;
-  color: #003d86;
-  width: 40px;
-  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 61, 134, 0.1);
-  border-radius: 8px;
+  padding: 40px 20px;
+  position: relative;
+  z-index: 1;
+  margin: auto;
+  flex: 1;
 }
 
-.info-item {
+/* 登录内容区域 - 合并左右面板 */
+.login-content {
   display: flex;
-  flex-direction: row;
-  gap: 8px;
-}
-
-.info-value {
-  font-size: 28px;
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.info-features {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-}
-
-.feature-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 15px;
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: 8px;
-  font-size: 14px;
-  color: #475569;
-  border: 1px solid #e2e8f0;
-  transition: all 0.2s ease;
-}
-
-.feature-item:hover {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: #cbd5e1;
-}
-
-.feature-icon {
-  color: #10b981;
-  font-size: 14px;
-}
-
-/* 登录框样式 - 完全保持不变 */
-.login-box {
-  background: rgba(255, 255, 255, 0.95);
-  padding: 40px 35px;
+  width: 100%;
+  max-width: 900px;
   border-radius: 16px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(10px);
-  transform: translateZ(0);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  max-height: 80vh;
-  overflow-y: auto;
-  margin-left: 0px;
-  scrollbar-width: none;
+  background: linear-gradient(90deg,#215493db 20%, #001736e9 100%);
+  box-shadow: 0 20px 30px rgba(2, 6, 21, 0.549);
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+  min-height: 600px;
+  max-height: 730px; /* 恢复固定高度限制 */
 }
 
-.login-box::-webkit-scrollbar {
-  display: none;
+/* 左侧信息面板样式*/
+.info-panel {
+  flex: 1;
+  color: rgba(255, 255, 255, 0.95);
+  padding: 50px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
 }
 
-/* 所有登录框内部样式保持不变 */
+.info-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+/* Logo区域 */
 .logo-area {
   display: flex;
   align-items: center;
-  padding-bottom: 25px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  margin-bottom: 25px;
+  margin-left: 25px;
+  margin-bottom: 30px;
+  position: relative;
+  z-index: 1;
 }
 
-.xmu-logo {
-  width: 230px;
-  margin-right: 15px;
-  object-fit: contain;
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 50px;
 }
 
 .logo-text {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-}
-
-.logo-text .auth-title {
-  font-size: 20px;
-  font-weight: bold;
-  color: #003d86;
-  margin-bottom: 5px;
 }
 
 .logo-text .system-name {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.logo-text .auth-title {
   font-size: 16px;
+  opacity: 0.9;
+}
+
+/* 欢迎内容区域 */
+.welcome-content {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.welcome-title {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 25px;
+  line-height: 1.3;
+}
+
+.welcome-subtitle {
+  font-size: 18px;
+  opacity: 0.9;
+  gap: 10px;
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+
+/* 时间信息 */
+.time-info {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 25px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 40px;
+  margin-top: 25px;
+}
+
+.time-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.time-title svg {
+  color: #f59e0b;
+}
+
+.time-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.time-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 16px;
+}
+
+.time-label {
+  opacity: 0.9;
+}
+
+.time-value {
+  font-weight: 600;
+}
+
+/* 特性列表 */
+.features-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 50px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.feature-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.feature-icon svg {
+  color: #10b981;
+  font-size: 18px;
+}
+
+.feature-text {
+  font-size: 16px;
+}
+
+/* 右侧登录区域 - 保持原有样式但调整布局 */
+.login-box {
+  flex: 1;
+  padding: 50px 40px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  box-shadow: -10px 0 20px rgba(1, 7, 26, 0.2);
+  /* 移除justify-content: center，允许内容从顶部开始 */
+  background: rgba(255, 255, 255, 0.95);
+  max-height: 730px; /* 保持固定高度 */
+  overflow-y: auto; /* 当内容超出时启用滚动 */
+  scroll-behavior: smooth; /* 平滑滚动效果 */
+  padding-top: 20px; /* 调整顶部内边距 */
+  padding-bottom: 40px; /* 保持底部内边距 */
+  margin-left: 0;
+  /* 隐藏滚动条 */
+  -ms-overflow-style: none;  /* IE 和 Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* 隐藏Webkit浏览器（Chrome、Safari）的滚动条 */
+.login-box::-webkit-scrollbar {
+  display: none;
+}
+
+/* 登录头部 */
+.login-header {
+  text-align: center;
+  margin-top: 35px;
+  margin-bottom: 35px;
+}
+
+.login-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #003d86;
+  margin-bottom: 10px;
+}
+
+.login-subtitle {
   color: #666;
-  font-weight: 500;
+  font-size: 16px;
+}
+
+/* 以下保持原有的登录框内部样式 */
+.login-tabs {
+  width: 90%;
+  margin: 0 auto 25px;
+  text-align: center;
+  border-bottom: 2px solid #003d86;
+  padding-bottom: 10px;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  color: #003d86;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: default;
+  padding: 0;
 }
 
 .form-container {
   margin-bottom: 30px;
-}
-
-.form-container {
   display: flex;
   justify-content: center;
-  margin-bottom: 20px;
 }
 
 .login-form, .register-form {
-  width: 80%;
+  width: 90%;
 }
 
 .input-group {
@@ -1021,18 +1223,6 @@ const handleResetPassword = async () => {
   transition: all 0.3s ease;
   background: #f9fafb;
   box-sizing: border-box;
-}
-
-.captcha-group .input-icon {
-  position: absolute;
-  left: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.captcha-group > div {
-  padding-left: 45px;
-  width: 100%;
 }
 
 .input-group input:focus,
@@ -1130,7 +1320,7 @@ const handleResetPassword = async () => {
 
 .help-area {
   margin: 20px auto 0;
-  width: 80%;
+  width: 85%;
   font-size: 13px;
   color: #666;
   line-height: 1.6;
@@ -1148,32 +1338,6 @@ const handleResetPassword = async () => {
   margin-bottom: 0;
 }
 
-.login-tabs {
-  width: 90%;
-  margin: 0 auto 25px;
-  text-align: center;
-  border-bottom: 2px solid #003d86;
-  padding-bottom: 10px;
-}
-
-.tab-btn {
-  background: none;
-  border: none;
-  color: #003d86;
-  font-size: 18px;
-  font-weight: bold;
-  cursor: default;
-  padding: 0;
-}
-
-.login-form, .register-form {
-  width: 90%;
-}
-
-.help-area {
-  width: 85%;
-}
-
 /* 版权信息样式 - 与原有保持一致 */
 .copyright {
   text-align: center;
@@ -1189,66 +1353,43 @@ const handleResetPassword = async () => {
   z-index: 10;
 }
 
-/* 响应式设计 - 与原有保持一致 */
-@media (max-width: 768px) {
-  .login-container {
-    max-width: 90%;
+/* 响应式设计 */
+@media (max-width: 992px) {
+  .login-content {
     flex-direction: column;
-    gap: 20px;
+    max-width: 600px;
   }
   
   .info-panel {
-    max-width: 100%;
-    padding: 25px 20px;
+    padding: 40px 30px;
   }
   
-  .info-content {
-    flex-direction: column;
-    gap: 20px;
-  }
-  
-  .info-card {
-    padding: 20px;
-  }
-  
-  .info-header {
-    flex-direction: column;
-    gap: 10px;
-    text-align: center;
-  }
-  
-  .info-title {
-    font-size: 18px;
-  }
-  
-  .info-value {
-    font-size: 16px;
-    text-align: center;
-  }
-  
-  .info-features {
-    grid-template-columns: 1fr;
-  }
-  
-  .feature-item {
-    justify-content: center;
-  }
-
   .login-box {
-    padding: 30px 25px;
+    padding: 40px 30px;
   }
-
-  .logo-area {
-    flex-direction: column;
-    text-align: center;
+  
+  .features-list {
+    margin-bottom: 30px;
   }
+}
 
-  .xmu-logo {
-    width: 180px;
-    margin-right: 0;
-    margin-bottom: 15px;
+@media (max-width: 576px) {
+  .login-container {
+    padding: 20px 15px;
   }
-
+  
+  .info-panel, .login-box {
+    padding: 30px 20px;
+  }
+  
+  .welcome-title {
+    font-size: 26px;
+  }
+  
+  .login-title {
+    font-size: 24px;
+  }
+  
   .login-tabs {
     width: 85%;
   }

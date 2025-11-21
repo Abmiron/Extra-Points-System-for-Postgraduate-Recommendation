@@ -206,6 +206,52 @@ def register():
     # 基本数据验证
     if not data:
         return jsonify({"message": "请求数据不能为空"}), 400
+    
+    # 验证码验证
+    captcha_input = data.get("captcha")
+    captcha_token = data.get("captchaToken")
+    
+    if not captcha_input:
+        return jsonify({"message": "验证码不能为空"}), 400
+    
+    if not captcha_token:
+        return jsonify({"message": "验证码token不能为空"}), 400
+    
+    # 验证验证码
+    print(f"验证验证码: 输入={captcha_input.lower()}, token={captcha_token}")
+    
+    # 检查验证码是否存在
+    with captcha_lock:
+        if captcha_token not in captcha_store:
+            print("验证码验证失败：未找到对应的验证码")
+            return jsonify({"message": "验证码不存在，请刷新页面获取验证码"}), 400
+        
+        # 获取存储的验证码和时间
+        stored_captcha, captcha_timestamp = captcha_store[captcha_token]
+    
+    # 检查验证码是否过期（5分钟过期）
+    current_time = datetime.now()
+    time_diff = (current_time - captcha_timestamp).total_seconds()
+    print(f"验证码时间差: {time_diff}秒")
+    
+    # 设置5分钟（300秒）的过期时间
+    if time_diff > 300:
+        print("验证码已过期")
+        # 清除过期的验证码
+        with captcha_lock:
+            captcha_store.pop(captcha_token, None)
+        return jsonify({"message": "验证码已过期，请刷新页面获取新验证码"}), 400
+    
+    # 验证验证码内容
+    if captcha_input.lower() != stored_captcha:
+        print(f"验证码不匹配：输入={captcha_input.lower()}, 存储={stored_captcha}")
+        return jsonify({"message": "验证码错误"}), 400
+    
+    # 验证成功后删除验证码
+    with captcha_lock:
+        captcha_store.pop(captcha_token, None)
+    
+    print("验证码验证成功")
 
     required_fields = ["username", "name", "role", "password"]
     for field in required_fields:
@@ -295,6 +341,53 @@ def register():
 @auth_bp.route("/reset-password", methods=["POST"])
 def reset_password():
     data = request.get_json()
+    
+    # 验证码验证
+    captcha_input = data.get("captcha")
+    captcha_token = data.get("captchaToken")
+    
+    if not captcha_input:
+        return jsonify({"message": "验证码不能为空"}), 400
+    
+    if not captcha_token:
+        return jsonify({"message": "验证码token不能为空"}), 400
+    
+    # 验证验证码
+    print(f"验证验证码: 输入={captcha_input.lower()}, token={captcha_token}")
+    
+    # 检查验证码是否存在
+    with captcha_lock:
+        if captcha_token not in captcha_store:
+            print("验证码验证失败：未找到对应的验证码")
+            return jsonify({"message": "验证码不存在，请刷新页面获取验证码"}), 400
+        
+        # 获取存储的验证码和时间
+        stored_captcha, captcha_timestamp = captcha_store[captcha_token]
+    
+    # 检查验证码是否过期（5分钟过期）
+    current_time = datetime.now()
+    time_diff = (current_time - captcha_timestamp).total_seconds()
+    print(f"验证码时间差: {time_diff}秒")
+    
+    # 设置5分钟（300秒）的过期时间
+    if time_diff > 300:
+        print("验证码已过期")
+        # 清除过期的验证码
+        with captcha_lock:
+            captcha_store.pop(captcha_token, None)
+        return jsonify({"message": "验证码已过期，请刷新页面获取新验证码"}), 400
+    
+    # 验证验证码内容
+    if captcha_input.lower() != stored_captcha:
+        print(f"验证码不匹配：输入={captcha_input.lower()}, 存储={stored_captcha}")
+        return jsonify({"message": "验证码错误"}), 400
+    
+    # 验证成功后删除验证码
+    with captcha_lock:
+        captcha_store.pop(captcha_token, None)
+    
+    print("验证码验证成功")
+    
     username = data.get("username")
     new_password = data.get("newPassword")
 

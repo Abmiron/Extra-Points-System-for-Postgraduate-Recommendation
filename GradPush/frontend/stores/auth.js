@@ -80,11 +80,12 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // 注册
+  // 用户注册
   const register = async (userData) => {
     try {
-      const message = await api.apiRequest('/register', 'POST', userData)
-      return message
+      // 使用api.register方法进行注册
+      const result = await api.register(userData)
+      return result
     } catch (error) {
       console.error('注册错误:', error)
       throw error
@@ -92,9 +93,11 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // 密码重置
-  const resetPassword = async (username, newPassword) => {
+  const resetPassword = async (username, newPassword, captcha, captchaToken) => {
     try {
-      const message = await api.apiRequest('/reset-password', 'POST', { username, newPassword })
+      // 构造数据对象并使用api.resetPassword方法
+      const data = { username, newPassword, captcha, captchaToken }
+      const message = await api.resetPassword(data)
       return message
     } catch (error) {
       console.error('密码重置错误:', error)
