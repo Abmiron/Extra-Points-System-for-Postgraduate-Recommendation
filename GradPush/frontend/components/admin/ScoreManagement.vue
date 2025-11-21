@@ -8,13 +8,14 @@
     <!-- 筛选和搜索区域 -->
     <div class="filters">
       <div class="filter-group">
-        <span class="filter-label">学号:</span>
-        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="输入学生学号">
-      </div>
-      <div class="filter-group">
         <span class="filter-label">姓名:</span>
         <input type="text" class="form-control small" v-model="filters.studentName" placeholder="输入学生姓名">
       </div>
+      <div class="filter-group">
+        <span class="filter-label">学号:</span>
+        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="输入学生学号">
+      </div>
+
       <div class="filter-group">
         <span class="filter-label">学院:</span>
         <select class="form-control small" v-model="filters.faculty" @change="onFacultyChange">
@@ -171,62 +172,72 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">CET4成绩</label>
-                <input type="number" class="form-control" v-model="formData.cet4_score" placeholder="请输入CET4成绩" min="0" max="710" step="1" />
+                <input type="number" class="form-control" v-model="formData.cet4_score" placeholder="请输入CET4成绩" min="0"
+                  max="710" step="1" />
                 <div v-if="errors.cet4_score" class="error-message">{{ errors.cet4_score }}</div>
               </div>
               <div class="form-group">
                 <label class="form-label">CET6成绩</label>
-                <input type="number" class="form-control" v-model="formData.cet6_score" placeholder="请输入CET6成绩" min="0" max="710" step="1" />
+                <input type="number" class="form-control" v-model="formData.cet6_score" placeholder="请输入CET6成绩" min="0"
+                  max="710" step="1" />
                 <div v-if="errors.cet6_score" class="error-message">{{ errors.cet6_score }}</div>
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">GPA</label>
-                <input type="number" class="form-control" v-model="formData.gpa" placeholder="请输入GPA" min="0" max="4" step="0.0001" />
+                <input type="number" class="form-control" v-model="formData.gpa" placeholder="请输入GPA" min="0" max="4"
+                  step="0.0001" />
                 <div v-if="errors.gpa" class="error-message">{{ errors.gpa }}</div>
               </div>
               <div class="form-group">
                 <label class="form-label">学业成绩</label>
-                <input type="number" class="form-control" v-model="formData.academic_score" placeholder="请输入学业成绩" min="0" max="100" step="0.0001" />
+                <input type="number" class="form-control" v-model="formData.academic_score" placeholder="请输入学业成绩"
+                  min="0" max="100" step="0.0001" />
                 <div v-if="errors.academic_score" class="error-message">{{ errors.academic_score }}</div>
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">学术专长</label>
-                <input type="number" class="form-control" v-model="formData.academic_specialty_total" placeholder="系统自动计算" min="0" max="12" step="0.01" readonly />
+                <input type="number" class="form-control" v-model="formData.academic_specialty_total"
+                  placeholder="系统自动计算" min="0" max="12" step="0.01" readonly />
                 <div class="help-text">由系统根据申请记录自动计算，直接计入综合成绩</div>
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">综合表现</label>
-                <input type="number" class="form-control" v-model="formData.comprehensive_performance_total" placeholder="系统自动计算" min="0" max="8" step="0.01" readonly />
+                <input type="number" class="form-control" v-model="formData.comprehensive_performance_total"
+                  placeholder="系统自动计算" min="0" max="8" step="0.01" readonly />
                 <div class="help-text">由系统根据申请记录自动计算，直接计入综合成绩</div>
               </div>
               <div class="form-group">
                 <label class="form-label">考核总分</label>
-                <input type="number" class="form-control" v-model="formData.total_score" placeholder="系统自动计算" min="0" max="100" step="0.01" readonly />
+                <input type="number" class="form-control" v-model="formData.total_score" placeholder="系统自动计算" min="0"
+                  max="100" step="0.01" readonly />
                 <div class="help-text">由系统根据申请记录自动计算</div>
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">综合成绩</label>
-                <input type="number" class="form-control" v-model="formData.comprehensive_score" placeholder="系统自动计算" min="0" max="100" step="0.01" readonly />
+                <input type="number" class="form-control" v-model="formData.comprehensive_score" placeholder="系统自动计算"
+                  min="0" max="100" step="0.01" readonly />
                 <div class="help-text">计算方式：学业成绩 * 学业成绩权重 / 100 + 学术专长总分 + 综合表现总分</div>
               </div>
               <div class="form-group">
                 <label class="form-label">专业排名</label>
-                <input type="number" class="form-control" v-model="formData.major_ranking" placeholder="系统自动计算" min="1" step="1" readonly />
+                <input type="number" class="form-control" v-model="formData.major_ranking" placeholder="系统自动计算" min="1"
+                  step="1" readonly />
                 <div class="help-text">由系统根据申请记录自动计算</div>
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">排名人数</label>
-                <input type="number" class="form-control" v-model="formData.total_students" placeholder="系统自动计算" min="1" step="1" readonly />
+                <input type="number" class="form-control" v-model="formData.total_students" placeholder="系统自动计算" min="1"
+                  step="1" readonly />
                 <div class="help-text">由系统根据申请记录自动计算</div>
               </div>
             </div>
@@ -313,10 +324,10 @@ export default {
         const facultyMatch = !this.filters.faculty || student.faculty.includes(this.filters.faculty)
         const departmentMatch = !this.filters.department || student.department.includes(this.filters.department)
         const majorMatch = !this.filters.major || student.major.includes(this.filters.major)
-        
+
         return idMatch && nameMatch && facultyMatch && departmentMatch && majorMatch
       })
-      
+
       return filtered
     },
     paginatedScores() {
@@ -346,7 +357,7 @@ export default {
         // 使用applicationsStore加载学生排名数据
         const applicationsStore = useApplicationsStore()
         const responseData = await applicationsStore.fetchStudentsRanking()
-        
+
         // 获取学生列表并转换字段名称
         let students = responseData.students || []
         students = students.map(student => {
@@ -363,7 +374,7 @@ export default {
             cet6_score: student.cet6_score,
             gpa: student.gpa,
             academic_score: student.academic_score,
-            
+
             // 从排名数据获取的字段
             academic_specialty_total: student.specialty_score || 0,
             comprehensive_performance_total: student.comprehensive_performance_total || 0,
@@ -373,7 +384,7 @@ export default {
             total_students: student.major_total_students
           }
         })
-        
+
         // 更新数据
         this.scores = students
         this.total = this.filteredScores.length
@@ -393,11 +404,11 @@ export default {
         // 加载学院列表
         const facultiesResponse = await api.getFacultiesAdmin()
         this.faculties = facultiesResponse.faculties || []
-        
+
         // 加载所有系列表（后续可以优化为按学院筛选）
         const departmentsResponse = await api.getDepartmentsAdmin()
         this.departments = departmentsResponse.departments || []
-        
+
         // 加载所有专业列表（后续可以优化为按系筛选）
         const majorsResponse = await api.getMajorsAdmin()
         this.majors = majorsResponse.majors || []
@@ -405,12 +416,12 @@ export default {
         console.error('加载下拉数据失败:', error)
       }
     },
-    
+
     // 学院选择变化时的处理
     onFacultyChange() {
       this.filters.department = ''
       this.filters.major = ''
-      
+
       // 如果选择了学院，根据学院筛选系列表
       if (this.filters.faculty) {
         const selectedFaculty = this.faculties.find(f => f.name === this.filters.faculty)
@@ -419,23 +430,23 @@ export default {
           // 目前暂时显示所有系
         }
       }
-      
+
       this.currentPage = 1
     },
-    
+
     // 系选择变化时的处理
     onDepartmentChange() {
       this.filters.major = ''
-      
+
       // 如果选择了系，根据系筛选专业列表
       if (this.filters.department) {
         // 可以在这里添加根据系筛选专业的逻辑
         // 目前暂时显示所有专业
       }
-      
+
       this.currentPage = 1
     },
-    
+
     // 重置筛选条件
     resetFilter() {
       Object.assign(this.filters, {
@@ -505,7 +516,7 @@ export default {
         try {
           // 更新学生
           await api.updateStudentAdmin(this.formData.id, this.formData)
-          
+
           // 关闭模态框并刷新数据
           this.dialogVisible = false
           this.loadScoresFromAPI()
@@ -523,16 +534,16 @@ export default {
         // 显示确认对话框
         if (confirm('确定要重新计算所有学生的综合成绩吗？此操作可能需要一些时间。')) {
           this.loading = true
-          
+
           // 获取当前登录用户信息
           const userInfo = JSON.parse(localStorage.getItem('user'))
-          
+
           // 调用API重新计算综合成绩
           await api.recalculateComprehensiveScores({ username: userInfo?.username })
-          
+
           // 刷新成绩数据
           await this.loadScoresFromAPI()
-          
+
           //alert('综合成绩重新计算完成')
         }
       } catch (error) {
@@ -576,8 +587,13 @@ export default {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-text {
@@ -612,7 +628,7 @@ export default {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .filter-group {
     margin-bottom: 10px;
   }

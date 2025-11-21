@@ -28,7 +28,7 @@
       </div>
     </div>
 
-    
+
 
     <!-- 综合成绩设置 -->
     <div class="card">
@@ -37,21 +37,24 @@
         <div class="form-group">
           <label class="form-label">学业成绩比例</label>
           <div class="input-with-unit">
-            <input type="number" class="form-control small-input" v-model="settings.academicScoreWeight" min="0" max="100">
+            <input type="number" class="form-control small-input" v-model="settings.academicScoreWeight" min="0"
+              max="100">
             <span class="unit">%</span>
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">学术专长分数上限</label>
           <div class="input-with-unit">
-            <input type="number" class="form-control small-input" v-model="settings.specialtyMaxScore" min="0" step="0.1">
+            <input type="number" class="form-control small-input" v-model="settings.specialtyMaxScore" min="0"
+              step="0.1">
             <span class="unit">分</span>
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">综合表现分数上限</label>
           <div class="input-with-unit">
-            <input type="number" class="form-control small-input" v-model="settings.performanceMaxScore" min="0" step="0.1">
+            <input type="number" class="form-control small-input" v-model="settings.performanceMaxScore" min="0"
+              step="0.1">
             <span class="unit">分</span>
           </div>
         </div>
@@ -158,7 +161,7 @@
             <span :class="`status-indicator ${systemStatus}`"></span>
             {{ systemStatusText }}
             <button class="btn btn-outline" @click="toggleSystemStatus">
-            {{ systemStatus === 'online' ? '进入维护模式' : '恢复正常运行' }}
+              {{ systemStatus === 'online' ? '进入维护模式' : '恢复正常运行' }}
             </button>
           </div>
         </div>
@@ -321,7 +324,7 @@ async function loadSystemSettings() {
   try {
     const response = await api.getSystemSettings()
     const data = response.settings
-    
+
     // 更新设置数据
     settings.academicYear = data.academicYear || ''
     settings.applicationStart = data.applicationStart || ''
@@ -333,7 +336,7 @@ async function loadSystemSettings() {
     settings.academicScoreWeight = data.academicScoreWeight || ''
     settings.specialtyMaxScore = data.specialtyMaxScore || ''
     settings.performanceMaxScore = data.performanceMaxScore || ''
-    
+
     systemStatus.value = data.systemStatus === '维护中' ? 'maintenance' : 'online'
   } catch (error) {
     console.error('加载系统设置失败:', error)
@@ -383,21 +386,21 @@ async function loadSystemSettings() {
 }
 
 .small-input {
-    width: 100px;
-    display: inline-block;
-  }
+  width: 100px;
+  display: inline-block;
+}
 
-  .input-with-unit {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
+.input-with-unit {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
 
-  .unit {
-    color: #666;
-    font-size: 14px;
-    white-space: nowrap;
-  }
+.unit {
+  color: #666;
+  font-size: 14px;
+  white-space: nowrap;
+}
 
 .form-actions {
   display: flex;

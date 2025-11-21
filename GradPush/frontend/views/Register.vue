@@ -21,12 +21,12 @@
               <font-awesome-icon :icon="['fas', 'user']" class="input-icon" />
               <input type="text" v-model="registerForm.username" placeholder="请输入学号/工号" required>
             </div>
-            
+
             <div class="input-group">
               <font-awesome-icon :icon="['fas', 'user-tag']" class="input-icon" />
               <input type="text" v-model="registerForm.name" placeholder="请输入姓名" required>
             </div>
-            
+
             <div class="input-group">
               <font-awesome-icon :icon="['fas', 'user-shield']" class="input-icon" />
               <select v-model="registerForm.role" required @change="handleRoleChange">
@@ -35,7 +35,7 @@
                 <option value="teacher">教师</option>
               </select>
             </div>
-            
+
             <!-- 学院选择 -->
             <div class="input-group">
               <font-awesome-icon :icon="['fas', 'university']" class="input-icon" />
@@ -46,7 +46,7 @@
                 </option>
               </select>
             </div>
-            
+
             <!-- 系选择（仅学生显示） -->
             <div class="input-group" v-if="registerForm.role === 'student'">
               <font-awesome-icon :icon="['fas', 'building']" class="input-icon" />
@@ -57,7 +57,7 @@
                 </option>
               </select>
             </div>
-            
+
             <!-- 专业选择（仅学生显示） -->
             <div class="input-group" v-if="registerForm.role === 'student'">
               <font-awesome-icon :icon="['fas', 'graduation-cap']" class="input-icon" />
@@ -68,12 +68,12 @@
                 </option>
               </select>
             </div>
-            
+
             <div class="input-group">
               <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
               <input type="password" v-model="registerForm.password" placeholder="请设置密码" required minlength="6">
             </div>
-            
+
             <div class="input-group">
               <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
               <input type="password" v-model="registerForm.confirmPassword" placeholder="请确认密码" required minlength="6">
@@ -137,27 +137,27 @@ const majors = ref([])
 // 表单验证
 const isFormValid = computed(() => {
   const { username, name, password, confirmPassword, role, facultyId, departmentId, majorId } = registerForm
-  
+
   // 基本字段验证
   if (!username || !name || !password || !confirmPassword || !role || !facultyId) {
     return false
   }
-  
+
   // 学生需要验证系和专业
   if (role === 'student' && (!departmentId || !majorId)) {
     return false
   }
-  
+
   // 密码一致性验证
   if (password !== confirmPassword) {
     return false
   }
-  
+
   // 密码长度验证
   if (password.length < 6) {
     return false
   }
-  
+
   return true
 })
 
@@ -286,7 +286,7 @@ const handleRegister = async () => {
     alert('请选择专业')
     return
   }
-  
+
   // 密码一致性和长度验证
   if (registerForm.password !== registerForm.confirmPassword) {
     alert('两次输入的密码不一致')
@@ -296,7 +296,7 @@ const handleRegister = async () => {
     alert('密码长度不能少于6位')
     return
   }
-  
+
   loading.value = true
 
   try {
@@ -310,7 +310,7 @@ const handleRegister = async () => {
       departmentId: registerForm.departmentId,
       majorId: registerForm.majorId
     })
-    
+
     // 注册成功后跳转到登录页面
     // alert('注册成功！请使用您的账号密码登录')
     router.push('/login')
@@ -378,7 +378,8 @@ const goToLogin = () => {
   width: 100%;
   max-width: 480px;
   /* 隐藏滚动条 */
-  scrollbar-width: none; /* Firefox */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 /* WebKit浏览器隐藏滚动条 */

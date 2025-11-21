@@ -65,22 +65,22 @@
         </div>
         <table class="application-table">
           <thead>
-              <tr>
-                <th>规则名称</th>
-                <th>类型</th>
-                <th>子类型</th>
-                <th>级别</th>
-                <th>等级</th>
-                <th>基础分值</th>
-                <th>作者排序比例</th>
-                <th>最大分数</th>
-                <th>最大数量</th>
-                <th>规则类型</th>
-                <th>状态</th>
-                <th>创建时间</th>
-                <th>操作</th>
-              </tr>
-            </thead>
+            <tr>
+              <th>规则名称</th>
+              <th>类型</th>
+              <th>子类型</th>
+              <th>级别</th>
+              <th>等级</th>
+              <th>基础分值</th>
+              <th>作者排序比例</th>
+              <th>最大分数</th>
+              <th>最大数量</th>
+              <th>规则类型</th>
+              <th>状态</th>
+              <th>创建时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
           <tbody>
             <tr v-for="rule in paginatedRules" :key="rule.id">
               <td>{{ rule.name }}</td>
@@ -112,8 +112,7 @@
                     @click="toggleRuleStatus(rule.id)" title="禁用">
                     <font-awesome-icon :icon="['fas', 'ban']" />
                   </button>
-                  <button v-else class="btn-outline btn small-btn" @click="toggleRuleStatus(rule.id)"
-                    title="启用">
+                  <button v-else class="btn-outline btn small-btn" @click="toggleRuleStatus(rule.id)" title="启用">
                     <font-awesome-icon :icon="['fas', 'check']" />
                   </button>
                   <button class="btn-outline btn small-btn delete-btn" @click="deleteRule(rule)" title="删除">
@@ -158,18 +157,20 @@
               <label class="form-label">规则名称</label>
               <input type="text" class="form-control" v-model="ruleForm.name" required>
             </div>
-            
+
             <!-- 规则类型（卡片式选择） -->
             <div class="form-group">
               <label class="form-label">规则类型</label>
               <div class="radio-cards compact">
-                <div class="radio-card" :class="{ active: ruleForm.type === 'academic' }" @click.stop="handleTypeChange('academic')">
+                <div class="radio-card" :class="{ active: ruleForm.type === 'academic' }"
+                  @click.stop="handleTypeChange('academic')">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'book']" />
                   </div>
                   <span>学术专长</span>
                 </div>
-                <div class="radio-card" :class="{ active: ruleForm.type === 'comprehensive' }" @click.stop="handleTypeChange('comprehensive')">
+                <div class="radio-card" :class="{ active: ruleForm.type === 'comprehensive' }"
+                  @click.stop="handleTypeChange('comprehensive')">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'trophy']" />
                   </div>
@@ -177,13 +178,13 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- 规则子类型（卡片式选择） -->
             <div class="form-group" v-if="ruleForm.type">
               <label class="form-label">规则子类型</label>
               <div class="radio-cards">
-                <div class="radio-card" v-for="type in currentSubTypes" :key="type.value" 
-                  :class="{ active: ruleForm.sub_type === type.value }" 
+                <div class="radio-card" v-for="type in currentSubTypes" :key="type.value"
+                  :class="{ active: ruleForm.sub_type === type.value }"
                   @click.stop="ruleForm.sub_type = type.value; handleSubTypeChange()">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="type.icon" />
@@ -192,13 +193,14 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- 级别选择 -->
-            <div class="form-group" v-if="!(ruleForm.type === 'academic' && (ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation')) && currentLevels.length > 0">
+            <div class="form-group"
+              v-if="!(ruleForm.type === 'academic' && (ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation')) && currentLevels.length > 0">
               <label class="form-label">级别</label>
               <div class="radio-cards">
-                <div class="radio-card" v-for="level in currentLevels" :key="level.value" 
-                  :class="{ active: ruleForm.level === level.value }" 
+                <div class="radio-card" v-for="level in currentLevels" :key="level.value"
+                  :class="{ active: ruleForm.level === level.value }"
                   @click.stop="ruleForm.level = level.value; handleLevelChange()">
                   <span>{{ level.label }}</span>
                 </div>
@@ -207,13 +209,14 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- 等级选择（科研成果、创新创业训练和综合表现不需要） -->
-            <div class="form-group" v-if="ruleForm.type === 'academic' && !(ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation')">
+            <div class="form-group"
+              v-if="ruleForm.type === 'academic' && !(ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation')">
               <label class="form-label">等级</label>
               <div class="radio-cards">
-                <div class="radio-card" v-for="grade in currentGrades" :key="grade.value" 
-                  :class="{ active: ruleForm.grade === grade.value, disabled: !ruleForm.level && currentLevels.length > 0 }" 
+                <div class="radio-card" v-for="grade in currentGrades" :key="grade.value"
+                  :class="{ active: ruleForm.grade === grade.value, disabled: !ruleForm.level && currentLevels.length > 0 }"
                   @click.stop="(currentLevels.length === 0 || ruleForm.level) && (ruleForm.grade = grade.value)">
                   <span>{{ grade.label }}</span>
                 </div>
@@ -222,19 +225,19 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- 科研成果类型选择（只有科研成果需要） -->
             <div class="form-group" v-if="ruleForm.type === 'academic' && ruleForm.sub_type === 'research'">
               <label class="form-label">科研成果类型</label>
               <div class="radio-cards compact">
-                <div class="radio-card small" :class="{ active: ruleForm.research_type === 'paper' }" 
+                <div class="radio-card small" :class="{ active: ruleForm.research_type === 'paper' }"
                   @click.stop="ruleForm.research_type = 'paper'">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'file-alt']" />
                   </div>
                   <span>学术论文</span>
                 </div>
-                <div class="radio-card small" :class="{ active: ruleForm.research_type === 'patent' }" 
+                <div class="radio-card small" :class="{ active: ruleForm.research_type === 'patent' }"
                   @click.stop="ruleForm.research_type = 'patent'">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'file-invoice']" />
@@ -243,14 +246,13 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- 只有学业竞赛才显示奖项类别选择 -->
             <div class="form-group" v-if="ruleForm.type === 'academic' && ruleForm.sub_type === 'competition'">
               <label class="form-label">奖项类别</label>
               <div class="radio-cards">
-                <div class="radio-card" v-for="category in currentCategories" :key="category" 
-                  :class="{ active: ruleForm.category === category }" 
-                  @click.stop="ruleForm.category = category">
+                <div class="radio-card" v-for="category in currentCategories" :key="category"
+                  :class="{ active: ruleForm.category === category }" @click.stop="ruleForm.category = category">
                   <span>{{ category }}</span>
                 </div>
                 <div class="radio-card" v-if="currentCategories.length === 0" :class="{ disabled: true }">
@@ -258,19 +260,19 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- 参与类型选择（创新创业训练不需要） -->
             <div class="form-group" v-if="!(ruleForm.type === 'academic' && ruleForm.sub_type === 'innovation')">
               <label class="form-label">参与类型</label>
               <div class="radio-cards compact">
-                <div class="radio-card small" :class="{ active: ruleForm.participation_type === 'individual' }" 
+                <div class="radio-card small" :class="{ active: ruleForm.participation_type === 'individual' }"
                   @click.stop="ruleForm.participation_type = 'individual'">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'user']" />
                   </div>
                   <span>个人</span>
                 </div>
-                <div class="radio-card small" :class="{ active: ruleForm.participation_type === 'team' }" 
+                <div class="radio-card small" :class="{ active: ruleForm.participation_type === 'team' }"
                   @click.stop="ruleForm.participation_type = 'team'">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'users']" />
@@ -279,19 +281,20 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- 团队角色选择（综合表现且选择集体时，或创新创业训练时显示） -->
-            <div class="form-group" v-if="(ruleForm.type === 'comprehensive' && ruleForm.participation_type === 'team') || (ruleForm.type === 'academic' && ruleForm.sub_type === 'innovation')">
+            <div class="form-group"
+              v-if="(ruleForm.type === 'comprehensive' && ruleForm.participation_type === 'team') || (ruleForm.type === 'academic' && ruleForm.sub_type === 'innovation')">
               <label class="form-label">团队角色</label>
               <div class="radio-cards compact">
-                <div class="radio-card small" :class="{ active: ruleForm.team_role === 'leader' }" 
+                <div class="radio-card small" :class="{ active: ruleForm.team_role === 'leader' }"
                   @click.stop="ruleForm.team_role = 'leader'">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'flag']" />
                   </div>
                   <span>队长</span>
                 </div>
-                <div class="radio-card small" :class="{ active: ruleForm.team_role === 'member' }" 
+                <div class="radio-card small" :class="{ active: ruleForm.team_role === 'member' }"
                   @click.stop="ruleForm.team_role = 'member'">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'user-friends']" />
@@ -300,19 +303,20 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- 作者排序类型选择（只有集体参与且为学业竞赛时显示） -->
-            <div class="form-group" v-if="ruleForm.type === 'academic' && ruleForm.sub_type === 'competition' && ruleForm.participation_type === 'team'">
+            <div class="form-group"
+              v-if="ruleForm.type === 'academic' && ruleForm.sub_type === 'competition' && ruleForm.participation_type === 'team'">
               <label class="form-label">作者排序类型</label>
               <div class="radio-cards compact">
-                <div class="radio-card small" :class="{ active: ruleForm.author_rank_type === 'ranked' }" 
+                <div class="radio-card small" :class="{ active: ruleForm.author_rank_type === 'ranked' }"
                   @click.stop="ruleForm.author_rank_type = 'ranked'">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'sort-numeric-up']" />
                   </div>
                   <span>区分排名</span>
                 </div>
-                <div class="radio-card small" :class="{ active: ruleForm.author_rank_type === 'unranked' }" 
+                <div class="radio-card small" :class="{ active: ruleForm.author_rank_type === 'unranked' }"
                   @click.stop="ruleForm.author_rank_type = 'unranked'">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'sort']" />
@@ -321,43 +325,49 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- 作者排序输入（只有区分排名时显示） -->
-            <div class="form-group" v-if="ruleForm.type === 'academic' && ruleForm.sub_type === 'competition' && ruleForm.participation_type === 'team' && ruleForm.author_rank_type === 'ranked'">
+            <div class="form-group"
+              v-if="ruleForm.type === 'academic' && ruleForm.sub_type === 'competition' && ruleForm.participation_type === 'team' && ruleForm.author_rank_type === 'ranked'">
               <label class="form-label">作者排序</label>
-              <input type="number" class="form-control" v-model="ruleForm.author_rank" min="1" placeholder="请输入作者排序（数字）">
+              <input type="number" class="form-control" v-model="ruleForm.author_rank" min="1"
+                placeholder="请输入作者排序（数字）">
             </div>
-            
+
             <!-- 作者排序比例（科研成果和区分排名的学业竞赛显示） -->
-            <div class="form-group" v-if="(ruleForm.type === 'academic' && (ruleForm.sub_type === 'research' || (ruleForm.sub_type === 'competition' && ruleForm.author_rank_type === 'ranked')))">
+            <div class="form-group"
+              v-if="(ruleForm.type === 'academic' && (ruleForm.sub_type === 'research' || (ruleForm.sub_type === 'competition' && ruleForm.author_rank_type === 'ranked')))">
               <label class="form-label">作者排序比例 (%)</label>
-              <input type="number" class="form-control" v-model="ruleForm.author_rank_ratio" min="0" max="100" step="1" placeholder="请输入比例（如80%填写80）">
+              <input type="number" class="form-control" v-model="ruleForm.author_rank_ratio" min="0" max="100" step="1"
+                placeholder="请输入比例（如80%填写80）">
             </div>
-            
+
             <!-- 最大分数限制（可选） -->
             <div class="form-group">
               <label class="form-label">最大分数限制</label>
-              <input type="number" class="form-control" v-model="ruleForm.max_score" step="0.1" min="0" placeholder="请输入最大分数限制（留空表示无限制）">
+              <input type="number" class="form-control" v-model="ruleForm.max_score" step="0.1" min="0"
+                placeholder="请输入最大分数限制（留空表示无限制）">
             </div>
-            
+
             <!-- 最大项目数量限制（可选） -->
             <div class="form-group">
               <label class="form-label">最大项目数量限制</label>
-              <input type="number" class="form-control" v-model="ruleForm.max_count" min="1" placeholder="请输入最大项目数量（留空表示无限制）">
+              <input type="number" class="form-control" v-model="ruleForm.max_count" min="1"
+                placeholder="请输入最大项目数量（留空表示无限制）">
             </div>
-            
+
             <!-- 特殊规则标记 -->
             <div class="form-group">
               <label class="form-label">特殊规则</label>
               <div class="radio-cards compact">
-                <div class="radio-card small" :class="{ active: ruleForm.is_special === true }" 
+                <div class="radio-card small" :class="{ active: ruleForm.is_special === true }"
                   @click.stop="ruleForm.is_special = true">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'check']" />
                   </div>
                   <span>是</span>
                 </div>
-                <div class="radio-card small" :class="{ active: ruleForm.is_special === false }" 
+                <div class="radio-card small" :class="{ active: ruleForm.is_special === false }"
                   @click.stop="ruleForm.is_special = false">
                   <div class="radio-icon">
                     <font-awesome-icon :icon="['fas', 'times']" />
@@ -366,7 +376,7 @@
                 </div>
               </div>
             </div>
-            
+
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">分值</label>
@@ -508,20 +518,20 @@ const getGradeText = (grade) => {
     'good': '良好',
     'general': '合格',
     'participation': '参与奖',
-    
+
     // 国际组织实习
     'full_year': '满一学年',
     'half_year': '超过一学期不满一年',
-    
+
     // 参军入伍服兵役
     '1-2_years': '1-2年',
     '2+_years': '2年以上',
-    
+
     // 志愿服务
     'captain': '队长',
     'team_member': '队员',
     'individual': '个人',
-    
+
     // 社会工作
     'executive_chair': '院学生会执行主席/团总支书记',
     'presidium_member': '院学生会主席团成员/团总支副书记',
@@ -532,13 +542,13 @@ const getGradeText = (grade) => {
     'club_president': '社团社长',
     'committee_member': '党支部委员/系团总支各部部长/各班班委/团支部委员',
     'assistant_club_president': '院学生会/团总支长期志愿者/社团副社长及主要干部',
-    
+
     // 体育比赛
     'champion': '冠军',
     'runner_up': '亚军',
     'third_place': '季军',
     'top_8': '第四至八名',
-    
+
     // 荣誉称号
     'collective': '集体'
   }
@@ -629,53 +639,53 @@ const saveRule = async () => {
     if (!ruleForm.name || !ruleForm.type || !ruleForm.sub_type || !ruleForm.score) {
       // 检查级别字段是否必填
       const needLevel = ['volunteer', 'sports', 'honor_title', 'international_internship', 'military_service', 'social_work'] // 需要级别的综合表现子类型
-      if ((ruleForm.type !== 'academic' || !(ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation')) && 
-          (ruleForm.type !== 'comprehensive' || needLevel.includes(ruleForm.sub_type)) && 
-          !ruleForm.level) {
+      if ((ruleForm.type !== 'academic' || !(ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation')) &&
+        (ruleForm.type !== 'comprehensive' || needLevel.includes(ruleForm.sub_type)) &&
+        !ruleForm.level) {
         alert('请填写必填字段')
         return
       }
     }
-    
+
     // 检查等级字段是否必填
     // 综合表现类型不需要等级，只有学术类型需要等级（科研成果和创新创业训练除外）
     if (ruleForm.type !== 'comprehensive' && !(ruleForm.type === 'academic' && (ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation')) && !ruleForm.grade) {
       alert('请选择等级')
       return
     }
-    
+
     // 对于学业竞赛，奖项类别是必填的
     if (ruleForm.type === 'academic' && ruleForm.sub_type === 'competition' && !ruleForm.category) {
       alert('请选择奖项类别')
       return
     }
-    
+
     // 对于科研成果，科研成果类型是必填的
     if (ruleForm.type === 'academic' && ruleForm.sub_type === 'research' && !ruleForm.research_type) {
       alert('请选择科研成果类型')
       return
     }
-    
+
     // 对于综合表现类型，清空等级字段
     // 综合表现类型不需要等级，设置为空值（已在表单验证中处理）
-    
+
     // 对于非学业竞赛类型，清空奖项类别字段
     if (!(ruleForm.type === 'academic' && ruleForm.sub_type === 'competition')) {
       ruleForm.category = ''
     }
-    
+
     // 对于非科研成果类型，清空科研成果类型字段
     if (!(ruleForm.type === 'academic' && ruleForm.sub_type === 'research')) {
       ruleForm.research_type = ''
     }
-    
+
     // 准备要发送的数据，处理作者排序比例
     const ruleData = { ...ruleForm }
     // 将百分比转换为小数
     if (ruleData.author_rank_ratio !== null) {
       ruleData.author_rank_ratio = parseFloat(ruleData.author_rank_ratio) / 100
     }
-    
+
     // 处理可能的空值，确保与数据库字段类型匹配
     // 将空字符串转换为null
     for (const key in ruleData) {
@@ -683,7 +693,7 @@ const saveRule = async () => {
         ruleData[key] = null
       }
     }
-    
+
     // 处理可能的空值，确保与数据库字段类型匹配
     if (ruleData.author_rank === null) {
       delete ruleData.author_rank
@@ -694,7 +704,7 @@ const saveRule = async () => {
     if (ruleData.max_count === null) {
       delete ruleData.max_count
     }
-    
+
     if (editingRule.value) {
       // 更新规则
       await api.updateRule(editingRule.value.id, ruleData)
@@ -808,12 +818,12 @@ const levelGradeOptions = {
     social_work: {
       levels: ['provincial', 'school', 'college'],  // 社会工作级别
       grades: {
-        provincial: ['executive_chair', 'presidium_member', 'department_head', 'branch_secretary', 'monitor', 
-             'assistant_department_head', 'club_president', 'committee_member', 'assistant_club_president'],  // 省级：各类职务
-        school: ['executive_chair', 'presidium_member', 'department_head', 'branch_secretary', 'monitor', 
-             'assistant_department_head', 'club_president', 'committee_member', 'assistant_club_president'],  // 校级：各类职务
-        college: ['executive_chair', 'presidium_member', 'department_head', 'branch_secretary', 'monitor', 
-             'assistant_department_head', 'club_president', 'committee_member', 'assistant_club_president']  // 院级：各类职务
+        provincial: ['executive_chair', 'presidium_member', 'department_head', 'branch_secretary', 'monitor',
+          'assistant_department_head', 'club_president', 'committee_member', 'assistant_club_president'],  // 省级：各类职务
+        school: ['executive_chair', 'presidium_member', 'department_head', 'branch_secretary', 'monitor',
+          'assistant_department_head', 'club_president', 'committee_member', 'assistant_club_president'],  // 校级：各类职务
+        college: ['executive_chair', 'presidium_member', 'department_head', 'branch_secretary', 'monitor',
+          'assistant_department_head', 'club_president', 'committee_member', 'assistant_club_president']  // 院级：各类职务
       }
     },
     sports: {
@@ -890,10 +900,10 @@ const currentSubTypes = computed(() => {
 // 根据当前规则类型和子类型获取级别选项
 const currentLevels = computed(() => {
   if (!ruleForm.type || !ruleForm.sub_type) return []
-  
+
   const options = levelGradeOptions[ruleForm.type][ruleForm.sub_type]
   if (!options) return []
-  
+
   return options.levels.map(level => ({
     value: level,
     label: getLevelText(level)
@@ -903,14 +913,14 @@ const currentLevels = computed(() => {
 // 根据当前级别获取等级选项
 const currentGrades = computed(() => {
   if (!ruleForm.type || !ruleForm.sub_type) return []
-  
+
   const options = levelGradeOptions[ruleForm.type][ruleForm.sub_type]
   if (!options || !options.grades) return []
-  
+
   // 获取当前级别的等级选项，如果没有级别则使用空字符串作为键
   const levelKey = ruleForm.level || ''
   if (!options.grades[levelKey]) return []
-  
+
   return options.grades[levelKey].map(grade => ({
     value: grade,
     label: getGradeText(grade)
@@ -1010,30 +1020,39 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .application-table th:last-child,
 .application-table td:last-child {
-  width: 160px; /* 增加宽度以容纳删除按钮 */
+  width: 160px;
+  /* 增加宽度以容纳删除按钮 */
   min-width: 160px;
   text-align: center;
 }
 
 /* 删除按钮样式 */
 .delete-btn {
-  color: #dc3545; /* 红色表示危险操作 */
+  color: #dc3545;
+  /* 红色表示危险操作 */
 }
 
 /* 特殊规则状态标签样式 */
 .status-badge.status-special {
-  background-color: #ffc107; /* 黄色表示特殊规则 */
+  background-color: #ffc107;
+  /* 黄色表示特殊规则 */
   color: #212529;
 }
 
 .status-badge.status-normal {
-  background-color: #17a2b8; /* 青色表示普通规则 */
+  background-color: #17a2b8;
+  /* 青色表示普通规则 */
   color: white;
 }
 

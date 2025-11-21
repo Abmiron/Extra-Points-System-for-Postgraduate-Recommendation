@@ -23,11 +23,13 @@ from sqlalchemy import event
 import pytz
 
 # 设置上海时区
-shanghai_tz = pytz.timezone('Asia/Shanghai')
+shanghai_tz = pytz.timezone("Asia/Shanghai")
+
 
 # 获取当前时间（上海时区）
 def get_current_time():
     return datetime.now(shanghai_tz)
+
 
 # 学院模型
 class Faculty(db.Model):
@@ -35,40 +37,53 @@ class Faculty(db.Model):
     name = db.Column(db.String(100), unique=True, nullable=False)  # 学院名称
     description = db.Column(db.Text, nullable=True)  # 学院描述
     created_at = db.Column(db.DateTime, default=get_current_time)  # 创建时间
-    updated_at = db.Column(db.DateTime, default=get_current_time, onupdate=get_current_time)  # 更新时间
-    
+    updated_at = db.Column(
+        db.DateTime, default=get_current_time, onupdate=get_current_time
+    )  # 更新时间
+
     # 关系
-    departments = db.relationship('Department', backref='faculty', lazy=True)
-    
+    departments = db.relationship("Department", backref="faculty", lazy=True)
+
     def __repr__(self):
-        return f'<Faculty {self.name}>'
+        return f"<Faculty {self.name}>"
+
 
 # 系模型
 class Department(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)  # 系名称
-    faculty_id = db.Column(db.Integer, db.ForeignKey('faculty.id'), nullable=False)  # 所属学院
+    faculty_id = db.Column(
+        db.Integer, db.ForeignKey("faculty.id"), nullable=False
+    )  # 所属学院
     description = db.Column(db.Text, nullable=True)  # 系描述
     created_at = db.Column(db.DateTime, default=get_current_time)  # 创建时间
-    updated_at = db.Column(db.DateTime, default=get_current_time, onupdate=get_current_time)  # 更新时间
-    
+    updated_at = db.Column(
+        db.DateTime, default=get_current_time, onupdate=get_current_time
+    )  # 更新时间
+
     # 关系
-    majors = db.relationship('Major', backref='department', lazy=True)
-    
+    majors = db.relationship("Major", backref="department", lazy=True)
+
     def __repr__(self):
-        return f'<Department {self.name}>'
+        return f"<Department {self.name}>"
+
 
 # 专业模型
 class Major(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)  # 专业名称
-    department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False)  # 所属系
+    department_id = db.Column(
+        db.Integer, db.ForeignKey("department.id"), nullable=False
+    )  # 所属系
     description = db.Column(db.Text, nullable=True)  # 专业描述
     created_at = db.Column(db.DateTime, default=get_current_time)  # 创建时间
-    updated_at = db.Column(db.DateTime, default=get_current_time, onupdate=get_current_time)  # 更新时间
-    
+    updated_at = db.Column(
+        db.DateTime, default=get_current_time, onupdate=get_current_time
+    )  # 更新时间
+
     def __repr__(self):
-        return f'<Major {self.name}>'
+        return f"<Major {self.name}>"
+
 
 # 用户模型
 class User(db.Model):
@@ -79,28 +94,34 @@ class User(db.Model):
     role = db.Column(db.String(20), nullable=False)  # student, teacher, admin
     avatar = db.Column(db.String(200), nullable=True)
     # 使用外键关联学院、系、专业
-    faculty_id = db.Column(db.Integer, db.ForeignKey('faculty.id'), nullable=True)
-    department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=True)
-    major_id = db.Column(db.Integer, db.ForeignKey('major.id'), nullable=True)
+    faculty_id = db.Column(db.Integer, db.ForeignKey("faculty.id"), nullable=True)
+    department_id = db.Column(db.Integer, db.ForeignKey("department.id"), nullable=True)
+    major_id = db.Column(db.Integer, db.ForeignKey("major.id"), nullable=True)
     # 与Student模型建立外键关系
-    student_id = db.Column(db.String(20), db.ForeignKey('student.student_id'), nullable=True, unique=True)
+    student_id = db.Column(
+        db.String(20), db.ForeignKey("student.student_id"), nullable=True, unique=True
+    )
     email = db.Column(db.String(120), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     role_name = db.Column(db.String(50), nullable=True)
-    status = db.Column(db.String(20), default='active')  # active, disabled
+    status = db.Column(db.String(20), default="active")  # active, disabled
     last_login = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=get_current_time)
-    updated_at = db.Column(db.DateTime, default=get_current_time, onupdate=get_current_time)
-    
+    updated_at = db.Column(
+        db.DateTime, default=get_current_time, onupdate=get_current_time
+    )
+
     # 与Student模型建立一对一关系
-    student = db.relationship('Student', backref=db.backref('user', uselist=False), foreign_keys=[student_id])
-    
+    student = db.relationship(
+        "Student", backref=db.backref("user", uselist=False), foreign_keys=[student_id]
+    )
+
     def __repr__(self):
-        return f'<User {self.username}>'
-    
+        return f"<User {self.username}>"
+
     # 保存前确保学生用户的信息与Student模型同步
     def before_save(self):
-        if self.role == 'student' and self.student:
+        if self.role == "student" and self.student:
             # 同步学生用户的基本信息到Student模型
             self.student.student_name = self.name
             # 同步学院、系、专业信息到Student模型
@@ -110,73 +131,102 @@ class User(db.Model):
                 self.student.department_id = self.department_id
             if self.major_id:
                 self.student.major_id = self.major_id
-    
+
     # 设置密码（哈希）
     def set_password(self, password):
-        self.password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    
+        self.password = bcrypt.hashpw(
+            password.encode("utf-8"), bcrypt.gensalt()
+        ).decode("utf-8")
+
     # 验证密码
     def check_password(self, password):
-        return bcrypt.checkpw(password.encode('utf-8'), self.password.encode('utf-8'))
+        return bcrypt.checkpw(password.encode("utf-8"), self.password.encode("utf-8"))
+
 
 # 申请模型
 class Application(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    student_id = db.Column(db.String(20), db.ForeignKey('student.student_id'), nullable=False)
+    student_id = db.Column(
+        db.String(20), db.ForeignKey("student.student_id"), nullable=False
+    )
     student_name = db.Column(db.String(100), nullable=False)
     # 使用外键关联学院、系和专业
-    faculty_id = db.Column(db.Integer, db.ForeignKey('faculty.id'), nullable=True)
-    department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False)
-    major_id = db.Column(db.Integer, db.ForeignKey('major.id'), nullable=False)
-    application_type = db.Column(db.String(50), nullable=False)  # academic, comprehensive
+    faculty_id = db.Column(db.Integer, db.ForeignKey("faculty.id"), nullable=True)
+    department_id = db.Column(
+        db.Integer, db.ForeignKey("department.id"), nullable=False
+    )
+    major_id = db.Column(db.Integer, db.ForeignKey("major.id"), nullable=False)
+    application_type = db.Column(
+        db.String(50), nullable=False
+    )  # academic, comprehensive
     applied_at = db.Column(db.DateTime, default=get_current_time)
     self_score = db.Column(db.Float, nullable=True)
-    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected, draft
+    status = db.Column(
+        db.String(20), default="pending"
+    )  # pending, approved, rejected, draft
     project_name = db.Column(db.String(200), nullable=False)
     award_date = db.Column(db.Date, nullable=True)
-    award_level = db.Column(db.String(50), nullable=True)  # national, provincial, municipal, school
+    award_level = db.Column(
+        db.String(50), nullable=True
+    )  # national, provincial, municipal, school
     award_type = db.Column(db.String(50), nullable=True)  # individual, team
     description = db.Column(db.Text, nullable=True)
     files = db.Column(db.JSON, nullable=True)  # 存储文件信息的JSON数组
-    
+
     # 学术专长相关字段
-    academic_type = db.Column(db.String(50), nullable=True)  # research, competition, innovation
+    academic_type = db.Column(
+        db.String(50), nullable=True
+    )  # research, competition, innovation
     # 科研成果特有字段
     research_type = db.Column(db.String(50), nullable=True)  # thesis, patent
     # 创新创业特有字段
-    innovation_level = db.Column(db.String(50), nullable=True)  # national, provincial, school
+    innovation_level = db.Column(
+        db.String(50), nullable=True
+    )  # national, provincial, school
     innovation_role = db.Column(db.String(50), nullable=True)  # leader, member
     # 学业竞赛特有字段
-    award_grade = db.Column(db.String(50), nullable=True)  # firstOrHigher, second, third
+    award_grade = db.Column(
+        db.String(50), nullable=True
+    )  # firstOrHigher, second, third
     award_category = db.Column(db.String(50), nullable=True)  # A+类, A类, A-类
     author_rank_type = db.Column(db.String(50), nullable=True)  # ranked, unranked
     author_order = db.Column(db.Integer, nullable=True)  # 作者排序
-    
+
     # 综合表现相关字段
-    performance_type = db.Column(db.String(100), nullable=True)  # international_internship, military_service, volunteer, social_work, sports, honor_title
-    performance_level = db.Column(db.String(50), nullable=True)  # provincial, school, college
-    performance_participation = db.Column(db.String(50), nullable=True)  # individual, team
+    performance_type = db.Column(
+        db.String(100), nullable=True
+    )  # international_internship, military_service, volunteer, social_work, sports, honor_title
+    performance_level = db.Column(
+        db.String(50), nullable=True
+    )  # provincial, school, college
+    performance_participation = db.Column(
+        db.String(50), nullable=True
+    )  # individual, team
     team_role = db.Column(db.String(50), nullable=True)  # leader, member
-    
+
     # 审核相关字段
     final_score = db.Column(db.Float, nullable=True)  # 最终核定分数
     review_comment = db.Column(db.Text, nullable=True)  # 审核意见
     reviewed_at = db.Column(db.DateTime, nullable=True)  # 审核时间
     reviewed_by = db.Column(db.String(100), nullable=True)  # 审核人
-    
+
     # 规则关联
-    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=True)
-    
+    rule_id = db.Column(db.Integer, db.ForeignKey("rule.id"), nullable=True)
+
     # 关系定义
-    faculty = db.relationship('Faculty', backref=db.backref('applications', lazy=True))
-    department = db.relationship('Department', backref=db.backref('applications', lazy=True))
-    major = db.relationship('Major', backref=db.backref('applications', lazy=True))
-    
+    faculty = db.relationship("Faculty", backref=db.backref("applications", lazy=True))
+    department = db.relationship(
+        "Department", backref=db.backref("applications", lazy=True)
+    )
+    major = db.relationship("Major", backref=db.backref("applications", lazy=True))
+
     created_at = db.Column(db.DateTime, default=get_current_time)
-    updated_at = db.Column(db.DateTime, default=get_current_time, onupdate=get_current_time)
-    
+    updated_at = db.Column(
+        db.DateTime, default=get_current_time, onupdate=get_current_time
+    )
+
     def __repr__(self):
-        return f'<Application {self.id}>'
+        return f"<Application {self.id}>"
 
 
 # 合并学生模型和学生总评模型
@@ -186,37 +236,47 @@ class Student(db.Model):
     student_name = db.Column(db.String(100), nullable=False)  # 姓名
     gender = db.Column(db.String(10), nullable=True)  # 性别
     # 外键关联学院、系和专业
-    faculty_id = db.Column(db.Integer, db.ForeignKey('faculty.id'), nullable=True)  # 学院ID
-    department_id = db.Column(db.Integer, db.ForeignKey('department.id'), nullable=False)  # 系ID
-    major_id = db.Column(db.Integer, db.ForeignKey('major.id'), nullable=False)  # 专业ID
+    faculty_id = db.Column(
+        db.Integer, db.ForeignKey("faculty.id"), nullable=True
+    )  # 学院ID
+    department_id = db.Column(
+        db.Integer, db.ForeignKey("department.id"), nullable=False
+    )  # 系ID
+    major_id = db.Column(
+        db.Integer, db.ForeignKey("major.id"), nullable=False
+    )  # 专业ID
     # 关系
-    faculty = db.relationship('Faculty', backref=db.backref('students', lazy=True))
-    department = db.relationship('Department', backref=db.backref('students', lazy=True))
-    major = db.relationship('Major', backref=db.backref('students', lazy=True))
+    faculty = db.relationship("Faculty", backref=db.backref("students", lazy=True))
+    department = db.relationship(
+        "Department", backref=db.backref("students", lazy=True)
+    )
+    major = db.relationship("Major", backref=db.backref("students", lazy=True))
     cet4_score = db.Column(db.Integer, nullable=True)  # CET4成绩
     cet6_score = db.Column(db.Integer, nullable=True)  # CET6成绩
-    
+
     # 学业综合成绩
     gpa = db.Column(db.Float, nullable=True)  # 推免绩点(满分4分)
     academic_score = db.Column(db.Float, nullable=True)  # 换算后的学业成绩(满分100分)
-    
+
     # 学术专长成绩（占总分12%）
     academic_specialty_total = db.Column(db.Float, nullable=True)  # 学院核定总分
-    
+
     # 综合表现加分（占总分8%）
     comprehensive_performance_total = db.Column(db.Float, nullable=True)  # 学院核定总分
-    
+
     # 总分与排名
     comprehensive_score = db.Column(db.Float, nullable=True)  # 综合成绩
     major_ranking = db.Column(db.Integer, nullable=True)  # 专业成绩排名
     total_students = db.Column(db.Integer, nullable=True)  # 排名人数
-    
+
     created_at = db.Column(db.DateTime, default=get_current_time)
-    updated_at = db.Column(db.DateTime, default=get_current_time, onupdate=get_current_time)
-    
+    updated_at = db.Column(
+        db.DateTime, default=get_current_time, onupdate=get_current_time
+    )
+
     def __repr__(self):
-        return f'<Student {self.student_name} ({self.student_id})>'
-    
+        return f"<Student {self.student_name} ({self.student_id})>"
+
     # 保存前确保学生信息与User模型同步
     def before_save(self):
         if self.user:
@@ -230,17 +290,19 @@ class Student(db.Model):
             if self.major_id:
                 self.user.major_id = self.major_id
 
+
 # 添加事件监听器，确保在保存前调用同步方法
-@event.listens_for(User, 'before_insert')
-@event.listens_for(User, 'before_update')
+@event.listens_for(User, "before_insert")
+@event.listens_for(User, "before_update")
 def call_before_save_user(mapper, connection, target):
-    if hasattr(target, 'before_save'):
+    if hasattr(target, "before_save"):
         target.before_save()
 
-@event.listens_for(Student, 'before_insert')
-@event.listens_for(Student, 'before_update')
+
+@event.listens_for(Student, "before_insert")
+@event.listens_for(Student, "before_update")
 def call_before_save_student(mapper, connection, target):
-    if hasattr(target, 'before_save'):
+    if hasattr(target, "before_save"):
         target.before_save()
 
 
@@ -248,54 +310,83 @@ def call_before_save_student(mapper, connection, target):
 class Rule(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)  # 规则名称
-    type = db.Column(db.String(50), nullable=False)  # 规则类型: academic(学术专长), comprehensive(综合表现)
-    sub_type = db.Column(db.String(50), nullable=True)  # 子类型: research(科研成果), competition(学业竞赛), innovation(创新创业训练), etc.
-    level = db.Column(db.String(50), nullable=True)  # 级别: 国家级, 省级, 校级, A+, A, A-, etc.
-    grade = db.Column(db.String(50), nullable=True)  # 等级: 一等奖及以上, 二等奖, 三等奖
+    type = db.Column(
+        db.String(50), nullable=False
+    )  # 规则类型: academic(学术专长), comprehensive(综合表现)
+    sub_type = db.Column(
+        db.String(50), nullable=True
+    )  # 子类型: research(科研成果), competition(学业竞赛), innovation(创新创业训练), etc.
+    level = db.Column(
+        db.String(50), nullable=True
+    )  # 级别: 国家级, 省级, 校级, A+, A, A-, etc.
+    grade = db.Column(
+        db.String(50), nullable=True
+    )  # 等级: 一等奖及以上, 二等奖, 三等奖
     category = db.Column(db.String(50), nullable=True)  # 奖项类别: 个人奖项, 团队奖项
-    participation_type = db.Column(db.String(50), default='individual')  # 参与类型: individual(个人), team(集体)
-    team_role = db.Column(db.String(50), nullable=True)  # 团队角色: captain(队长), member(队员)
-    author_rank_type = db.Column(db.String(50), default='unranked')  # 作者排序类型: ranked(区分排名), unranked(不区分排名)
-    author_rank = db.Column(db.Integer, nullable=True)  # 作者排序: 数字，仅当区分排名时填写
+    participation_type = db.Column(
+        db.String(50), default="individual"
+    )  # 参与类型: individual(个人), team(集体)
+    team_role = db.Column(
+        db.String(50), nullable=True
+    )  # 团队角色: captain(队长), member(队员)
+    author_rank_type = db.Column(
+        db.String(50), default="unranked"
+    )  # 作者排序类型: ranked(区分排名), unranked(不区分排名)
+    author_rank = db.Column(
+        db.Integer, nullable=True
+    )  # 作者排序: 数字，仅当区分排名时填写
     author_rank_ratio = db.Column(db.Float, nullable=True)  # 作者排序比例: 如80%填写0.8
-    research_type = db.Column(db.String(50), nullable=True)  # 科研成果类型: thesis(学术论文), patent(发明专利)
+    research_type = db.Column(
+        db.String(50), nullable=True
+    )  # 科研成果类型: thesis(学术论文), patent(发明专利)
     score = db.Column(db.Float, nullable=False)  # 基础分值
-    max_score = db.Column(db.Float, nullable=True)  # 最大分数限制（如创新创业训练最多加2分）
-    max_count = db.Column(db.Integer, nullable=True)  # 最大项目数量限制（如学业竞赛不超过3项）
-    is_special = db.Column(db.Boolean, default=False)  # 是否为特殊规则（如Nature/Science论文）
-    status = db.Column(db.String(20), default='active')  # 状态: active, disabled
+    max_score = db.Column(
+        db.Float, nullable=True
+    )  # 最大分数限制（如创新创业训练最多加2分）
+    max_count = db.Column(
+        db.Integer, nullable=True
+    )  # 最大项目数量限制（如学业竞赛不超过3项）
+    is_special = db.Column(
+        db.Boolean, default=False
+    )  # 是否为特殊规则（如Nature/Science论文）
+    status = db.Column(db.String(20), default="active")  # 状态: active, disabled
     description = db.Column(db.Text, nullable=True)  # 规则描述
     created_at = db.Column(db.DateTime, default=get_current_time)  # 创建时间
-    updated_at = db.Column(db.DateTime, default=get_current_time, onupdate=get_current_time)  # 更新时间
-    
+    updated_at = db.Column(
+        db.DateTime, default=get_current_time, onupdate=get_current_time
+    )  # 更新时间
+
     def __repr__(self):
-        return f'<Rule {self.name}>'
+        return f"<Rule {self.name}>"
+
 
 # 系统设置模型
 class SystemSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    
+
     # 学术年度设置
-    academic_year = db.Column(db.String(10), default='2023')
+    academic_year = db.Column(db.String(10), default="2023")
     application_start = db.Column(db.Date, nullable=True)
     application_end = db.Column(db.Date, nullable=True)
-    
+
     # 文件存储设置
     single_file_size_limit = db.Column(db.Integer, default=10)  # 单文件大小限制（MB）
     total_file_size_limit = db.Column(db.Integer, default=50)  # 总文件大小限制（MB）
-    allowed_file_types = db.Column(db.String(200), default='.pdf, .jpg, .jpeg, .png')
-    
+    allowed_file_types = db.Column(db.String(200), default=".pdf, .jpg, .jpeg, .png")
+
     # 综合成绩设置
     academic_score_weight = db.Column(db.Float, default=80.0)  # 学业成绩比例
     specialty_max_score = db.Column(db.Float, default=15.0)  # 学术专长分数上限
     performance_max_score = db.Column(db.Float, default=5.0)  # 综合表现分数上限
-    
+
     # 系统维护信息
-    system_status = db.Column(db.String(20), default='online')  # online, maintenance
+    system_status = db.Column(db.String(20), default="online")  # online, maintenance
     last_backup = db.Column(db.DateTime, nullable=True)
-    
+
     created_at = db.Column(db.DateTime, default=get_current_time)
-    updated_at = db.Column(db.DateTime, default=get_current_time, onupdate=get_current_time)
-    
+    updated_at = db.Column(
+        db.DateTime, default=get_current_time, onupdate=get_current_time
+    )
+
     def __repr__(self):
-        return f'<SystemSettings id={self.id}>'
+        return f"<SystemSettings id={self.id}>"

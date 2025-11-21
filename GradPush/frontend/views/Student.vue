@@ -1,17 +1,14 @@
 <template>
   <div class="container">
-    <Header :user-name="authStore.userName" :user-avatar="authStore.userAvatar" title="推免加分系统" @go-to-profile="goToProfile" />
+    <Header :user-name="authStore.userName" :user-avatar="authStore.userAvatar" title="推免加分系统"
+      @go-to-profile="goToProfile" />
 
     <div class="content-wrapper">
       <Sidebar :active-page="currentPage" @page-change="switchPage" :user-info="userInfo" user-type="student" />
 
       <main class="main-content">
-        <component 
-          :is="currentPageComponent" 
-          @switch-page="switchPage"
-          @edit-application="handleEditApplication"
-          :edit-application-id="editApplicationId"
-        />
+        <component :is="currentPageComponent" @switch-page="switchPage" @edit-application="handleEditApplication"
+          :edit-application-id="editApplicationId" />
       </main>
     </div>
   </div>
@@ -55,7 +52,7 @@ const userInfo = computed(() => ({
 // 切换页面
 const switchPage = (page) => {
   currentPage.value = page
-  
+
   // 当切换到申请表单页面时，默认重置编辑ID
   if (page === 'application-form') {
     editApplicationId.value = null

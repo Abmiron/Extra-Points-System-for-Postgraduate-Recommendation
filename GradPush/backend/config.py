@@ -9,16 +9,17 @@
 import os
 from sqlalchemy.engine.url import URL
 
+
 class Config:
     # 数据库配置
-    SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:123456@localhost:5432/gradpush'
+    SQLALCHEMY_DATABASE_URI = "postgresql://postgres:123456@localhost:5432/gradpush"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    
+
     # 密钥配置
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key'
-    
+    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-key"
+
     # 文件上传配置
-    UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
-    AVATAR_FOLDER = os.path.join(UPLOAD_FOLDER, 'avatars')
-    FILE_FOLDER = os.path.join(UPLOAD_FOLDER, 'files')
+    UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
+    AVATAR_FOLDER = os.path.join(UPLOAD_FOLDER, "avatars")
+    FILE_FOLDER = os.path.join(UPLOAD_FOLDER, "files")
     MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100MB，支持多文件上传

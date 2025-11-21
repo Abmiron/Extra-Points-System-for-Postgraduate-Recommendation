@@ -3,19 +3,15 @@
     <div class="page-title">
       <span>学院、系和专业管理</span>
     </div>
-    
+
     <!-- 标签页切换 -->
     <div class="tabs">
-      <button
-        v-for="tab in tabs"
-        :key="tab.value"
-        :class="['tab-btn', { active: activeTab === tab.value }]"
-        @click="activeTab = tab.value"
-      >
+      <button v-for="tab in tabs" :key="tab.value" :class="['tab-btn', { active: activeTab === tab.value }]"
+        @click="activeTab = tab.value">
         {{ tab.label }}
       </button>
     </div>
-    
+
     <!-- 学院管理 -->
     <div v-if="activeTab === 'faculties'" class="card">
       <div class="card-title">
@@ -26,28 +22,23 @@
           </button>
         </div>
       </div>
-      
+
       <!-- 搜索和筛选 -->
       <div class="filters" style="padding: 0 20px; padding-top: 20px;">
         <div class="filter-group">
-          <input
-            type="text"
-            v-model="facultyFilter"
-            placeholder="搜索学院..."
-            class="form-control"
-          >
+          <input type="text" v-model="facultyFilter" placeholder="搜索学院..." class="form-control">
         </div>
         <div class="filter-group">
           <button class="btn btn-outline" @click="resetFilters">清空筛选</button>
         </div>
       </div>
-      
+
       <!-- 加载状态指示器 -->
       <div v-if="loading" class="loading-overlay">
         <div class="loading-spinner"></div>
         <div class="loading-text">加载中...</div>
       </div>
-      
+
       <!-- 学院列表 -->
       <div class="table-container" style="padding: 0 20px 20px;">
         <table class="application-table">
@@ -77,7 +68,7 @@
         </table>
       </div>
     </div>
-    
+
     <!-- 系管理 -->
     <div v-if="activeTab === 'departments'" class="card">
       <div class="card-title">
@@ -88,16 +79,11 @@
           </button>
         </div>
       </div>
-      
+
       <!-- 搜索和筛选 -->
       <div class="filters" style="padding: 0 20px; padding-top: 20px;">
         <div class="filter-group">
-          <input
-            type="text"
-            v-model="departmentFilter"
-            placeholder="搜索系..."
-            class="form-control"
-          >
+          <input type="text" v-model="departmentFilter" placeholder="搜索系..." class="form-control">
         </div>
         <div class="filter-group">
           <label class="filter-label">学院：</label>
@@ -112,13 +98,13 @@
           <button class="btn btn-outline" @click="resetFilters">清空筛选</button>
         </div>
       </div>
-      
+
       <!-- 加载状态指示器 -->
       <div v-if="loading" class="loading-overlay">
         <div class="loading-spinner"></div>
         <div class="loading-text">加载中...</div>
       </div>
-      
+
       <!-- 系列表 -->
       <div class="table-container" style="padding: 0 20px 20px;">
         <table class="application-table">
@@ -140,7 +126,8 @@
                   <button class="btn-outline btn small-btn" @click="editDepartment(department)" title="编辑">
                     <font-awesome-icon icon="fa-solid fa-edit" />
                   </button>
-                  <button class="btn-outline btn small-btn delete-btn" @click="deleteDepartment(department.id)" title="删除">
+                  <button class="btn-outline btn small-btn delete-btn" @click="deleteDepartment(department.id)"
+                    title="删除">
                     <font-awesome-icon icon="fa-solid fa-trash" />
                   </button>
                 </div>
@@ -150,7 +137,7 @@
         </table>
       </div>
     </div>
-    
+
     <!-- 专业管理 -->
     <div v-if="activeTab === 'majors'" class="card">
       <div class="card-title">
@@ -161,16 +148,11 @@
           </button>
         </div>
       </div>
-      
+
       <!-- 搜索和筛选 -->
       <div class="filters" style="padding: 0 20px; padding-top: 20px;">
         <div class="filter-group">
-          <input
-            type="text"
-            v-model="majorFilter"
-            placeholder="搜索专业..."
-            class="form-control"
-          >
+          <input type="text" v-model="majorFilter" placeholder="搜索专业..." class="form-control">
         </div>
         <div class="filter-group">
           <label class="filter-label">学院：</label>
@@ -194,13 +176,13 @@
           <button class="btn btn-outline" @click="resetFilters">清空筛选</button>
         </div>
       </div>
-      
+
       <!-- 加载状态指示器 -->
       <div v-if="loading" class="loading-overlay">
         <div class="loading-spinner"></div>
         <div class="loading-text">加载中...</div>
       </div>
-      
+
       <!-- 专业列表 -->
       <div class="table-container" style="padding: 0 20px 20px;">
         <table class="application-table">
@@ -232,7 +214,7 @@
         </table>
       </div>
     </div>
-    
+
     <!-- 添加学院模态框 -->
     <div v-if="showAddFacultyModal" class="modal-overlay" @click="showAddFacultyModal = false">
       <div class="modal-content" @click.stop>
@@ -244,24 +226,13 @@
           <form @submit.prevent="addFaculty">
             <div class="form-group">
               <label for="facultyName">学院名称</label>
-              <input 
-                type="text" 
-                id="facultyName" 
-                v-model="newFaculty.name" 
-                required
-                placeholder="请输入学院名称"
-                class="form-control"
-              >
+              <input type="text" id="facultyName" v-model="newFaculty.name" required placeholder="请输入学院名称"
+                class="form-control">
             </div>
             <div class="form-group">
               <label for="facultyDescription">描述</label>
-              <textarea 
-                id="facultyDescription" 
-                v-model="newFaculty.description" 
-                rows="3"
-                placeholder="请输入学院描述（可选）"
-                class="form-control"
-              ></textarea>
+              <textarea id="facultyDescription" v-model="newFaculty.description" rows="3" placeholder="请输入学院描述（可选）"
+                class="form-control"></textarea>
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-outline" @click="showAddFacultyModal = false">取消</button>
@@ -271,7 +242,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 编辑学院模态框 -->
     <div v-if="showEditFacultyModal" class="modal-overlay" @click="showEditFacultyModal = false">
       <div class="modal-content" @click.stop>
@@ -283,24 +254,13 @@
           <form @submit.prevent="updateFaculty">
             <div class="form-group">
               <label for="editFacultyName">学院名称</label>
-              <input 
-                type="text" 
-                id="editFacultyName" 
-                v-model="editingFaculty.name" 
-                required
-                placeholder="请输入学院名称"
-                class="form-control"
-              >
+              <input type="text" id="editFacultyName" v-model="editingFaculty.name" required placeholder="请输入学院名称"
+                class="form-control">
             </div>
             <div class="form-group">
               <label for="editFacultyDescription">描述</label>
-              <textarea 
-                id="editFacultyDescription" 
-                v-model="editingFaculty.description" 
-                rows="3"
-                placeholder="请输入学院描述（可选）"
-                class="form-control"
-              ></textarea>
+              <textarea id="editFacultyDescription" v-model="editingFaculty.description" rows="3"
+                placeholder="请输入学院描述（可选）" class="form-control"></textarea>
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-outline" @click="showEditFacultyModal = false">取消</button>
@@ -310,7 +270,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 添加系模态框 -->
     <div v-if="showAddDepartmentModal" class="modal-overlay" @click="showAddDepartmentModal = false">
       <div class="modal-content" @click.stop>
@@ -322,23 +282,12 @@
           <form @submit.prevent="addDepartment">
             <div class="form-group">
               <label for="departmentName">系名称</label>
-              <input 
-                type="text" 
-                id="departmentName" 
-                v-model="newDepartment.name" 
-                required
-                placeholder="请输入系名称"
-                class="form-control"
-              >
+              <input type="text" id="departmentName" v-model="newDepartment.name" required placeholder="请输入系名称"
+                class="form-control">
             </div>
             <div class="form-group">
               <label for="departmentFaculty">所属学院</label>
-              <select 
-                id="departmentFaculty" 
-                v-model="newDepartment.faculty_id" 
-                required
-                class="form-control"
-              >
+              <select id="departmentFaculty" v-model="newDepartment.faculty_id" required class="form-control">
                 <option value="">请选择学院</option>
                 <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
                   {{ faculty.name }}
@@ -347,13 +296,8 @@
             </div>
             <div class="form-group">
               <label for="departmentDescription">描述</label>
-              <textarea 
-                id="departmentDescription" 
-                v-model="newDepartment.description" 
-                rows="3"
-                placeholder="请输入系描述（可选）"
-                class="form-control"
-              ></textarea>
+              <textarea id="departmentDescription" v-model="newDepartment.description" rows="3" placeholder="请输入系描述（可选）"
+                class="form-control"></textarea>
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-outline" @click="showAddDepartmentModal = false">取消</button>
@@ -363,7 +307,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 编辑系模态框 -->
     <div v-if="showEditDepartmentModal" class="modal-overlay" @click="showEditDepartmentModal = false">
       <div class="modal-content" @click.stop>
@@ -375,23 +319,12 @@
           <form @submit.prevent="updateDepartment">
             <div class="form-group">
               <label for="editDepartmentName">系名称</label>
-              <input 
-                type="text" 
-                id="editDepartmentName" 
-                v-model="editingDepartment.name" 
-                required
-                placeholder="请输入系名称"
-                class="form-control"
-              >
+              <input type="text" id="editDepartmentName" v-model="editingDepartment.name" required placeholder="请输入系名称"
+                class="form-control">
             </div>
             <div class="form-group">
               <label for="editDepartmentFaculty">所属学院</label>
-              <select 
-                id="editDepartmentFaculty" 
-                v-model="editingDepartment.faculty_id" 
-                required
-                class="form-control"
-              >
+              <select id="editDepartmentFaculty" v-model="editingDepartment.faculty_id" required class="form-control">
                 <option value="">请选择学院</option>
                 <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
                   {{ faculty.name }}
@@ -400,13 +333,8 @@
             </div>
             <div class="form-group">
               <label for="editDepartmentDescription">描述</label>
-              <textarea 
-                id="editDepartmentDescription" 
-                v-model="editingDepartment.description" 
-                rows="3"
-                placeholder="请输入系描述（可选）"
-                class="form-control"
-              ></textarea>
+              <textarea id="editDepartmentDescription" v-model="editingDepartment.description" rows="3"
+                placeholder="请输入系描述（可选）" class="form-control"></textarea>
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-outline" @click="showEditDepartmentModal = false">取消</button>
@@ -416,7 +344,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 添加专业模态框 -->
     <div v-if="showAddMajorModal" class="modal-overlay" @click="showAddMajorModal = false">
       <div class="modal-content" @click.stop>
@@ -428,24 +356,13 @@
           <form @submit.prevent="addMajor">
             <div class="form-group">
               <label for="majorName">专业名称</label>
-              <input 
-                type="text" 
-                id="majorName" 
-                v-model="newMajor.name" 
-                required
-                placeholder="请输入专业名称"
-                class="form-control"
-              >
+              <input type="text" id="majorName" v-model="newMajor.name" required placeholder="请输入专业名称"
+                class="form-control">
             </div>
             <div class="form-group">
               <label for="majorFaculty">所属学院</label>
-              <select 
-                id="majorFaculty" 
-                v-model="newMajor.faculty_id" 
-                required
-                class="form-control"
-                @change="onNewMajorFacultyChange"
-              >
+              <select id="majorFaculty" v-model="newMajor.faculty_id" required class="form-control"
+                @change="onNewMajorFacultyChange">
                 <option value="">请选择学院</option>
                 <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
                   {{ faculty.name }}
@@ -454,13 +371,8 @@
             </div>
             <div class="form-group">
               <label for="majorDepartment">所属系</label>
-              <select 
-                id="majorDepartment" 
-                v-model="newMajor.department_id" 
-                required
-                class="form-control"
-                :disabled="!newMajor.faculty_id"
-              >
+              <select id="majorDepartment" v-model="newMajor.department_id" required class="form-control"
+                :disabled="!newMajor.faculty_id">
                 <option value="">请选择系</option>
                 <option v-for="department in filteredDepartmentsForMajor" :key="department.id" :value="department.id">
                   {{ department.name }}
@@ -469,13 +381,8 @@
             </div>
             <div class="form-group">
               <label for="majorDescription">描述</label>
-              <textarea 
-                id="majorDescription" 
-                v-model="newMajor.description" 
-                rows="3"
-                placeholder="请输入专业描述（可选）"
-                class="form-control"
-              ></textarea>
+              <textarea id="majorDescription" v-model="newMajor.description" rows="3" placeholder="请输入专业描述（可选）"
+                class="form-control"></textarea>
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-outline" @click="showAddMajorModal = false">取消</button>
@@ -485,7 +392,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 编辑专业模态框 -->
     <div v-if="showEditMajorModal" class="modal-overlay" @click="showEditMajorModal = false">
       <div class="modal-content" @click.stop>
@@ -497,24 +404,13 @@
           <form @submit.prevent="updateMajor">
             <div class="form-group">
               <label for="editMajorName">专业名称</label>
-              <input 
-                type="text" 
-                id="editMajorName" 
-                v-model="editingMajor.name" 
-                required
-                placeholder="请输入专业名称"
-                class="form-control"
-              >
+              <input type="text" id="editMajorName" v-model="editingMajor.name" required placeholder="请输入专业名称"
+                class="form-control">
             </div>
             <div class="form-group">
               <label for="editMajorFaculty">所属学院</label>
-              <select 
-                id="editMajorFaculty" 
-                v-model="editingMajor.faculty_id" 
-                required
-                class="form-control"
-                @change="onEditMajorFacultyChange"
-              >
+              <select id="editMajorFaculty" v-model="editingMajor.faculty_id" required class="form-control"
+                @change="onEditMajorFacultyChange">
                 <option value="">请选择学院</option>
                 <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
                   {{ faculty.name }}
@@ -523,28 +419,19 @@
             </div>
             <div class="form-group">
               <label for="editMajorDepartment">所属系</label>
-              <select 
-                id="editMajorDepartment" 
-                v-model="editingMajor.department_id" 
-                required
-                class="form-control"
-                :disabled="!editingMajor.faculty_id"
-              >
+              <select id="editMajorDepartment" v-model="editingMajor.department_id" required class="form-control"
+                :disabled="!editingMajor.faculty_id">
                 <option value="">请选择系</option>
-                <option v-for="department in filteredDepartmentsForEditMajor" :key="department.id" :value="department.id">
+                <option v-for="department in filteredDepartmentsForEditMajor" :key="department.id"
+                  :value="department.id">
                   {{ department.name }}
                 </option>
               </select>
             </div>
             <div class="form-group">
               <label for="editMajorDescription">描述</label>
-              <textarea 
-                id="editMajorDescription" 
-                v-model="editingMajor.description" 
-                rows="3"
-                placeholder="请输入专业描述（可选）"
-                class="form-control"
-              ></textarea>
+              <textarea id="editMajorDescription" v-model="editingMajor.description" rows="3" placeholder="请输入专业描述（可选）"
+                class="form-control"></textarea>
             </div>
             <div class="form-actions">
               <button type="button" class="btn btn-outline" @click="showEditMajorModal = false">取消</button>
@@ -570,23 +457,23 @@ export default {
       { value: 'departments', label: '系' },
       { value: 'majors', label: '专业' }
     ]
-    
+
     // 当前激活的标签页
     const activeTab = ref('faculties')
-    
+
     // 数据存储
     const faculties = ref([])
     const departments = ref([])
     const majors = ref([])
     const loading = ref(false)
-    
+
     // 筛选条件
     const facultyFilter = ref('')
     const departmentFilter = ref('')
     const majorFilter = ref('')
     const selectedFacultyId = ref('')
     const selectedDepartmentId = ref('')
-    
+
     // 模态框控制
     const showAddFacultyModal = ref(false)
     const showEditFacultyModal = ref(false)
@@ -594,7 +481,7 @@ export default {
     const showEditDepartmentModal = ref(false)
     const showAddMajorModal = ref(false)
     const showEditMajorModal = ref(false)
-    
+
     // 表单数据
     const newFaculty = ref({ name: '', description: '' })
     const editingFaculty = ref({ id: null, name: '', description: '' })
@@ -602,7 +489,7 @@ export default {
     const editingDepartment = ref({ id: null, name: '', faculty_id: '', description: '' })
     const newMajor = ref({ name: '', faculty_id: '', department_id: '', description: '' })
     const editingMajor = ref({ id: null, name: '', faculty_id: '', department_id: '', description: '' })
-    
+
     // 加载数据
     const loadFaculties = async () => {
       loading.value = true
@@ -617,7 +504,7 @@ export default {
         loading.value = false
       }
     }
-    
+
     const loadDepartments = async () => {
       loading.value = true
       try {
@@ -631,7 +518,7 @@ export default {
         loading.value = false
       }
     }
-    
+
     const loadMajors = async () => {
       loading.value = true
       try {
@@ -645,36 +532,36 @@ export default {
         loading.value = false
       }
     }
-    
+
     // 筛选后的数据
     const filteredFaculties = ref([])
     const filteredDepartments = ref([])
     const filteredMajors = ref([])
-    
+
     // 用于添加和编辑专业的系筛选
     const filteredDepartmentsForMajor = ref([])
     const filteredDepartmentsForEditMajor = ref([])
-    
+
     // 监听筛选条件变化
     const updateFilters = () => {
       // 筛选学院
-      filteredFaculties.value = faculties.value ? faculties.value.filter(faculty => 
+      filteredFaculties.value = faculties.value ? faculties.value.filter(faculty =>
         faculty.name.toLowerCase().includes(facultyFilter.value.toLowerCase())
       ) : []
-      
+
       // 筛选系
-      filteredDepartments.value = departments.value ? departments.value.filter(department => 
+      filteredDepartments.value = departments.value ? departments.value.filter(department =>
         department.name.toLowerCase().includes(departmentFilter.value.toLowerCase()) &&
         (selectedFacultyId.value ? department.faculty_id === parseInt(selectedFacultyId.value) : true)
       ) : []
-      
+
       // 筛选专业
-      filteredMajors.value = majors.value ? majors.value.filter(major => 
+      filteredMajors.value = majors.value ? majors.value.filter(major =>
         major.name.toLowerCase().includes(majorFilter.value.toLowerCase()) &&
         (selectedDepartmentId.value ? major.department_id === parseInt(selectedDepartmentId.value) : true)
       ) : []
     }
-    
+
     // 监听筛选条件变化
     const unwatchFacultyFilter = watch(facultyFilter, updateFilters)
     const unwatchDepartmentFilter = watch(departmentFilter, updateFilters)
@@ -693,12 +580,12 @@ export default {
         updateFilters()
       })
     })
-    
+
     // 监听数据变化
     const unwatchFaculties = watch(faculties, updateFilters)
     const unwatchDepartments = watch(departments, updateFilters)
     const unwatchMajors = watch(majors, updateFilters)
-    
+
     // 重置筛选条件
     const resetFilters = () => {
       facultyFilter.value = ''
@@ -711,7 +598,7 @@ export default {
       loadDepartments()
       loadMajors()
     }
-    
+
     // 学院相关操作
     const addFaculty = async () => {
       try {
@@ -725,12 +612,12 @@ export default {
         alert('添加学院失败')
       }
     }
-    
+
     const editFaculty = (faculty) => {
       editingFaculty.value = { ...faculty }
       showEditFacultyModal.value = true
     }
-    
+
     const updateFaculty = async () => {
       try {
         await api.updateFacultyAdmin(editingFaculty.value.id, editingFaculty.value)
@@ -742,7 +629,7 @@ export default {
         alert('更新学院失败')
       }
     }
-    
+
     const deleteFaculty = async (id) => {
       if (confirm('确定要删除这个学院吗？删除后相关的系、专业和学生也会被删除。')) {
         try {
@@ -757,7 +644,7 @@ export default {
         }
       }
     }
-    
+
     // 系相关操作
     const addDepartment = async () => {
       try {
@@ -771,12 +658,12 @@ export default {
         alert('添加系失败')
       }
     }
-    
+
     const editDepartment = (department) => {
       editingDepartment.value = { ...department }
       showEditDepartmentModal.value = true
     }
-    
+
     const updateDepartment = async () => {
       try {
         await api.updateDepartmentAdmin(editingDepartment.value.id, editingDepartment.value)
@@ -789,7 +676,7 @@ export default {
         alert('更新系失败')
       }
     }
-    
+
     const deleteDepartment = async (id) => {
       if (confirm('确定要删除这个系吗？删除后相关的专业和学生也会被删除。')) {
         try {
@@ -803,7 +690,7 @@ export default {
         }
       }
     }
-    
+
     // 专业相关操作
     const addMajor = async () => {
       try {
@@ -817,7 +704,7 @@ export default {
         alert('添加专业失败')
       }
     }
-    
+
     const editMajor = (major) => {
       // 查找专业所属的系
       const department = departments.value.find(d => d.id === major.department_id)
@@ -827,7 +714,7 @@ export default {
       updateEditMajorDepartments()
       showEditMajorModal.value = true
     }
-    
+
     // 监听添加专业时学院变化
     const onNewMajorFacultyChange = () => {
       // 重置系选择
@@ -835,7 +722,7 @@ export default {
       // 过滤系列表
       filteredDepartmentsForMajor.value = departments.value.filter(d => d.faculty_id === parseInt(newMajor.value.faculty_id))
     }
-    
+
     // 监听编辑专业时学院变化
     const onEditMajorFacultyChange = () => {
       // 重置系选择
@@ -843,7 +730,7 @@ export default {
       // 过滤系列表
       updateEditMajorDepartments()
     }
-    
+
     // 更新编辑专业时的系列表
     const updateEditMajorDepartments = () => {
       if (editingMajor.value.faculty_id) {
@@ -852,7 +739,7 @@ export default {
         filteredDepartmentsForEditMajor.value = []
       }
     }
-    
+
     const updateMajor = async () => {
       try {
         await api.updateMajorAdmin(editingMajor.value.id, editingMajor.value)
@@ -864,7 +751,7 @@ export default {
         alert('更新专业失败')
       }
     }
-    
+
     const deleteMajor = async (id) => {
       if (confirm('确定要删除这个专业吗？删除后相关的学生也会被删除。')) {
         try {
@@ -877,25 +764,25 @@ export default {
         }
       }
     }
-    
+
     // 辅助函数
     const getFacultyName = (facultyId) => {
       const faculty = faculties.value.find(f => f.id === facultyId)
       return faculty ? faculty.name : '未找到'
     }
-    
+
     const getDepartmentName = (departmentId) => {
       const department = departments.value.find(d => d.id === departmentId)
       return department ? department.name : '未找到'
     }
-    
+
     // 初始化
     onMounted(() => {
       loadFaculties()
       loadDepartments()
       loadMajors()
     })
-    
+
     // 清理监听器
     onUnmounted(() => {
       unwatchFacultyFilter()
@@ -907,7 +794,7 @@ export default {
       unwatchDepartments()
       unwatchMajors()
     })
-    
+
     return {
       tabs,
       activeTab,
@@ -987,8 +874,13 @@ export default {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-text {

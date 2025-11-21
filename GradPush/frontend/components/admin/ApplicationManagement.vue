@@ -2,27 +2,47 @@
   <div class="page-content">
     <div class="page-title">
       <span>申请管理</span>
-  
+
     </div>
 
     <!-- 搜索区域 - 修改为与用户管理组件相同样式 -->
     <div class="filters">
-      <div class="filter-group">
-        <span class="filter-label">学号:</span>
-        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="输入学生学号">
-      </div>
+      <!-- 基本信息筛选 -->
       <div class="filter-group">
         <span class="filter-label">姓名:</span>
         <input type="text" class="form-control small" v-model="filters.studentName" placeholder="输入学生姓名">
       </div>
       <div class="filter-group">
+        <span class="filter-label">学号:</span>
+        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="输入学生学号">
+      </div>
+
+      <!-- 添加学院筛选 -->
+      <div class="filter-group">
+        <span class="filter-label">学院:</span>
+        <select v-model="filters.faculty">
+          <option value="all">全部学院</option>
+          <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">{{ faculty.name }}</option>
+        </select>
+      </div>
+
+      <!-- 系和专业筛选 -->
+      <div class="filter-group">
         <span class="filter-label">所在系:</span>
-        <input type="text" class="form-control small" v-model="filters.department" placeholder="输入所在系名称">
+        <select v-model="filters.department">
+          <option value="all">全部系</option>
+          <option v-for="dept in departments" :key="dept.id" :value="dept.id">{{ dept.name }}</option>
+        </select>
       </div>
       <div class="filter-group">
         <span class="filter-label">专业:</span>
-        <input type="text" class="form-control small" v-model="filters.major" placeholder="输入专业名称">
+        <select v-model="filters.major">
+          <option value="all">全部专业</option>
+          <option v-for="major in majors" :key="major.id" :value="major.id">{{ major.name }}</option>
+        </select>
       </div>
+
+      <!-- 申请信息筛选 -->
       <div class="filter-group">
         <span class="filter-label">申请类型:</span>
         <select v-model="filters.applicationType">
@@ -31,38 +51,54 @@
           <option value="comprehensive">综合表现</option>
         </select>
       </div>
+
+      <!-- 添加申请规则筛选 -->
       <div class="filter-group">
-          <span class="filter-label">审核状态:</span>
-          <select v-model="filters.status">
-            <option value="all">全部状态</option>
-            <option value="pending">待审核</option>
-            <option value="approved">已通过</option>
-            <option value="rejected">未通过</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <span class="filter-label">审核人:</span>
-          <input type="text" class="form-control small" v-model="filters.reviewedBy" placeholder="审核人姓名">
-        </div>
-        <div class="filter-group checkbox-filter">
-          <label>
-            <input type="checkbox" v-model="filters.onlyMyReviews">
-            <span>只显示我审核的</span>
-          </label>
-        </div>
-        <div class="filter-group date-range-group">
-          <span class="filter-label">申请时间:</span>
-          <input type="date" class="form-control small" v-model="filters.startDate">
-          至 <input type="date" class="form-control small" v-model="filters.endDate">
-        </div>
+        <span class="filter-label">申请规则:</span>
+        <select v-model="filters.rule">
+          <option value="all">全部规则</option>
+          <option v-for="rule in availableRules" :key="rule.id" :value="rule.id">{{ rule.name }}</option>
+        </select>
+      </div>
+
+      <!-- 审核信息筛选 -->
+      <div class="filter-group">
+        <span class="filter-label">审核状态:</span>
+        <select v-model="filters.status">
+          <option value="all">全部状态</option>
+          <option value="pending">待审核</option>
+          <option value="approved">已通过</option>
+          <option value="rejected">未通过</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">审核人:</span>
+        <input type="text" class="form-control small" v-model="filters.reviewedBy" placeholder="审核人姓名">
+      </div>
+      <div class="filter-group checkbox-filter">
+        <label>
+          <input type="checkbox" v-model="filters.onlyMyReviews">
+          <span>只显示我审核的</span>
+        </label>
+      </div>
+
+      <!-- 时间筛选 -->
       <div class="filter-group date-range-group">
-          <span class="filter-label">审核时间:</span>
-          <input type="date" class="form-control small" v-model="filters.reviewedStartDate">
-          至 <input type="date" class="form-control small" v-model="filters.reviewedEndDate">
-        </div>
-        <div class="filter-group">
-          <button class="btn btn-outline" @click="resetFilters">清空筛选</button>
-        </div>
+        <span class="filter-label">申请时间:</span>
+        <input type="date" class="form-control small" v-model="filters.startDate">
+        至 <input type="date" class="form-control small" v-model="filters.endDate">
+      </div>
+      <div class="filter-group date-range-group">
+        <span class="filter-label">审核时间:</span>
+        <input type="date" class="form-control small" v-model="filters.reviewedStartDate">
+        至 <input type="date" class="form-control small" v-model="filters.reviewedEndDate">
+      </div>
+
+      <!-- 操作按钮 -->
+      <div class="filter-group">
+        <button class="btn btn-outline" @click="filterApplications">查询</button>
+        <button class="btn btn-outline" @click="resetFilters">清空筛选</button>
+      </div>
     </div>
 
     <!-- 批量操作工具栏 -->
@@ -237,22 +273,13 @@
     </div>
 
     <!-- 查看详情模态框 -->
-    <ApplicationDetailModal
-      v-if="viewDetailModalVisible"
-      :application="selectedApplication"
-      @close="closeViewDetailModal"
-      :is-review-mode="false"
-    />
+    <ApplicationDetailModal v-if="viewDetailModalVisible" :application="selectedApplication"
+      @close="closeViewDetailModal" :is-review-mode="false" />
 
     <!-- 审核操作模态框 -->
-    <ApplicationDetailModal
-      v-if="reviewDetailModalVisible"
-      :application="selectedApplication"
-      @approve="handleApproveApplication"
-      @reject="handleRejectApplication"
-      @close="closeReviewDetailModal"
-      :is-review-mode="true"
-    />
+    <ApplicationDetailModal v-if="reviewDetailModalVisible" :application="selectedApplication"
+      @approve="handleApproveApplication" @reject="handleRejectApplication" @close="closeReviewDetailModal"
+      :is-review-mode="true" />
 
 
   </div>
@@ -263,6 +290,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import ApplicationDetailModal from '../common/ApplicationDetailModal.vue'
 import { useApplicationsStore } from '../../stores/applications'
 import { useAuthStore } from '../../stores/auth'
+import api from '../../utils/api'
 
 // 初始化store
 const applicationsStore = useApplicationsStore()
@@ -273,6 +301,14 @@ const selectedApplications = ref([])
 const currentPage = ref(1)
 const pageSize = 10
 const isLoading = ref(false)
+
+// 学院、系和专业数据
+const faculties = ref([])
+const departments = ref([])
+const majors = ref([])
+const availableRules = ref([])
+const loadingDepartments = ref(false)
+const loadingMajors = ref(false)
 
 // 编辑弹窗相关
 const editDialogVisible = ref(false)
@@ -296,9 +332,11 @@ const reviewDetailModalVisible = ref(false)
 const filters = reactive({
   studentName: '',
   studentId: '',
-  department: '',
-  major: '',
+  faculty: 'all',
+  department: 'all',
+  major: 'all',
   applicationType: 'all',
+  rule: 'all',
   status: 'all',
   reviewedBy: '',
   onlyMyReviews: false,
@@ -313,24 +351,55 @@ const applications = computed(() => applicationsStore.applications)
 
 // 计算属性
 const filteredApplications = computed(() => {
+  // 获取当前登录用户姓名
+  const currentUserName = authStore.user?.name
+
   let filtered = applications.value.filter(app => {
     const nameMatch = !filters.studentName || app.studentName.includes(filters.studentName)
     const idMatch = !filters.studentId || app.studentId.includes(filters.studentId)
-    const departmentMatch = !filters.department || app.department?.includes(filters.department)
-    const majorMatch = !filters.major || app.major?.includes(filters.major)
+    const facultyMatch = filters.faculty === 'all' || app.facultyId === filters.faculty
+    const departmentMatch = filters.department === 'all' || app.departmentId === filters.department
+    const majorMatch = filters.major === 'all' || app.majorId === filters.major
     const typeMatch = filters.applicationType === 'all' || app.applicationType === filters.applicationType
+    const ruleMatch = filters.rule === 'all' || app.ruleId === filters.rule
     const statusMatch = filters.status === 'all' || app.status === filters.status
     const reviewedByMatch = !filters.reviewedBy || app.reviewedBy?.includes(filters.reviewedBy)
-      const onlyMyReviewsMatch = !filters.onlyMyReviews || (authStore.user?.name && app.reviewedBy === authStore.user.name)
-    const dateMatch = !filters.startDate || !filters.endDate ||
-      (new Date(app.appliedAt) >= new Date(filters.startDate) &&
-        new Date(app.appliedAt) <= new Date(filters.endDate))
-    const reviewedDateMatch = (!filters.reviewedStartDate && !filters.reviewedEndDate) ||
-      (!app.reviewedAt ? false :
-        ((!filters.reviewedStartDate || new Date(app.reviewedAt) >= new Date(filters.reviewedStartDate)) &&
-         (!filters.reviewedEndDate || new Date(app.reviewedAt) <= new Date(filters.reviewedEndDate))))
+    const onlyMyReviewsMatch = !filters.onlyMyReviews || (currentUserName && app.reviewedBy === currentUserName)
 
-    return nameMatch && idMatch && departmentMatch && majorMatch && typeMatch && statusMatch && reviewedByMatch && onlyMyReviewsMatch && dateMatch && reviewedDateMatch
+    // 申请日期筛选
+    let dateMatch = true
+    if (filters.startDate) {
+      dateMatch = new Date(app.appliedAt) >= new Date(filters.startDate)
+    }
+    if (dateMatch && filters.endDate) {
+      const endDate = new Date(filters.endDate)
+      endDate.setHours(23, 59, 59, 999)
+      dateMatch = new Date(app.appliedAt) <= endDate
+    }
+
+    // 审核日期筛选
+    let reviewedDateMatch = true
+    if (app.reviewedAt) {
+      if (filters.reviewedStartDate) {
+        reviewedDateMatch = new Date(app.reviewedAt) >= new Date(filters.reviewedStartDate)
+      }
+      if (reviewedDateMatch && filters.reviewedEndDate) {
+        const reviewedEndDate = new Date(filters.reviewedEndDate)
+        reviewedEndDate.setHours(23, 59, 59, 999)
+        reviewedDateMatch = new Date(app.reviewedAt) <= reviewedEndDate
+      }
+    } else if (filters.reviewedStartDate || filters.reviewedEndDate) {
+      reviewedDateMatch = false
+    }
+
+    return nameMatch && idMatch && facultyMatch && departmentMatch && majorMatch && typeMatch && ruleMatch && statusMatch && reviewedByMatch && onlyMyReviewsMatch && dateMatch && reviewedDateMatch
+  })
+
+  // 按申请时间倒序排序
+  filtered.sort((a, b) => {
+    const dateA = new Date(a.appliedAt || 0)
+    const dateB = new Date(b.appliedAt || 0)
+    return dateB - dateA
   })
 
   return filtered
@@ -400,9 +469,11 @@ watch(
   () => [
     filters.studentName,
     filters.studentId,
+    filters.faculty,
     filters.department,
     filters.major,
     filters.applicationType,
+    filters.rule,
     filters.status,
     filters.reviewedBy,
     filters.onlyMyReviews,
@@ -421,9 +492,11 @@ const resetFilters = () => {
   Object.assign(filters, {
     studentName: '',
     studentId: '',
-    department: '',
-    major: '',
+    faculty: 'all',
+    department: 'all',
+    major: 'all',
     applicationType: 'all',
+    rule: 'all',
     status: 'all',
     reviewedBy: '',
     onlyMyReviews: false,
@@ -432,6 +505,11 @@ const resetFilters = () => {
     reviewedStartDate: '',
     reviewedEndDate: ''
   })
+  currentPage.value = 1
+}
+
+// 主动应用筛选
+const filterApplications = () => {
   currentPage.value = 1
 }
 
@@ -452,7 +530,7 @@ const batchDelete = async () => {
     isLoading.value = true
     let successCount = 0
     let failCount = 0
-    
+
     try {
       // 循环删除每个选中的申请
       for (const id of selectedApplications.value) {
@@ -463,11 +541,11 @@ const batchDelete = async () => {
           failCount++
         }
       }
-      
+
       // 清空选中列表
       selectedApplications.value = []
       selectAll.value = false
-      
+
       // 显示结果
       //alert(`批量删除完成：成功 ${successCount} 条，失败 ${failCount} 条`)
     } catch (error) {
@@ -571,7 +649,101 @@ const nextPage = () => {
   }
 }
 
-// 方法
+// 加载学院数据
+const loadFaculties = async () => {
+  try {
+    // 使用管理员版本的API获取学院列表
+    const response = await api.getFacultiesAdmin()
+    // 检查并转换数据格式
+    if (Array.isArray(response)) {
+      faculties.value = response
+    } else if (response && Array.isArray(response.faculties)) {
+      // 从response.faculties字段提取数组
+      faculties.value = response.faculties
+    } else if (response && response.data && Array.isArray(response.data)) {
+      faculties.value = response.data
+    } else {
+      faculties.value = []
+    }
+  } catch (error) {
+    console.error('获取学院列表失败:', error)
+    faculties.value = []
+  }
+}
+
+// 加载系数据
+const loadDepartments = async () => {
+  try {
+    loadingDepartments.value = true
+    // 根据api.js中的定义，getDepartmentsAdmin需要传递facultyId参数（可选）
+    const response = await api.getDepartmentsAdmin('')
+    // 检查并转换数据格式
+    if (Array.isArray(response)) {
+      departments.value = response
+    } else if (response && Array.isArray(response.departments)) {
+      // 从response.departments字段提取数组
+      departments.value = response.departments
+    } else if (response && response.data && Array.isArray(response.data)) {
+      departments.value = response.data
+    } else {
+      departments.value = []
+    }
+  } catch (error) {
+    console.error('获取系列表失败:', error)
+    departments.value = []
+  } finally {
+    loadingDepartments.value = false
+  }
+}
+
+// 加载专业数据
+const loadMajors = async () => {
+  try {
+    loadingMajors.value = true
+    // 根据api.js中的定义，getMajorsAdmin需要传递departmentId和facultyId参数（可选）
+    const response = await api.getMajorsAdmin('', '')
+    // 检查并转换数据格式
+    if (Array.isArray(response)) {
+      majors.value = response
+    } else if (response && Array.isArray(response.majors)) {
+      // 从response.majors字段提取数组
+      majors.value = response.majors
+    } else if (response && response.data && Array.isArray(response.data)) {
+      majors.value = response.data
+    } else {
+      majors.value = []
+    }
+  } catch (error) {
+    console.error('获取专业列表失败:', error)
+    majors.value = []
+  } finally {
+    loadingMajors.value = false
+  }
+}
+
+// 加载规则数据
+const loadRules = async () => {
+  try {
+    // 根据api.js中的定义，getRules需要传递filters参数（可选）
+    const response = await api.getRules({})
+    // 检查并转换数据格式
+    if (Array.isArray(response)) {
+      availableRules.value = response
+    } else if (response && Array.isArray(response.rules)) {
+      // 从response.rules字段提取数组
+      availableRules.value = response.rules
+    } else if (response && response.data && Array.isArray(response.data)) {
+      availableRules.value = response.data
+    } else {
+      availableRules.value = []
+    }
+  } catch (error) {
+    console.error('获取规则列表失败:', error)
+    availableRules.value = []
+  }
+}
+
+// 加载申请数据
 const loadApplications = async () => {
   isLoading.value = true
   try {
@@ -585,13 +757,24 @@ const loadApplications = async () => {
   } catch (error) {
     console.error('加载申请数据失败:', error)
   } finally {
-      isLoading.value = false
+    isLoading.value = false
   }
 }
 
 // 生命周期
-onMounted(() => {
-  loadApplications()
+onMounted(async () => {
+  try {
+    // 并行加载所有数据
+    await Promise.all([
+      loadApplications(),
+      loadFaculties(),
+      loadDepartments(),
+      loadMajors(),
+      loadRules()
+    ])
+  } catch (error) {
+    console.error('数据加载失败:', error)
+  }
 })
 </script>
 
@@ -646,8 +829,13 @@ onMounted(() => {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .dialog-content {
@@ -662,8 +850,15 @@ onMounted(() => {
 }
 
 @keyframes slideIn {
-  from { transform: translateY(-20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .dialog-header {
@@ -826,8 +1021,13 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-text {
@@ -888,7 +1088,7 @@ onMounted(() => {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .filter-group {
     margin-bottom: 10px;
   }
@@ -904,22 +1104,20 @@ onMounted(() => {
     align-items: center;
     gap: 8px;
   }
-  
+
   .form-row {
     flex-direction: column;
   }
-  
+
   .table-container {
     overflow-x: auto;
   }
-  
+
   .pagination {
     flex-direction: column;
     gap: 10px;
   }
 }
-
-
 </style>
 
 <style>

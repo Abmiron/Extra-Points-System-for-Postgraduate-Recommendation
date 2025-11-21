@@ -102,7 +102,7 @@
         </table>
       </div>
     </div>
-    
+
     <!-- 加载状态指示器 -->
     <div v-if="loading" class="loading-overlay">
       <div class="loading-spinner"></div>
@@ -131,7 +131,7 @@ const statistics = reactive({
   comprehensiveScore: 0,
   totalScore: 0,
   ranking: '-',
-  majorTotalStudents: 0 
+  majorTotalStudents: 0
 })
 
 const systemSettings = reactive({
@@ -144,10 +144,10 @@ const systemSettings = reactive({
 const academicApplications = computed(() => {
   // 学术专长包括：academic(旧类型)、research、competition、innovation
   return applications.value.filter(app =>
-    (app.applicationType === 'academic' || 
-     app.applicationType === 'research' || 
-     app.applicationType === 'competition' || 
-     app.applicationType === 'innovation') && 
+    (app.applicationType === 'academic' ||
+      app.applicationType === 'research' ||
+      app.applicationType === 'competition' ||
+      app.applicationType === 'innovation') &&
     app.status === 'approved'
   )
 })
@@ -155,13 +155,13 @@ const academicApplications = computed(() => {
 const comprehensiveApplications = computed(() => {
   // 综合表现包括：comprehensive(旧类型)、international_internship、military_service、volunteer、social_work、sports、honor_title
   return applications.value.filter(app =>
-    (app.applicationType === 'comprehensive' || 
-     app.applicationType === 'international_internship' || 
-     app.applicationType === 'military_service' || 
-     app.applicationType === 'volunteer' || 
-     app.applicationType === 'social_work' || 
-     app.applicationType === 'sports' || 
-     app.applicationType === 'honor_title') && 
+    (app.applicationType === 'comprehensive' ||
+      app.applicationType === 'international_internship' ||
+      app.applicationType === 'military_service' ||
+      app.applicationType === 'volunteer' ||
+      app.applicationType === 'social_work' ||
+      app.applicationType === 'sports' ||
+      app.applicationType === 'honor_title') &&
     app.status === 'approved'
   )
 })
@@ -188,11 +188,11 @@ const getStatusText = (status) => {
 }
 
 const formatDate = (dateString) => {
-  if (!dateString) return '-'  
-  
+  if (!dateString) return '-'
+
   // 直接使用本地时间显示，因为后端返回的已经是上海时间
   const date = new Date(dateString)
-  
+
   return date.toLocaleDateString('zh-CN')
 }
 
@@ -214,34 +214,34 @@ const loadSystemSettings = async () => {
 const loadStatistics = async () => {
   loading.value = true
   error.value = null
-  
+
   try {
     if (!authStore.isAuthenticated) {
       error.value = '用户未登录'
       return
     }
-    
+
     // 获取系统设置
     await loadSystemSettings()
-    
+
     // 调试：查看用户信息
     //console.log('当前用户:', authStore.user)
-    
+
     // 使用正确的学生学号字段（studentId）而不是用户ID（id）
     const studentId = authStore.user.studentId || 'student'
     //console.log('使用的学生ID:', studentId)
-    
+
     // 获取学生的所有申请
     //console.log('开始获取申请记录...')
     const appData = await applicationsStore.fetchApplications({ studentId })
     applications.value = appData
     //console.log('获取到的申请记录:', applications.value)
-    
+
     // 获取加分统计数据
     //console.log('开始获取加分统计数据...')
     const statsData = await applicationsStore.fetchStatistics(studentId)
     //console.log('获取到的加分统计数据:', statsData)
-    
+
     // 更新统计信息
     // 注意：后端返回的是下划线命名，前端使用的是驼峰式命名
     statistics.academicScore = statsData.academic_score || 0
@@ -249,9 +249,9 @@ const loadStatistics = async () => {
     statistics.specialtyScore = statsData.specialty_score || 0
     statistics.comprehensiveScore = statsData.comprehensive_performance_total || 0
     statistics.totalScore = statsData.total_score || statsData.comprehensive_score || 0
-    statistics.ranking = statsData.ranking || '-'  
+    statistics.ranking = statsData.ranking || '-'
     statistics.majorTotalStudents = statsData.major_total_students || 0
-    
+
   } catch (err) {
     console.error('加载统计数据失败:', err)
     error.value = '加载统计数据失败，请刷新页面重试'
@@ -345,7 +345,9 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-text {

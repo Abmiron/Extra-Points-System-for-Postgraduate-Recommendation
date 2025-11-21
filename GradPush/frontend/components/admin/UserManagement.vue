@@ -22,37 +22,38 @@
     <!-- 筛选区域 -->
     <div class="filters">
       <div class="filter-group">
-        <input type="text" class="form-control" v-model="filters.keyword" placeholder="搜索姓名或学号/工号" @keyup.enter="searchUsers">
+        <input type="text" class="form-control" v-model="filters.keyword" placeholder="搜索姓名或学号/工号"
+          @keyup.enter="searchUsers">
       </div>
       <div class="filter-group">
-      <span class="filter-label">学院:</span>
-      <select class="form-control" v-model="filters.faculty">
-        <option value="all">全部</option>
-        <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
-          {{ faculty.name }}
-        </option>
-      </select>
-    </div>
+        <span class="filter-label">学院:</span>
+        <select class="form-control" v-model="filters.faculty">
+          <option value="all">全部</option>
+          <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
+            {{ faculty.name }}
+          </option>
+        </select>
+      </div>
       <!-- 系筛选（仅学生显示） -->
-    <div class="filter-group" v-if="activeTab === 'student'">
-      <span class="filter-label">系:</span>
-      <select class="form-control" v-model="filters.department">
-        <option value="all">全部</option>
-        <option v-for="department in departments" :key="department.id" :value="department.id">
-          {{ department.name }}
-        </option>
-      </select>
-    </div>
+      <div class="filter-group" v-if="activeTab === 'student'">
+        <span class="filter-label">系:</span>
+        <select class="form-control" v-model="filters.department">
+          <option value="all">全部</option>
+          <option v-for="department in departments" :key="department.id" :value="department.id">
+            {{ department.name }}
+          </option>
+        </select>
+      </div>
       <!-- 专业筛选（仅学生显示） -->
-    <div class="filter-group" v-if="activeTab === 'student'">
-      <span class="filter-label">专业:</span>
-      <select class="form-control" v-model="filters.major">
-        <option value="all">全部</option>
-        <option v-for="major in majors" :key="major.id" :value="major.id">
-          {{ major.name }}
-        </option>
-      </select>
-    </div>
+      <div class="filter-group" v-if="activeTab === 'student'">
+        <span class="filter-label">专业:</span>
+        <select class="form-control" v-model="filters.major">
+          <option value="all">全部</option>
+          <option v-for="major in majors" :key="major.id" :value="major.id">
+            {{ major.name }}
+          </option>
+        </select>
+      </div>
       <div class="filter-group">
         <span class="filter-label">状态:</span>
         <select class="form-control" v-model="filters.status">
@@ -105,14 +106,17 @@
           </thead>
           <tbody>
             <tr v-for="user in paginatedUsers" :key="user.id">
-              <td><input type="checkbox" v-model="selectedUsers" :value="user.id" :disabled="user.id === authStore.user.id" :class="{ 'checkbox-disabled': user.id === authStore.user.id }"></td>
+              <td><input type="checkbox" v-model="selectedUsers" :value="user.id"
+                  :disabled="user.id === authStore.user.id"
+                  :class="{ 'checkbox-disabled': user.id === authStore.user.id }"></td>
               <td>{{ user.username }}</td>
               <td>{{ user.name }}</td>
               <td>{{ user.faculty?.name || getFacultyText(user.faculty) }}</td>
               <td v-if="activeTab === 'student'">
                 {{ user.department?.name || user.department || '-' }}
               </td>
-              <td>{{ user.role === 'student' ? (user.major?.name || user.major) : (user.role === 'teacher' ? user.roleName : user.roleName || '管理员') }}</td>
+              <td>{{ user.role === 'student' ? (user.major?.name || user.major) : (user.role === 'teacher' ?
+                user.roleName : user.roleName || '管理员') }}</td>
               <td>
                 <span :class="`status-badge status-${user.status === 'active' ? 'approved' : 'rejected'}`">
                   {{ user.status === 'active' ? '启用' : '禁用' }}
@@ -124,21 +128,29 @@
               </td>
               <td>
                 <div class="action-buttons">
-                  <button class="btn-outline btn small-btn" @click="editUser(user)" title="编辑" :disabled="user.id === authStore.user.id" :class="{ 'btn-disabled': user.id === authStore.user.id }">
+                  <button class="btn-outline btn small-btn" @click="editUser(user)" title="编辑"
+                    :disabled="user.id === authStore.user.id"
+                    :class="{ 'btn-disabled': user.id === authStore.user.id }">
                     <font-awesome-icon :icon="['fas', 'edit']" />
                   </button>
                   <button v-if="user.status === 'active'" class="btn-outline btn small-btn"
-                    @click="toggleUserStatus(user.id, 'disabled')" title="禁用" :disabled="user.id === authStore.user.id" :class="{ 'btn-disabled': user.id === authStore.user.id }">
+                    @click="toggleUserStatus(user.id, 'disabled')" title="禁用" :disabled="user.id === authStore.user.id"
+                    :class="{ 'btn-disabled': user.id === authStore.user.id }">
                     <font-awesome-icon :icon="['fas', 'ban']" />
                   </button>
                   <button v-else class="btn-outline btn small-btn" @click="toggleUserStatus(user.id, 'active')"
-                    title="启用" :disabled="user.id === authStore.user.id" :class="{ 'btn-disabled': user.id === authStore.user.id }">
+                    title="启用" :disabled="user.id === authStore.user.id"
+                    :class="{ 'btn-disabled': user.id === authStore.user.id }">
                     <font-awesome-icon :icon="['fas', 'check']" />
                   </button>
-                  <button class="btn-outline btn small-btn" @click="resetPassword(user.id)" title="重置密码" :disabled="user.id === authStore.user.id" :class="{ 'btn-disabled': user.id === authStore.user.id }">
+                  <button class="btn-outline btn small-btn" @click="resetPassword(user.id)" title="重置密码"
+                    :disabled="user.id === authStore.user.id"
+                    :class="{ 'btn-disabled': user.id === authStore.user.id }">
                     <font-awesome-icon :icon="['fas', 'key']" />
                   </button>
-                  <button class="btn-outline btn small-btn" @click="deleteUser(user.id)" title="删除" :disabled="user.id === authStore.user.id" :class="{ 'btn-disabled': user.id === authStore.user.id }">
+                  <button class="btn-outline btn small-btn" @click="deleteUser(user.id)" title="删除"
+                    :disabled="user.id === authStore.user.id"
+                    :class="{ 'btn-disabled': user.id === authStore.user.id }">
                     <font-awesome-icon :icon="['fas', 'trash']" />
                   </button>
                 </div>
@@ -187,7 +199,8 @@
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">{{ userForm.role === 'student' ? '学号' : (userForm.role === 'teacher' ? '工号' : '管理员账号') }}</label>
+                <label class="form-label">{{ userForm.role === 'student' ? '学号' : (userForm.role === 'teacher' ? '工号' :
+                  '管理员账号') }}</label>
                 <input type="text" class="form-control" v-model="userForm.username" required>
               </div>
             </div>
@@ -230,16 +243,14 @@
             <div class="form-row" v-else-if="userForm.role === 'teacher'">
               <div class="form-group">
                 <label class="form-label">角色</label>
-                <input type="text" class="form-control" v-model="userForm.roleName"
-                  placeholder="如：审核员">
+                <input type="text" class="form-control" v-model="userForm.roleName" placeholder="如：审核员">
                 <div class="help-text">默认为审核员</div>
               </div>
             </div>
             <div class="form-row" v-else-if="userForm.role === 'admin'">
               <div class="form-group">
                 <label class="form-label">管理员类型</label>
-                <input type="text" class="form-control" v-model="userForm.roleName"
-                  placeholder="如：系统管理员">
+                <input type="text" class="form-control" v-model="userForm.roleName" placeholder="如：系统管理员">
                 <div class="help-text">默认为系统管理员</div>
               </div>
             </div>
@@ -299,8 +310,13 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-text {
@@ -508,13 +524,13 @@ const loadUsersFromAPI = async () => {
   if (!authStore.isAuthenticated) {
     return
   }
-  
+
   try {
     isLoading.value = true
     const role = activeTab.value
     const status = filters.status === 'all' ? '' : filters.status
     const search = filters.keyword || ''
-    
+
     // 构建API请求URL
     const params = new URLSearchParams({
       currentUserId: authStore.user.id,
@@ -524,12 +540,12 @@ const loadUsersFromAPI = async () => {
       status: status,
       search: search
     })
-    
+
     // 添加学院筛选条件（排除'all'）
     if (filters.faculty && filters.faculty !== 'all') {
       params.append('faculty', filters.faculty)
     }
-    
+
     // 仅当学生选项卡时添加系和专业筛选条件
     if (role === 'student') {
       if (filters.department !== 'all') {
@@ -539,17 +555,13 @@ const loadUsersFromAPI = async () => {
         params.append('major', filters.major)
       }
     }
-    
-    // 调试日志
-    //console.log('API Request URL:', `http://localhost:5001/api/admin/users?${params}`)
-    //console.log('Filters:', filters)
-    
+
     const response = await fetch(`http://localhost:5001/api/admin/users?${params}`)
-    
+
     if (!response.ok) {
       throw new Error('获取用户数据失败')
     }
-    
+
     const data = await response.json()
     users.value = data.users
     totalUsers.value = data.total
@@ -623,7 +635,7 @@ const importUsers = () => {
 
 const editUser = async (user) => {
   editingUser.value = user
-  
+
   // 初始化表单，直接使用用户对象中的ID字段
   Object.assign(userForm, {
     id: user.id,
@@ -637,7 +649,7 @@ const editUser = async (user) => {
     status: user.status,
     password: '' // 重置密码字段
   })
-  
+
   // 如果是学生用户，需要加载对应的系和专业列表
   if (userForm.role === 'student' && userForm.facultyId) {
     await loadDepartments(userForm.facultyId)
@@ -645,7 +657,7 @@ const editUser = async (user) => {
       await loadMajors(userForm.departmentId)
     }
   }
-  
+
   showAddUserModal.value = true
 }
 
@@ -653,7 +665,7 @@ const saveUser = async () => {
   try {
     isLoading.value = true
     const username = userForm.username
-    
+
     // 准备请求数据
     const userData = {
       role: userForm.role,
@@ -668,14 +680,14 @@ const saveUser = async () => {
         roleName: userForm.roleName || (userForm.role === 'teacher' ? '审核员' : '系统管理员')
       })
     }
-    
+
     // 如果提供了密码，则包含密码字段；如果是新用户且未提供密码，则使用默认密码
     if (userForm.password) {
       userData.password = userForm.password
     } else if (!editingUser.value) {
       userData.password = '123456'
     }
-    
+
     let response
     if (editingUser.value) {
       // 更新用户 - 调用PUT API
@@ -696,12 +708,12 @@ const saveUser = async () => {
         body: JSON.stringify(userData)
       })
     }
-    
+
     if (!response.ok) {
       const errorData = await response.json()
       throw new Error(errorData.message || '操作失败')
     }
-    
+
     //alert(editingUser.value ? '用户信息更新成功' : '用户添加成功')
     closeModal()
     loadUsersFromAPI() // 重新加载用户列表
@@ -716,7 +728,7 @@ const saveUser = async () => {
 const toggleUserStatus = async (userId, status) => {
   try {
     isLoading.value = true
-    
+
     const response = await fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
       method: 'PUT',
       headers: {
@@ -724,12 +736,12 @@ const toggleUserStatus = async (userId, status) => {
       },
       body: JSON.stringify({ status: status })
     })
-    
+
     if (!response.ok) {
       const errorData = await response.json()
       throw new Error(errorData.message || '操作失败')
     }
-    
+
     //alert(`用户已${status === 'active' ? '启用' : '禁用'}`)
     loadUsersFromAPI() // 重新加载用户列表
   } catch (error) {
@@ -745,7 +757,7 @@ const resetPassword = async (userId) => {
     try {
       isLoading.value = true
       const newPassword = prompt('请输入新密码（留空则使用默认密码123456）:', '') || '123456'
-      
+
       const response = await fetch(`http://localhost:5001/api/admin/users/${userId}/reset-password?currentUserId=${authStore.user.id}`, {
         method: 'POST',
         headers: {
@@ -753,12 +765,12 @@ const resetPassword = async (userId) => {
         },
         body: JSON.stringify({ newPassword: newPassword })
       })
-      
+
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.message || '操作失败')
       }
-      
+
       //alert('密码重置成功')
     } catch (error) {
       console.error('重置密码失败:', error)
@@ -773,15 +785,15 @@ const deleteUser = async (userId) => {
   if (confirm(`确定要删除该用户吗？此操作不可恢复！`)) {
     try {
       isLoading.value = true
-      
+
       const response = await fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
         method: 'DELETE'
       })
-      
+
       if (!response.ok) {
         throw new Error('删除用户失败')
       }
-      
+
       //alert('用户已删除')
       loadUsersFromAPI() // 重新加载用户列表
     } catch (error) {
@@ -797,9 +809,9 @@ const batchDisable = async () => {
   if (confirm(`确定要禁用选中的 ${selectedUsers.value.length} 个用户吗？`)) {
     try {
       isLoading.value = true
-      
+
       // 批量禁用用户（逐个调用API）
-      const promises = selectedUsers.value.map(userId => 
+      const promises = selectedUsers.value.map(userId =>
         fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
           method: 'PUT',
           headers: {
@@ -808,16 +820,16 @@ const batchDisable = async () => {
           body: JSON.stringify({ status: 'disabled' })
         })
       )
-      
+
       const responses = await Promise.all(promises)
-      
+
       // 检查是否所有请求都成功
       for (const response of responses) {
         if (!response.ok) {
           throw new Error('批量禁用失败')
         }
       }
-      
+
       selectedUsers.value = []
       selectAll.value = false
       //alert('选中用户已禁用')
@@ -835,10 +847,10 @@ const batchEnable = async () => {
   if (confirm(`确定要启用选中的 ${selectedUsers.value.length} 个用户吗？`)) {
     try {
       isLoading.value = true
-      
+
       // 批量启用用户（逐个调用API）
-        const promises = selectedUsers.value.map(userId => 
-          fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
+      const promises = selectedUsers.value.map(userId =>
+        fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -846,16 +858,16 @@ const batchEnable = async () => {
           body: JSON.stringify({ status: 'active' })
         })
       )
-      
+
       const responses = await Promise.all(promises)
-      
+
       // 检查是否所有请求都成功
       for (const response of responses) {
         if (!response.ok) {
           throw new Error('批量启用失败')
         }
       }
-      
+
       selectedUsers.value = []
       selectAll.value = false
       //alert('选中用户已启用')
@@ -874,10 +886,10 @@ const batchResetPassword = async () => {
     try {
       isLoading.value = true
       const newPassword = prompt('请输入新密码（留空则使用默认密码123456）:', '') || '123456'
-      
+
       // 批量重置密码（逐个调用API）
-        const promises = selectedUsers.value.map(userId => 
-          fetch(`http://localhost:5001/api/admin/users/${userId}/reset-password?currentUserId=${authStore.user.id}`, {
+      const promises = selectedUsers.value.map(userId =>
+        fetch(`http://localhost:5001/api/admin/users/${userId}/reset-password?currentUserId=${authStore.user.id}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -885,16 +897,16 @@ const batchResetPassword = async () => {
           body: JSON.stringify({ newPassword: newPassword })
         })
       )
-      
+
       const responses = await Promise.all(promises)
-      
+
       // 检查是否所有请求都成功
       for (const response of responses) {
         if (!response.ok) {
           throw new Error('批量重置密码失败')
         }
       }
-      
+
       selectedUsers.value = []
       selectAll.value = false
       //alert('选中用户的密码已重置')
@@ -911,23 +923,23 @@ const batchDelete = async () => {
   if (confirm(`确定要删除选中的 ${selectedUsers.value.length} 个用户吗？此操作不可恢复！`)) {
     try {
       isLoading.value = true
-      
+
       // 批量删除用户（逐个调用API）
-        const promises = selectedUsers.value.map(userId => 
-          fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
+      const promises = selectedUsers.value.map(userId =>
+        fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
           method: 'DELETE'
         })
       )
-      
+
       const responses = await Promise.all(promises)
-      
+
       // 检查是否所有请求都成功
       for (const response of responses) {
         if (!response.ok) {
           throw new Error('批量删除失败')
         }
       }
-      
+
       selectedUsers.value = []
       selectAll.value = false
       //alert('选中用户已删除')
@@ -1015,21 +1027,21 @@ watch(
 )
 
 // 监听系筛选条件变化，加载对应的专业列表
-  watch(
-    () => filters.department,
-    async (newDepartmentId) => {
-      if (activeTab.value === 'student' && newDepartmentId && newDepartmentId !== 'all') {
-        await loadMajors(newDepartmentId)
-      } else {
-        // 重置专业筛选
-        filters.major = 'all'
-        majors.value = []
-      }
-      // 重新加载用户数据
-      currentPage.value = 1
-      loadUsersFromAPI()
+watch(
+  () => filters.department,
+  async (newDepartmentId) => {
+    if (activeTab.value === 'student' && newDepartmentId && newDepartmentId !== 'all') {
+      await loadMajors(newDepartmentId)
+    } else {
+      // 重置专业筛选
+      filters.major = 'all'
+      majors.value = []
     }
-  )
+    // 重新加载用户数据
+    currentPage.value = 1
+    loadUsersFromAPI()
+  }
+)
 
 // 监听其他筛选条件变化
 watch(
@@ -1048,7 +1060,7 @@ onMounted(async () => {
       loadFaculties(),
       loadUsersFromAPI()
     ])
-    
+
     // 如果当前是学生选项卡，加载系和专业数据
     if (activeTab.value === 'student') {
       await loadDepartments()

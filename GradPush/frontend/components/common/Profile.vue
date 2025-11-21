@@ -24,11 +24,7 @@
             <div class="avatar-tooltip">
               上传图片限制：JPG、PNG格式，大小不超过2MB
             </div>
-            <button 
-              class="btn btn-outline reset-avatar-btn" 
-              @click="resetAvatar" 
-              :disabled="uploadingAvatar"
-            >
+            <button class="btn btn-outline reset-avatar-btn" @click="resetAvatar" :disabled="uploadingAvatar">
               <font-awesome-icon :icon="['fas', 'undo']" /> 恢复默认头像
             </button>
             <input type="file" ref="avatarInput" @change="handleAvatarChange" accept="image/*" style="display: none;">
@@ -37,20 +33,10 @@
 
         <!-- 动态渲染表单字段 -->
         <div v-for="(row, rowIndex) in formRows" :key="rowIndex" class="form-row">
-          <div 
-            v-for="field in row" 
-            :key="field.key" 
-            class="form-group"
-            :class="{ [field.className]: field.className }"
-          >
+          <div v-for="field in row" :key="field.key" class="form-group" :class="{ [field.className]: field.className }">
             <label class="form-label">{{ field.label }}</label>
-            <input 
-              type="text" 
-              class="form-control" 
-              v-model="profile[field.key]" 
-              :disabled="!isEditing || field.editable !== true"
-              :required="field.required"
-            />
+            <input type="text" class="form-control" v-model="profile[field.key]"
+              :disabled="!isEditing || field.editable !== true" :required="field.required" />
           </div>
         </div>
 
@@ -270,13 +256,13 @@ const handleAvatarChange = async (event) => {
   try {
     // 调用上传头像API
     const response = await api.uploadAvatar(authStore.user.username, file)
-    
+
     // 更新用户信息
     authStore.updateUserInfo(response.user)
-    
+
     // 更新本地profile中的头像
     profile.avatar = response.user.avatar
-    
+
     // alert('头像上传成功')
   } catch (error) {
     console.error('头像上传失败:', error)
@@ -295,18 +281,18 @@ const resetAvatar = async () => {
   if (!confirm('确定要恢复默认头像吗？')) {
     return
   }
-  
+
   uploadingAvatar.value = true
   try {
     // 调用恢复默认头像API
     const response = await api.resetAvatar(authStore.user.username)
-    
+
     // 更新用户信息
     authStore.updateUserInfo(response.user)
-    
+
     // 更新本地profile中的头像
     profile.avatar = response.user.avatar
-    
+
     //alert('已恢复默认头像')
   } catch (error) {
     console.error('恢复默认头像失败:', error)
@@ -323,7 +309,7 @@ const saveProfile = async () => {
     // 准备更新数据
     const updateData = { username: authStore.user.username }
     const editableFields = getEditableFields()
-    
+
     // 只包含可编辑字段
     editableFields.forEach(field => {
       if (profile[field] !== undefined) {
@@ -333,7 +319,7 @@ const saveProfile = async () => {
 
     // 调用API更新个人信息
     const response = await api.updateProfile(updateData)
-    
+
     // 更新auth store中的用户信息
     authStore.updateUserInfo(response.user)
 
@@ -370,10 +356,10 @@ const changePassword = async () => {
       currentPassword: passwordForm.currentPassword,
       newPassword: passwordForm.newPassword
     }
-    
+
     // 调用API修改密码
     await api.changePassword(passwordData)
-    
+
     // alert('密码修改成功')
 
     closePasswordModal()
@@ -406,7 +392,7 @@ onMounted(() => {
   if (authStore.user) {
     const user = authStore.user
     const userType = getUserType()
-    
+
     // 根据用户类型初始化profile对象
     if (userType === 'student') {
       Object.assign(profile, {
@@ -444,7 +430,7 @@ onMounted(() => {
         avatar: user.avatar || ''
       })
     }
-    
+
     originalProfile.value = { ...profile }
   }
 })
@@ -531,7 +517,7 @@ onMounted(() => {
   z-index: 10;
 }
 
-.avatar-container:hover + .avatar-tooltip {
+.avatar-container:hover+.avatar-tooltip {
   opacity: 1;
   visibility: visible;
 }

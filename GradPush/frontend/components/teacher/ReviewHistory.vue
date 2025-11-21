@@ -9,13 +9,15 @@
 
       <div class="filter-group">
         <span class="filter-label">姓名:</span>
-        <input type="text" class="form-control small" v-model="filters.studentName" placeholder="输入学生姓名" @input="filterApplications">
+        <input type="text" class="form-control small" v-model="filters.studentName" placeholder="输入学生姓名"
+          @input="filterApplications">
       </div>
       <div class="filter-group">
         <span class="filter-label">学号:</span>
-        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="输入学生学号" @input="filterApplications">
+        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="输入学生学号"
+          @input="filterApplications">
       </div>
-      
+
       <div class="filter-group">
         <span class="filter-label">学院:</span>
         <select v-model="filters.faculty" @change="filterApplications">
@@ -70,7 +72,8 @@
       </div>
       <div class="filter-group">
         <span class="filter-label">审核人:</span>
-        <input type="text" class="form-control small" v-model="filters.reviewedBy" placeholder="输入审核人姓名" @input="filterApplications">
+        <input type="text" class="form-control small" v-model="filters.reviewedBy" placeholder="输入审核人姓名"
+          @input="filterApplications">
       </div>
       <div class="filter-group checkbox-filter">
         <label>
@@ -132,10 +135,10 @@
               <td class="action-column">
                 <div class="action-buttons">
                   <button class="btn-outline btn small-btn" @click="viewApplication(application)" title="查看">
-                    <font-awesome-icon :icon="['fas', 'eye']" /> 
+                    <font-awesome-icon :icon="['fas', 'eye']" />
                   </button>
                   <button class="btn-outline btn small-btn" @click="editApplication(application)" title="编辑">
-                    <font-awesome-icon :icon="['fas', 'edit']" /> 
+                    <font-awesome-icon :icon="['fas', 'edit']" />
                   </button>
                 </div>
               </td>
@@ -162,12 +165,12 @@
     </div>
 
     <!-- 查看申请详情模态框 -->
-    <ApplicationDetailModal v-if="selectedApplication" :application="selectedApplication"
-      @close="closeDetailModal" :is-review-mode="false" />
+    <ApplicationDetailModal v-if="selectedApplication" :application="selectedApplication" @close="closeDetailModal"
+      :is-review-mode="false" />
 
     <!-- 编辑申请详情模态框 -->
-    <ApplicationDetailModal v-if="editingApplication" :application="editingApplication"
-      @close="closeEditDialog" @approve="handleApproveApplication" @reject="handleRejectApplication" :is-review-mode="true" />
+    <ApplicationDetailModal v-if="editingApplication" :application="editingApplication" @close="closeEditDialog"
+      @approve="handleApproveApplication" @reject="handleRejectApplication" :is-review-mode="true" />
   </div>
 </template>
 
@@ -226,7 +229,7 @@ const loading = computed(() => applicationsStore.loading)
 const paginatedApplications = computed(() => {
   // 获取当前登录教师姓名
   const currentTeacherName = authStore.user?.name
-  
+
   // 先筛选
   let filtered = applicationsStore.filterApplications({
     faculty: filters.value.faculty !== 'all' ? filters.value.faculty : undefined,
@@ -241,15 +244,15 @@ const paginatedApplications = computed(() => {
     studentId: filters.value.studentId || undefined,
     studentName: filters.value.studentName || undefined
   })
-  
+
   // 只保留已审核的
   filtered = filtered.filter(app => app.status === 'approved' || app.status === 'rejected')
-  
+
   // 如果有状态筛选
   if (filters.value.status !== 'all') {
     filtered = filtered.filter(app => app.status === filters.value.status)
   }
-  
+
   // 如果有审核时间筛选
   if (filters.value.reviewedStartDate) {
     const startDate = new Date(filters.value.reviewedStartDate)
@@ -266,14 +269,14 @@ const paginatedApplications = computed(() => {
       return new Date(app.reviewedAt) <= endDate
     })
   }
-  
+
   // 按审核时间倒序排序
   filtered.sort((a, b) => {
     const dateA = new Date(a.reviewedAt || 0)
     const dateB = new Date(b.reviewedAt || 0)
     return dateB - dateA
   })
-  
+
   // 再分页
   const startIndex = (pagination.value.currentPage - 1) * pagination.value.pageSize
   const endIndex = startIndex + pagination.value.pageSize
@@ -284,7 +287,7 @@ const paginatedApplications = computed(() => {
 const totalApplications = computed(() => {
   // 获取当前登录教师姓名
   const currentTeacherName = authStore.user?.name
-  
+
   let filtered = applicationsStore.filterApplications({
     faculty: filters.value.faculty !== 'all' ? filters.value.faculty : undefined,
     department: filters.value.department !== 'all' ? filters.value.department : undefined,
@@ -298,13 +301,13 @@ const totalApplications = computed(() => {
     studentId: filters.value.studentId || undefined,
     studentName: filters.value.studentName || undefined
   })
-  
+
   filtered = filtered.filter(app => app.status === 'approved' || app.status === 'rejected')
-  
+
   if (filters.value.status !== 'all') {
     filtered = filtered.filter(app => app.status === filters.value.status)
   }
-  
+
   // 如果有审核时间筛选
   if (filters.value.reviewedStartDate) {
     const startDate = new Date(filters.value.reviewedStartDate)
@@ -321,7 +324,7 @@ const totalApplications = computed(() => {
       return new Date(app.reviewedAt) <= endDate
     })
   }
-  
+
   return filtered.length
 })
 
@@ -384,7 +387,7 @@ const getRuleText = (ruleId) => {
 
 // 格式化日期
 const formatDate = (dateString) => {
-  if (!dateString) return '-'  
+  if (!dateString) return '-'
   return new Date(dateString).toLocaleDateString('zh-CN')
 }
 
@@ -673,8 +676,13 @@ const fetchRules = async () => {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .dialog-content {
@@ -689,8 +697,15 @@ const fetchRules = async () => {
 }
 
 @keyframes slideIn {
-  from { transform: translateY(-20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .dialog-header {

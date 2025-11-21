@@ -20,14 +20,20 @@ import pytz
 app = Flask(__name__)
 
 # 配置CORS，支持跨域请求
-CORS(app, origins="*", supports_credentials=True, allow_headers=["Content-Type", "Authorization", "X-Requested-With"], methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+CORS(
+    app,
+    origins="*",
+    supports_credentials=True,
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+)
 
 # 加载配置
-app.config.from_object('config.Config')
+app.config.from_object("config.Config")
 
 # 配置JSON编码
-app.config['JSON_AS_ASCII'] = False  # 支持中文输出
-app.config['JSONIFY_MIMETYPE'] = 'application/json; charset=utf-8'  # 设置响应头 charset
+app.config["JSON_AS_ASCII"] = False  # 支持中文输出
+app.config["JSONIFY_MIMETYPE"] = "application/json; charset=utf-8"  # 设置响应头 charset
 
 # 初始化数据库
 db.init_app(app)
@@ -44,38 +50,50 @@ from blueprints.rule_bp import rule_bp
 from blueprints.admin_bp import admin_bp
 from routes import main_bp
 
+
 # 配置静态文件服务
-@app.route('/uploads/<path:filename>')
+@app.route("/uploads/<path:filename>")
 def uploaded_file(filename):
-    response = send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    response = send_from_directory(app.config["UPLOAD_FOLDER"], filename)
     # 使用安全的方式处理中文文件名
-    response.headers['Content-Disposition'] = f'attachment; filename*=UTF-8''={quote(filename)}'
+    response.headers["Content-Disposition"] = (
+        f"attachment; filename*=UTF-8" "={quote(filename)}"
+    )
     return response
+
 
 # 配置头像文件的静态服务
-@app.route('/uploads/avatars/<path:filename>')
+@app.route("/uploads/avatars/<path:filename>")
 def uploaded_avatar(filename):
-    response = send_from_directory(app.config['AVATAR_FOLDER'], filename)
+    response = send_from_directory(app.config["AVATAR_FOLDER"], filename)
     # 使用安全的方式处理中文文件名
-    response.headers['Content-Disposition'] = f'attachment; filename*=UTF-8''={quote(filename)}'
+    response.headers["Content-Disposition"] = (
+        f"attachment; filename*=UTF-8" "={quote(filename)}"
+    )
     return response
 
+
 # 配置普通文件的静态服务
-@app.route('/uploads/files/<path:filename>')
+@app.route("/uploads/files/<path:filename>")
 def uploaded_app_file(filename):
     # 检查文件是否是PDF
-    is_pdf = filename.lower().endswith('.pdf')
-    response = send_from_directory(app.config['FILE_FOLDER'], filename)
-    
+    is_pdf = filename.lower().endswith(".pdf")
+    response = send_from_directory(app.config["FILE_FOLDER"], filename)
+
     if is_pdf:
         # PDF文件设置为内联显示
-        response.headers['Content-Disposition'] = f'inline; filename*=UTF-8''={quote(filename)}'
-        response.headers['Content-Type'] = 'application/pdf'
+        response.headers["Content-Disposition"] = (
+            f"inline; filename*=UTF-8" "={quote(filename)}"
+        )
+        response.headers["Content-Type"] = "application/pdf"
     else:
         # 其他文件设置为附件下载
-        response.headers['Content-Disposition'] = f'attachment; filename*=UTF-8''={quote(filename)}'
-    
+        response.headers["Content-Disposition"] = (
+            f"attachment; filename*=UTF-8" "={quote(filename)}"
+        )
+
     return response
+
 
 # 注册蓝图
 app.register_blueprint(auth_bp)
@@ -86,6 +104,5 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(main_bp)
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True, port=5001, use_reloader=False)

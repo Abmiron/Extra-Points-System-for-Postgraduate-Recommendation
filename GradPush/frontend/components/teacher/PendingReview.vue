@@ -9,13 +9,15 @@
 
       <div class="filter-group">
         <span class="filter-label">姓名:</span>
-        <input type="text" class="form-control small" v-model="filters.studentName" placeholder="请输入姓名" @input="filterApplications">
+        <input type="text" class="form-control small" v-model="filters.studentName" placeholder="请输入姓名"
+          @input="filterApplications">
       </div>
       <div class="filter-group">
         <span class="filter-label">学号:</span>
-        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="请输入学号" @input="filterApplications">
+        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="请输入学号"
+          @input="filterApplications">
       </div>
-      
+
       <div class="filter-group">
         <span class="filter-label">学院:</span>
         <select v-model="filters.faculty" @change="filterApplications">
@@ -187,10 +189,10 @@ const filteredAndPaginatedApplications = computed(() => {
     startDate: filters.value.startDate,
     endDate: filters.value.endDate
   })
-  
+
   // 只保留待审核的
   filtered = filtered.filter(app => app.status === 'pending')
-  
+
   // 再分页
   const start = (pagination.value.currentPage - 1) * pagination.value.pageSize
   const end = start + pagination.value.pageSize
@@ -259,7 +261,7 @@ const getTypeText = (type) => {
 }
 
 const formatDate = (dateString) => {
-  if (!dateString) return '-'  
+  if (!dateString) return '-'
   return new Date(dateString).toLocaleDateString('zh-CN')
 }
 

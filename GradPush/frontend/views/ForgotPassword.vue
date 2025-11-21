@@ -21,12 +21,12 @@
               <font-awesome-icon :icon="['fas', 'user']" class="input-icon" />
               <input type="text" v-model="resetForm.username" placeholder="请输入学号/工号" required>
             </div>
-            
+
             <div class="input-group">
               <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
               <input type="password" v-model="resetForm.newPassword" placeholder="请设置新密码" required minlength="6">
             </div>
-            
+
             <div class="input-group">
               <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
               <input type="password" v-model="resetForm.confirmPassword" placeholder="请确认新密码" required minlength="6">
@@ -87,7 +87,7 @@ const handleResetPassword = async () => {
     alert('请确认新密码')
     return
   }
-  
+
   // 密码一致性和长度验证
   if (resetForm.newPassword !== resetForm.confirmPassword) {
     alert('两次输入的密码不一致')
@@ -97,13 +97,13 @@ const handleResetPassword = async () => {
     alert('密码长度不能少于6位')
     return
   }
-  
+
   loading.value = true
 
   try {
     // 调用密码重置函数
     const message = await authStore.resetPassword(resetForm.username, resetForm.newPassword)
-    
+
     // alert('密码重置成功！请使用新密码登录')
     router.push('/login')
   } catch (error) {

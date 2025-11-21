@@ -68,7 +68,8 @@
                   <div v-else-if="isPDF(currentPreviewFile)" class="pdf-preview-container" :style="{
                     transform: `translate(${previewDragOffset.x}px, ${previewDragOffset.y}px) scale(${previewZoomLevel})`,
                   }">
-                    <iframe :src="getFileUrl(currentPreviewFile)" class="pdf-preview" type="application/pdf" title="PDF Preview"></iframe>
+                    <iframe :src="getFileUrl(currentPreviewFile)" class="pdf-preview" type="application/pdf"
+                      title="PDF Preview"></iframe>
                   </div>
                 </div>
               </div>
@@ -99,7 +100,7 @@
 
         <!-- 右侧：申请信息和文件列表/审核操作 -->
         <div class="right-column">
-          
+
           <!-- 学生基本信息 -->
           <div class="card compact-card">
             <div class="card-title">学生信息</div>
@@ -131,17 +132,17 @@
                 <label>申请类型</label>
                 <span>{{ application.applicationType || '未知类型' }}</span>
               </div>
-              
+
               <div class="compact-group">
                 <label>项目全称</label>
                 <span>{{ application.projectName || '未知项目' }}</span>
               </div>
-              
+
               <div class="compact-group">
                 <label>申请时间</label>
                 <span>{{ formatDate(application.appliedAt || application.createdAt) }}</span>
               </div>
-              
+
               <div class="compact-group">
                 <label>审核时间</label>
                 <span>{{ formatDate(application.reviewedAt) || '-' }}</span>
@@ -152,7 +153,8 @@
               </div>
               <div class="compact-group">
                 <label>申请状态</label>
-                <span class="status-badge" :class="`status-${application.status}`">{{ getStatusText(application.status) }}</span>
+                <span class="status-badge" :class="`status-${application.status}`">{{ getStatusText(application.status)
+                  }}</span>
               </div>
               <div class="compact-group">
                 <label>自评分数</label>
@@ -160,9 +162,10 @@
               </div>
               <div v-if="isReviewMode || application.status !== 'pending'" class="compact-group">
                 <label>最终分数</label>
-                <span>{{ application.status === 'pending' ? '-' : (application.status === 'rejected' ? 0 : application.finalScore || 0) }}</span>
+                <span>{{ application.status === 'pending' ? '-' : (application.status === 'rejected' ? 0 :
+                  application.finalScore || 0) }}</span>
               </div>
-              
+
             </div>
             <div class="compact-group full-width">
               <label>加分依据</label>
@@ -175,7 +178,7 @@
           </div>
 
 
-          
+
           <!-- 审核规则信息 -->
           <div class="card compact-card" v-if="application.rule">
             <div class="card-title">审核规则</div>
@@ -201,7 +204,8 @@
             <div class="form-group">
               <label>最终分数</label>
               <div class="score-input-container">
-                <input type="number" v-model.number="reviewData.finalScore" min="0" max="100" step="0.5" class="form-control small-input" />
+                <input type="number" v-model.number="reviewData.finalScore" min="0" max="100" step="0.5"
+                  class="form-control small-input" />
                 <span class="score-hint">规则分数（预计分数）: {{ application.rule?.score || 0 }}</span>
                 <span v-if="isScoreMismatch" class="score-mismatch-warning">
                   最终分数与规则分数不一致，请确认
@@ -211,11 +215,13 @@
             <div class="form-row">
               <div class="form-group">
                 <label>通过意见</label>
-                <textarea class="form-control small-textarea" v-model="reviewData.approveComment" rows="2" placeholder="通过说明（可选）"></textarea>
+                <textarea class="form-control small-textarea" v-model="reviewData.approveComment" rows="2"
+                  placeholder="通过说明（可选）"></textarea>
               </div>
               <div class="form-group">
                 <label>驳回意见 <span class="required">*</span></label>
-                <textarea class="form-control small-textarea" v-model="reviewData.rejectComment" rows="2" placeholder="请输入驳回理由（必填）"></textarea>
+                <textarea class="form-control small-textarea" v-model="reviewData.rejectComment" rows="2"
+                  placeholder="请输入驳回理由（必填）"></textarea>
               </div>
             </div>
             <div class="form-actions-compact">
@@ -239,7 +245,8 @@
                 <font-awesome-icon :icon="getFileIcon(file.name)" class="file-icon" />
                 <span class="file-name">{{ file.name }}</span>
                 <div class="file-actions">
-                  <button v-if="isImage(file) || isPDF(file)" class="btn-icon" @click="switchToImage(file)" :class="{ active: isCurrentImage(file) }" title="预览">
+                  <button v-if="isImage(file) || isPDF(file)" class="btn-icon" @click="switchToImage(file)"
+                    :class="{ active: isCurrentImage(file) }" title="预览">
                     <font-awesome-icon :icon="['fas', 'eye']" />
                   </button>
                   <button class="btn-icon" @click.stop="downloadFile(file)" title="下载">
@@ -359,10 +366,10 @@ const currentPreviewFile = computed(() => {
 const isScoreMismatch = computed(() => {
   const ruleScore = props.application.rule?.score;
   const selfScore = reviewData.finalScore;
-  
+
   // 确保两个分数都有值且可转换为数字
   if (ruleScore !== undefined && ruleScore !== null && ruleScore !== '' &&
-      selfScore !== undefined && selfScore !== null && selfScore !== '') {
+    selfScore !== undefined && selfScore !== null && selfScore !== '') {
     // 转换为浮点数进行比较
     return parseFloat(ruleScore) !== parseFloat(selfScore);
   }
@@ -426,9 +433,9 @@ const getFileUrl = (file) => {
   if (file instanceof File) return URL.createObjectURL(file)
   if (file.data) return file.data
   if (file.url) return file.url
-  
+
   let fileUrl = null
-  
+
   if (file.path) {
     // 检查path是否已经是完整URL
     if (file.path.startsWith('http://') || file.path.startsWith('https://')) {
@@ -444,7 +451,7 @@ const getFileUrl = (file) => {
     // 作为最后的回退，使用文件名构建URL
     fileUrl = `http://localhost:5001/uploads/files/${file.name}`
   }
-  
+
   return fileUrl || ''
 }
 
@@ -552,10 +559,10 @@ const downloadFile = async (file) => {
       URL.revokeObjectURL(url)
       return
     }
-    
+
     // 从后端获取的文件对象，构建正确的下载URL
     let downloadUrl = null
-    
+
     // 构建完整的下载URL
     if (file.id) {
       downloadUrl = `http://localhost:5001/uploads/files/${file.id}`
@@ -568,31 +575,31 @@ const downloadFile = async (file) => {
     } else if (file.name) {
       downloadUrl = `http://localhost:5001/uploads/files/${file.name}`
     }
-    
+
     if (!downloadUrl) {
       alert(`无法下载文件: ${file.name}`)
       return
     }
-    
+
     // 使用fetch API获取文件内容
     const response = await fetch(downloadUrl)
     if (!response.ok) {
       throw new Error(`下载失败: ${response.status} ${response.statusText}`)
     }
-    
+
     // 获取文件内容
     const blob = await response.blob()
-    
+
     // 创建下载链接
     const blobUrl = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = blobUrl
     a.download = file.name || 'downloaded_file'
     document.body.appendChild(a)
-    
+
     // 触发下载
     a.click()
-    
+
     // 清理资源
     setTimeout(() => {
       document.body.removeChild(a)
@@ -1034,7 +1041,8 @@ const rejectApplication = () => {
 
 .file-list {
   margin-top: 12px;
-  overflow: visible !important; /* 覆盖shared-styles.css中的overflow: hidden设置 */
+  overflow: visible !important;
+  /* 覆盖shared-styles.css中的overflow: hidden设置 */
   border: none !important;
 }
 

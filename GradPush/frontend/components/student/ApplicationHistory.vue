@@ -3,85 +3,81 @@
     <div class="page-title">
       <span>申请记录</span>
       <div class="page-title-actions">
-        <button class="btn btn-outline refresh-btn" @click="refreshData" :disabled="loading" :class="{ 'refreshing': loading }">
+        <button class="btn btn-outline refresh-btn" @click="refreshData" :disabled="loading"
+          :class="{ 'refreshing': loading }">
           <font-awesome-icon :icon="['fas', 'sync']" :spin="loading" />
           {{ loading ? '加载中...' : '刷新数据' }}
         </button>
       </div>
     </div>
-    
+
     <!-- 高级筛选区域 -->
     <div class="filters">
-        
-        <div class="filter-group">
-          <span class="filter-label">申请类型：</span>
-          <select v-model="filters.type" class="form-control">
-            <option value="all">全部类型</option>
-            <option value="academic">学术专长</option>
-            <option value="comprehensive">综合表现</option>
-          </select>
-        </div>
-        
-        <div class="filter-group" style="flex: 1; min-width: 200px;">
-          <span class="filter-label">项目名称：</span>
-          <input 
-            type="text" 
-            v-model="filters.searchQuery" 
-            class="form-control" 
-            style="width: 100%;"
-            placeholder="输入项目名称关键词"
-          />
-        </div>
 
-        <div class="filter-group">
-          <span class="filter-label">规则：</span>
-          <select v-model="filters.rule" class="form-control">
-            <option value="all">全部规则</option>
-            <option v-for="rule in availableRules" :key="rule.id" :value="rule.id">
-              {{ rule.name }}
-            </option>
-          </select>
-        </div>
-        
-        
-        <div class="filter-group">
-          <span class="filter-label">时间范围：</span>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <input type="date" v-model="filters.dateRange.start" class="form-control" style="width: 140px;" />
-            <span>至</span>
-            <input type="date" v-model="filters.dateRange.end" class="form-control" style="width: 140px;" />
-          </div>
-        </div>
+      <div class="filter-group">
+        <span class="filter-label">申请类型：</span>
+        <select v-model="filters.type" class="form-control">
+          <option value="all">全部类型</option>
+          <option value="academic">学术专长</option>
+          <option value="comprehensive">综合表现</option>
+        </select>
+      </div>
 
-        <div class="filter-group">
-          <span class="filter-label">状态筛选：</span>
-          <select v-model="filters.status" class="form-control">
-            <option value="all">全部状态</option>
-            <option value="draft">草稿</option>
-            <option value="pending">待审核</option>
-            <option value="approved">已通过</option>
-            <option value="rejected">已拒绝</option>
-          </select>
-        </div>
+      <div class="filter-group" style="flex: 1; min-width: 200px;">
+        <span class="filter-label">项目名称：</span>
+        <input type="text" v-model="filters.searchQuery" class="form-control" style="width: 100%;"
+          placeholder="输入项目名称关键词" />
+      </div>
 
-        <div class="filter-group">
-          <button class="btn btn-outline" @click="clearFilters">清空筛选</button>
+      <div class="filter-group">
+        <span class="filter-label">规则：</span>
+        <select v-model="filters.rule" class="form-control">
+          <option value="all">全部规则</option>
+          <option v-for="rule in availableRules" :key="rule.id" :value="rule.id">
+            {{ rule.name }}
+          </option>
+        </select>
+      </div>
+
+
+      <div class="filter-group">
+        <span class="filter-label">时间范围：</span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="date" v-model="filters.dateRange.start" class="form-control" style="width: 140px;" />
+          <span>至</span>
+          <input type="date" v-model="filters.dateRange.end" class="form-control" style="width: 140px;" />
         </div>
       </div>
-    
+
+      <div class="filter-group">
+        <span class="filter-label">状态筛选：</span>
+        <select v-model="filters.status" class="form-control">
+          <option value="all">全部状态</option>
+          <option value="draft">草稿</option>
+          <option value="pending">待审核</option>
+          <option value="approved">已通过</option>
+          <option value="rejected">已拒绝</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <button class="btn btn-outline" @click="clearFilters">清空筛选</button>
+      </div>
+    </div>
+
     <!-- 申请列表 -->
     <div class="card">
       <div v-if="loading" class="no-data">
         <font-awesome-icon :icon="['fas', 'spinner']" :spin="true" style="margin-right: 8px;" />
         正在加载申请记录...
       </div>
-      
+
       <div v-else-if="paginatedApplications.length === 0" class="no-data">
         <div style="font-size: 48px; margin-bottom: 16px;">📝</div>
         <div style="font-size: 16px; color: #333;">暂无申请记录</div>
         <div style="font-size: 14px; color: #999; margin-top: 8px;">尝试调整筛选条件或创建新申请</div>
       </div>
-      
+
       <div v-else class="table-container" :class="{ 'content-loaded': !loading }">
         <table class="application-table">
           <thead>
@@ -113,7 +109,8 @@
           <tbody>
             <tr v-for="application in paginatedApplications" :key="application.id">
               <td>{{ getApplicationTypeText(application.applicationType || application.type) }}</td>
-              <td style="white-space: normal; max-width: 200px; word-break: break-word;">{{ application.eventName || application.projectName || '未命名' }}</td>
+              <td style="white-space: normal; max-width: 200px; word-break: break-word;">{{ application.eventName ||
+                application.projectName || '未命名' }}</td>
               <td>{{ getRuleName(application.ruleId) }}</td>
               <td>{{ formatDate(application.appliedAt || application.createdAt) }}</td>
               <td>{{ application.selfScore || '-' }}</td>
@@ -125,27 +122,16 @@
               </td>
               <td>
                 <div class="action-buttons">
-                  <button 
-                    class="btn btn-outline small-btn btn-view" 
-                    @click="viewApplicationDetails(application)"
-                    title="查看详情"
-                  >
+                  <button class="btn btn-outline small-btn btn-view" @click="viewApplicationDetails(application)"
+                    title="查看详情">
                     <font-awesome-icon :icon="['fas', 'eye']" />
                   </button>
-                  <button 
-                    v-if="application.status === 'draft'" 
-                    class="btn btn-outline small-btn btn-edit" 
-                    @click="editApplication(application)"
-                    title="编辑草稿"
-                  >
+                  <button v-if="application.status === 'draft'" class="btn btn-outline small-btn btn-edit"
+                    @click="editApplication(application)" title="编辑草稿">
                     <font-awesome-icon :icon="['fas', 'edit']" />
                   </button>
-                  <button 
-                    v-if="application.status === 'draft' || application.status === 'pending'" 
-                    class="btn btn-outline small-btn btn-delete" 
-                    @click="deleteApplication(application)"
-                    title="删除申请"
-                  >
+                  <button v-if="application.status === 'draft' || application.status === 'pending'"
+                    class="btn btn-outline small-btn btn-delete" @click="deleteApplication(application)" title="删除申请">
                     <font-awesome-icon :icon="['fas', 'trash']" />
                   </button>
                 </div>
@@ -155,7 +141,7 @@
         </table>
       </div>
     </div>
-    
+
     <!-- 分页控件 -->
     <div class="pagination">
       <div>显示 {{ startItemIndex }}-{{ endItemIndex }} 条，共 {{ totalItems }} 条记录</div>
@@ -168,14 +154,11 @@
         </button>
       </div>
     </div>
-    
+
     <!-- 详情模态框 -->
     <Teleport to="body">
-      <ApplicationDetailModal 
-        v-if="selectedApplication" 
-        :application="selectedApplication" 
-        @close="selectedApplication = null"
-      />
+      <ApplicationDetailModal v-if="selectedApplication" :application="selectedApplication"
+        @close="selectedApplication = null" />
     </Teleport>
   </div>
 </template>
@@ -189,7 +172,6 @@ import api from '../../utils/api'
 
 // 定义事件，用于通知父组件切换页面和编辑申请
 const emit = defineEmits(['switch-page', 'edit-application'])
-// FontAwesome图标已在main.js中全局注册，此处无需重复导入
 
 const authStore = useAuthStore()
 const applicationsStore = useApplicationsStore()
@@ -235,121 +217,121 @@ const filteredApplications = computed(() => {
   let applications = applicationsStore.applications.filter(
     app => app.studentId === authStore.user?.studentId || app.name === authStore.userName
   )
-  
+
   // 筛选状态
   if (filters.value.status !== 'all') {
     applications = applications.filter(app => app.status === filters.value.status)
   }
-  
+
   // 筛选类型
   if (filters.value.type !== 'all') {
-    applications = applications.filter(app => 
+    applications = applications.filter(app =>
       app.applicationType === filters.value.type || app.type === filters.value.type
     )
   }
-  
+
   // 筛选规则
-    if (filters.value.rule !== 'all') {
-      applications = applications.filter(app => app.ruleId === filters.value.rule)
-    }
-  
+  if (filters.value.rule !== 'all') {
+    applications = applications.filter(app => app.ruleId === filters.value.rule)
+  }
+
   // 搜索项目名称
   if (filters.value.searchQuery.trim()) {
     const query = filters.value.searchQuery.toLowerCase().trim()
-    applications = applications.filter(app => 
+    applications = applications.filter(app =>
       (app.projectName && app.projectName.toLowerCase().includes(query)) ||
       (app.eventName && app.eventName.toLowerCase().includes(query))
     )
   }
-  
+
   // 筛选日期范围
   if (filters.value.dateRange.start) {
     const startDate = new Date(filters.value.dateRange.start)
     startDate.setHours(0, 0, 0, 0)
     applications = applications.filter(app => {
-        const appDate = app.appliedAt || app.createdAt
-        if (!appDate) return false
-        
-        // 处理时区问题
-        const date = new Date(appDate)
-        const hasTimezone = /(Z|[+-]\d{2}:\d{2})$/.test(appDate)
-        if (!hasTimezone) {
-          // 如果日期字符串没有包含时区信息，假设它是UTC时间
-          date.setTime(date.getTime() + date.getTimezoneOffset() * 60 * 1000)
-        }
-        
-        return date >= startDate
-      })
+      const appDate = app.appliedAt || app.createdAt
+      if (!appDate) return false
+
+      // 处理时区问题
+      const date = new Date(appDate)
+      const hasTimezone = /(Z|[+-]\d{2}:\d{2})$/.test(appDate)
+      if (!hasTimezone) {
+        // 如果日期字符串没有包含时区信息，假设它是UTC时间
+        date.setTime(date.getTime() + date.getTimezoneOffset() * 60 * 1000)
+      }
+
+      return date >= startDate
+    })
   }
-  
+
   if (filters.value.dateRange.end) {
     const endDate = new Date(filters.value.dateRange.end)
     endDate.setHours(23, 59, 59, 999)
     applications = applications.filter(app => {
-        const appDate = app.appliedAt || app.createdAt
-        if (!appDate) return false
-        
-        // 处理时区问题
-        const date = new Date(appDate)
-        const hasTimezone = /(Z|[+-]\d{2}:\d{2})$/.test(appDate)
-        if (!hasTimezone) {
-          // 如果日期字符串没有包含时区信息，假设它是UTC时间
-          date.setTime(date.getTime() + date.getTimezoneOffset() * 60 * 1000)
-        }
-        
-        return date <= endDate
-      })
+      const appDate = app.appliedAt || app.createdAt
+      if (!appDate) return false
+
+      // 处理时区问题
+      const date = new Date(appDate)
+      const hasTimezone = /(Z|[+-]\d{2}:\d{2})$/.test(appDate)
+      if (!hasTimezone) {
+        // 如果日期字符串没有包含时区信息，假设它是UTC时间
+        date.setTime(date.getTime() + date.getTimezoneOffset() * 60 * 1000)
+      }
+
+      return date <= endDate
+    })
   }
-  
+
   // 排序
   applications.sort((a, b) => {
     let aVal = a[sortField.value]
     let bVal = b[sortField.value]
-    
+
     // 处理日期类型
     if (sortField.value === 'appliedAt' || sortField.value === 'createdAt') {
-        if (aVal) {
-          const aDate = new Date(aVal)
-          const hasTimezoneA = /(Z|[+-]\d{2}:\d{2})$/.test(aVal)
-          if (!hasTimezoneA) {
-            // 如果日期字符串没有包含时区信息，假设它是UTC时间
-            aDate.setTime(aDate.getTime() + aDate.getTimezoneOffset() * 60 * 1000)
-          }
-          aVal = aDate.getTime()
-        } else {
-          aVal = 0
+      if (aVal) {
+        const aDate = new Date(aVal)
+        const hasTimezoneA = /(Z|[+-]\d{2}:\d{2})$/.test(aVal)
+        if (!hasTimezoneA) {
+          // 如果日期字符串没有包含时区信息，假设它是UTC时间
+          aDate.setTime(aDate.getTime() + aDate.getTimezoneOffset() * 60 * 1000)
         }
-        
-        if (bVal) {
-          const bDate = new Date(bVal)
-          const hasTimezoneB = /(Z|[+-]\d{2}:\d{2})$/.test(bVal)
-          if (!hasTimezoneB) {
-            // 如果日期字符串没有包含时区信息，假设它是UTC时间
-            bDate.setTime(bDate.getTime() + bDate.getTimezoneOffset() * 60 * 1000)
-          }
-          bVal = bDate.getTime()
-        } else {
-          bVal = 0
-        }
+        aVal = aDate.getTime()
+      } else {
+        aVal = 0
       }
-    
+
+      if (bVal) {
+        const bDate = new Date(bVal)
+        const hasTimezoneB = /(Z|[+-]\d{2}:\d{2})$/.test(bVal)
+        if (!hasTimezoneB) {
+          // 如果日期字符串没有包含时区信息，假设它是UTC时间
+          bDate.setTime(bDate.getTime() + bDate.getTimezoneOffset() * 60 * 1000)
+        }
+        bVal = bDate.getTime()
+      } else {
+        bVal = 0
+      }
+    }
+
     // 处理数字类型
     if (sortField.value === 'selfScore' || sortField.value === 'finalScore') {
       aVal = parseFloat(aVal) || 0
       bVal = parseFloat(bVal) || 0
     }
-    
+
     // 处理字符串类型
     if (typeof aVal === 'string' && typeof bVal === 'string') {
       aVal = aVal.toLowerCase()
       bVal = bVal.toLowerCase()
     }
-    
+
     if (aVal < bVal) return sortOrder.value === 'asc' ? -1 : 1
     if (aVal > bVal) return sortOrder.value === 'asc' ? 1 : -1
     return 0
   })
-  
+
   return applications
 })
 
@@ -384,20 +366,20 @@ const visiblePages = computed(() => {
   const pages = []
   const total = totalPages.value
   const current = currentPage.value
-  
+
   // 简单的分页逻辑，显示当前页及前后各2页
   let startPage = Math.max(1, current - 2)
   let endPage = Math.min(total, startPage + 4)
-  
+
   // 调整起始页，确保显示5个页码
   if (endPage - startPage < 4) {
     startPage = Math.max(1, endPage - 4)
   }
-  
+
   for (let i = startPage; i <= endPage; i++) {
     pages.push(i)
   }
-  
+
   return pages
 })
 
@@ -421,11 +403,11 @@ const getSortIcon = (field) => {
 
 // 格式化日期
 const formatDate = (dateString) => {
-  if (!dateString) return '-'  
-  
+  if (!dateString) return '-'
+
   // 直接使用本地时间显示，因为后端返回的已经是上海时间
   const date = new Date(dateString)
-  
+
   return date.toLocaleDateString('zh-CN', {
     year: 'numeric',
     month: '2-digit',
@@ -599,9 +581,11 @@ onActivated(async () => {
   0% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.6;
   }
+
   100% {
     opacity: 1;
   }

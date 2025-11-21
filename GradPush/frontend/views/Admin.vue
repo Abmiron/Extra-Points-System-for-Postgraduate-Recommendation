@@ -1,6 +1,7 @@
 <template>
   <div class="container">
-    <Header :user-name="authStore.userName" :user-avatar="authStore.userAvatar" title="推免加分系统-管理端" @go-to-profile="goToProfile" />
+    <Header :user-name="authStore.userName" :user-avatar="authStore.userAvatar" title="推免加分系统-管理端"
+      @go-to-profile="goToProfile" />
 
     <div class="content-wrapper">
       <Sidebar :active-page="currentPage" @page-change="switchPage" :user-info="userInfo" user-type="admin" />
