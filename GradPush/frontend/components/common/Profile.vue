@@ -109,9 +109,11 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useAuthStore } from '../../stores/auth'
+import { useToastStore } from '../../stores/toast'
 import api from '../../utils/api'
 
 const authStore = useAuthStore()
+const toastStore = useToastStore()
 
 const isEditing = ref(false)
 const saving = ref(false)
@@ -248,7 +250,7 @@ const handleAvatarChange = async (event) => {
 
   // 检查文件大小（限制为2MB）
   if (file.size > 2 * 1024 * 1024) {
-    alert('头像文件大小不能超过2MB')
+    toastStore.error('头像文件大小不能超过2MB')
     return
   }
 
@@ -263,10 +265,10 @@ const handleAvatarChange = async (event) => {
     // 更新本地profile中的头像
     profile.avatar = response.user.avatar
 
-    // alert('头像上传成功')
+    toastStore.success('头像上传成功')
   } catch (error) {
     console.error('头像上传失败:', error)
-    alert(`头像上传失败: ${error.message || '请稍后重试'}`)
+    toastStore.error(`头像上传失败: ${error.message || '请稍后重试'}`)
   } finally {
     uploadingAvatar.value = false
     // 清空文件输入
@@ -293,10 +295,10 @@ const resetAvatar = async () => {
     // 更新本地profile中的头像
     profile.avatar = response.user.avatar
 
-    //alert('已恢复默认头像')
+    toastStore.success('已恢复默认头像')
   } catch (error) {
     console.error('恢复默认头像失败:', error)
-    alert(`恢复默认头像失败: ${error.message || '请稍后重试'}`)
+    toastStore.error(`恢复默认头像失败: ${error.message || '请稍后重试'}`)
   } finally {
     uploadingAvatar.value = false
   }
@@ -328,11 +330,11 @@ const saveProfile = async () => {
       await authStore.getCurrentUser()
     }
 
-    //alert('个人信息已更新')
+    toastStore.success('个人信息已更新')
     isEditing.value = false
   } catch (error) {
     console.error('保存失败:', error)
-    alert(`保存失败: ${error.message || '请稍后重试'}`)
+    toastStore.error(`保存失败: ${error.message || '请稍后重试'}`)
   } finally {
     saving.value = false
   }
@@ -340,12 +342,12 @@ const saveProfile = async () => {
 
 const changePassword = async () => {
   if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-    alert('两次输入的密码不一致')
+    toastStore.error('两次输入的密码不一致')
     return
   }
 
   if (passwordForm.newPassword.length < 6) {
-    alert('密码长度至少6位')
+    toastStore.error('密码长度至少6位')
     return
   }
 
@@ -360,7 +362,7 @@ const changePassword = async () => {
     // 调用API修改密码
     await api.changePassword(passwordData)
 
-    // alert('密码修改成功')
+    toastStore.success('密码修改成功')
 
     closePasswordModal()
 
@@ -372,7 +374,7 @@ const changePassword = async () => {
     })
   } catch (error) {
     console.error('密码修改失败:', error)
-    alert(`密码修改失败: ${error.message || '请稍后重试'}`)
+    toastStore.error(`密码修改失败: ${error.message || '请稍后重试'}`)
   }
 }
 

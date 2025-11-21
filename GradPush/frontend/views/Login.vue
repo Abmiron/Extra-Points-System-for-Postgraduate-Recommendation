@@ -59,9 +59,11 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useToastStore } from '../stores/toast'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const toastStore = useToastStore()
 
 const loading = ref(false)
 
@@ -87,7 +89,7 @@ const handleLogin = async () => {
     router.push(routeMap[authStore.role])
   } catch (error) {
     console.error('登录错误:', error)
-    alert(error.message || '登录失败，请稍后重试')
+    toastStore.error(error.message || '登录失败，请稍后重试')
   } finally {
     loading.value = false
   }

@@ -134,11 +134,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useApplicationsStore } from '../../stores/applications'
+import { useToastStore } from '../../stores/toast'
 import ApplicationDetailModal from '../common/ApplicationDetailModal.vue'
 import api from '../../utils/api'
 
 const authStore = useAuthStore()
 const applicationsStore = useApplicationsStore()
+const toastStore = useToastStore()
 
 // 筛选条件
 const filters = ref({
@@ -326,10 +328,10 @@ const handleApprove = async (approveData) => {
     // 重新加载数据
     await applicationsStore.fetchApplications()
     closeReviewModal()
-    //alert('申请已通过审核')
+    toastStore.success('申请已通过审核')
   } catch (error) {
     console.error('批准申请失败:', error)
-    alert('批准申请失败，请稍后重试')
+    toastStore.error('批准申请失败，请稍后重试')
   }
 }
 
@@ -346,10 +348,10 @@ const handleReject = async (rejectData) => {
     // 重新加载数据
     await applicationsStore.fetchApplications()
     closeReviewModal()
-    //alert('申请已驳回')
+    toastStore.success('申请已驳回')
   } catch (error) {
     console.error('拒绝申请失败:', error)
-    alert('拒绝申请失败，请稍后重试')
+    toastStore.error('拒绝申请失败，请稍后重试')
   }
 }
 
@@ -392,7 +394,7 @@ onMounted(async () => {
     ])
   } catch (error) {
     console.error('数据加载失败:', error)
-    alert('数据加载失败，请稍后重试')
+    toastStore.error('数据加载失败，请稍后重试')
   }
 })
 

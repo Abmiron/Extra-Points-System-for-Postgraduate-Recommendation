@@ -329,6 +329,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '../../stores/auth'
+import { useToastStore } from '../../stores/toast'
 import api from '../../utils/api'
 
 const activeTab = ref('student')
@@ -340,6 +341,7 @@ const currentPage = ref(1)
 const pageSize = 10
 const isLoading = ref(false)
 const authStore = useAuthStore()
+const toastStore = useToastStore()
 
 const filters = reactive({
   keyword: '',
@@ -399,7 +401,7 @@ const loadFaculties = async () => {
     faculties.value = response.faculties
   } catch (error) {
     console.error('加载学院列表失败:', error)
-    alert('加载学院列表失败，请刷新页面重试')
+    toastStore.error('加载学院列表失败，请刷新页面重试')
   } finally {
     loadingOptions.value = false
   }
@@ -438,7 +440,7 @@ const loadDepartments = async (facultyId = null) => {
     }
   } catch (error) {
     console.error('加载系列表失败:', error)
-    alert('加载系列表失败，请重试')
+    toastStore.error('加载系列表失败，请重试')
   } finally {
     loadingOptions.value = false
   }
@@ -478,7 +480,7 @@ const loadMajors = async (departmentId = null) => {
     }
   } catch (error) {
     console.error('加载专业列表失败:', error)
-    alert('加载专业列表失败，请重试')
+    toastStore.error('加载专业列表失败，请重试')
   } finally {
     loadingOptions.value = false
   }
@@ -568,7 +570,7 @@ const loadUsersFromAPI = async () => {
     totalPages.value = data.pages
   } catch (error) {
     console.error('加载用户数据失败:', error)
-    alert('加载用户数据失败，请稍后重试')
+    toastStore.error('加载用户数据失败，请稍后重试')
   } finally {
     isLoading.value = false
   }
@@ -630,7 +632,7 @@ const toggleSelectAll = () => {
 }
 
 const importUsers = () => {
-  //alert('用户导入功能开发中...')
+  toastStore.info('用户导入功能开发中...')
 }
 
 const editUser = async (user) => {
@@ -714,12 +716,12 @@ const saveUser = async () => {
       throw new Error(errorData.message || '操作失败')
     }
 
-    //alert(editingUser.value ? '用户信息更新成功' : '用户添加成功')
+    toastStore.success(editingUser.value ? '用户信息更新成功' : '用户添加成功')
     closeModal()
     loadUsersFromAPI() // 重新加载用户列表
   } catch (error) {
     console.error('保存用户失败:', error)
-    alert(error.message || '保存失败，请稍后重试')
+    toastStore.error(error.message || '保存失败，请稍后重试')
   } finally {
     isLoading.value = false
   }
@@ -742,11 +744,11 @@ const toggleUserStatus = async (userId, status) => {
       throw new Error(errorData.message || '操作失败')
     }
 
-    //alert(`用户已${status === 'active' ? '启用' : '禁用'}`)
+    toastStore.success(`用户已${status === 'active' ? '启用' : '禁用'}`)
     loadUsersFromAPI() // 重新加载用户列表
   } catch (error) {
     console.error('更新用户状态失败:', error)
-    alert(error.message || '操作失败，请稍后重试')
+    toastStore.error(error.message || '操作失败，请稍后重试')
   } finally {
     isLoading.value = false
   }
@@ -771,10 +773,10 @@ const resetPassword = async (userId) => {
         throw new Error(errorData.message || '操作失败')
       }
 
-      //alert('密码重置成功')
+      toastStore.success('密码重置成功')
     } catch (error) {
       console.error('重置密码失败:', error)
-      alert(error.message || '重置密码失败，请稍后重试')
+      toastStore.error(error.message || '重置密码失败，请稍后重试')
     } finally {
       isLoading.value = false
     }
@@ -794,11 +796,11 @@ const deleteUser = async (userId) => {
         throw new Error('删除用户失败')
       }
 
-      //alert('用户已删除')
+      toastStore.success('用户已删除')
       loadUsersFromAPI() // 重新加载用户列表
     } catch (error) {
       console.error('删除用户失败:', error)
-      alert('操作失败，请稍后重试')
+      toastStore.error('操作失败，请稍后重试')
     } finally {
       isLoading.value = false
     }
@@ -832,11 +834,11 @@ const batchDisable = async () => {
 
       selectedUsers.value = []
       selectAll.value = false
-      //alert('选中用户已禁用')
+      toastStore.success('选中用户已禁用')
       loadUsersFromAPI() // 重新加载用户列表
     } catch (error) {
       console.error('批量禁用失败:', error)
-      alert('操作失败，请稍后重试')
+      toastStore.error('操作失败，请稍后重试')
     } finally {
       isLoading.value = false
     }
@@ -870,11 +872,11 @@ const batchEnable = async () => {
 
       selectedUsers.value = []
       selectAll.value = false
-      //alert('选中用户已启用')
+      toastStore.success('选中用户已启用')
       loadUsersFromAPI() // 重新加载用户列表
     } catch (error) {
       console.error('批量启用失败:', error)
-      alert('操作失败，请稍后重试')
+      toastStore.error('操作失败，请稍后重试')
     } finally {
       isLoading.value = false
     }
@@ -909,10 +911,10 @@ const batchResetPassword = async () => {
 
       selectedUsers.value = []
       selectAll.value = false
-      //alert('选中用户的密码已重置')
+      toastStore.success('选中用户的密码已重置')
     } catch (error) {
       console.error('批量重置密码失败:', error)
-      alert('操作失败，请稍后重试')
+      toastStore.error('操作失败，请稍后重试')
     } finally {
       isLoading.value = false
     }
@@ -942,11 +944,11 @@ const batchDelete = async () => {
 
       selectedUsers.value = []
       selectAll.value = false
-      //alert('选中用户已删除')
+      toastStore.success('选中用户已删除')
       loadUsersFromAPI() // 重新加载用户列表
     } catch (error) {
       console.error('批量删除失败:', error)
-      alert('操作失败，请稍后重试')
+      toastStore.error('操作失败，请稍后重试')
     } finally {
       isLoading.value = false
     }

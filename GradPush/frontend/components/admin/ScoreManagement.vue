@@ -255,10 +255,16 @@
 <script>
 import api from '../../utils/api'
 import { useApplicationsStore } from '../../stores/applications'
+import { useToastStore } from '../../stores/toast'
 
 export default {
   name: 'ScoreManagement',
   components: {
+  },
+  setup() {
+    return {
+      toastStore: useToastStore()
+    }
   },
   data() {
     return {
@@ -391,7 +397,7 @@ export default {
         this.currentPage = 1
         this.pageSize = 10
       } catch (error) {
-        alert('加载成绩数据失败')
+        this.toastStore.error('加载成绩数据失败')
         console.error('Error loading scores:', error)
       } finally {
         this.loading = false
@@ -520,9 +526,9 @@ export default {
           // 关闭模态框并刷新数据
           this.dialogVisible = false
           this.loadScoresFromAPI()
-          // alert('成绩信息更新成功')
+          this.toastStore.success('成绩信息更新成功')
         } catch (error) {
-          alert('更新成绩信息失败')
+          this.toastStore.error('更新成绩信息失败')
           console.error('Error submitting student form:', error)
         }
       }
@@ -544,11 +550,11 @@ export default {
           // 刷新成绩数据
           await this.loadScoresFromAPI()
 
-          //alert('综合成绩重新计算完成')
+          this.toastStore.success('综合成绩重新计算完成')
         }
       } catch (error) {
-        console.error('Error recalculating comprehensive scores:', error)
-        alert('重新计算综合成绩失败')
+          console.error('Error recalculating comprehensive scores:', error)
+          this.toastStore.error('重新计算综合成绩失败')
       } finally {
         this.loading = false
       }

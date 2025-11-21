@@ -447,10 +447,13 @@
 <script>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import api from '../../utils/api'
+import { useToastStore } from '../../stores/toast'
 
 export default {
   name: 'FacultyManagement',
   setup() {
+    // 实例化toastStore
+    const toastStore = useToastStore()
     // 标签页数据
     const tabs = [
       { value: 'faculties', label: '学院' },
@@ -496,10 +499,10 @@ export default {
       try {
         const response = await api.getFacultiesAdmin()
         faculties.value = response.faculties  // 后端返回 {'faculties': [...]} 格式
-        updateFilters() // 数据加载完成后更新筛选
-      } catch (error) {
-        console.error('加载学院数据失败:', error)
-        alert('加载学院数据失败')
+          updateFilters() // 数据加载完成后更新筛选
+        } catch (error) {
+          console.error('加载学院数据失败:', error)
+          toastStore.error('加载学院数据失败')
       } finally {
         loading.value = false
       }
@@ -513,7 +516,7 @@ export default {
         updateFilters() // 数据加载完成后更新筛选
       } catch (error) {
         console.error('加载系数据失败:', error)
-        alert('加载系数据失败')
+        toastStore.error('加载系数据失败')
       } finally {
         loading.value = false
       }
@@ -527,7 +530,7 @@ export default {
         updateFilters() // 数据加载完成后更新筛选
       } catch (error) {
         console.error('加载专业数据失败:', error)
-        alert('加载专业数据失败')
+        toastStore.error('加载专业数据失败')
       } finally {
         loading.value = false
       }
@@ -606,10 +609,10 @@ export default {
         showAddFacultyModal.value = false
         newFaculty.value = { name: '', description: '' }
         loadFaculties()
-        // alert('学院添加成功')
+        toastStore.success('学院添加成功')
       } catch (error) {
         console.error('添加学院失败:', error)
-        alert('添加学院失败')
+        toastStore.error('添加学院失败')
       }
     }
 
@@ -623,10 +626,10 @@ export default {
         await api.updateFacultyAdmin(editingFaculty.value.id, editingFaculty.value)
         showEditFacultyModal.value = false
         loadFaculties()
-        // alert('学院更新成功')
+        toastStore.success('学院更新成功')
       } catch (error) {
         console.error('更新学院失败:', error)
-        alert('更新学院失败')
+        toastStore.error('更新学院失败')
       }
     }
 
@@ -637,10 +640,10 @@ export default {
           loadFaculties()
           loadDepartments()
           loadMajors()
-          // alert('学院删除成功')
+          toastStore.success('学院删除成功')
         } catch (error) {
           console.error('删除学院失败:', error)
-          alert('删除学院失败')
+          toastStore.error('删除学院失败')
         }
       }
     }
@@ -652,10 +655,10 @@ export default {
         showAddDepartmentModal.value = false
         newDepartment.value = { name: '', faculty_id: '', description: '' }
         loadDepartments()
-        // alert('系添加成功')
+        toastStore.success('系添加成功')
       } catch (error) {
         console.error('添加系失败:', error)
-        alert('添加系失败')
+        toastStore.error('添加系失败')
       }
     }
 
@@ -670,10 +673,10 @@ export default {
         showEditDepartmentModal.value = false
         loadDepartments()
         loadMajors()
-        // alert('系更新成功')
+        toastStore.success('系更新成功')
       } catch (error) {
         console.error('更新系失败:', error)
-        alert('更新系失败')
+        toastStore.error('更新系失败')
       }
     }
 
@@ -683,10 +686,10 @@ export default {
           await api.deleteDepartmentAdmin(id)
           loadDepartments()
           loadMajors()
-          // alert('系删除成功')
+          toastStore.success('系删除成功')
         } catch (error) {
           console.error('删除系失败:', error)
-          alert('删除系失败')
+          toastStore.error('删除系失败')
         }
       }
     }
@@ -698,10 +701,10 @@ export default {
         showAddMajorModal.value = false
         newMajor.value = { name: '', faculty_id: '', department_id: '', description: '' }
         loadMajors()
-        // alert('专业添加成功')
+        toastStore.success('专业添加成功')
       } catch (error) {
         console.error('添加专业失败:', error)
-        alert('添加专业失败')
+        toastStore.error('添加专业失败')
       }
     }
 
@@ -745,10 +748,10 @@ export default {
         await api.updateMajorAdmin(editingMajor.value.id, editingMajor.value)
         showEditMajorModal.value = false
         loadMajors()
-        // alert('专业更新成功')
+        toastStore.success('专业更新成功')
       } catch (error) {
         console.error('更新专业失败:', error)
-        alert('更新专业失败')
+        toastStore.error('更新专业失败')
       }
     }
 
@@ -757,10 +760,10 @@ export default {
         try {
           await api.deleteMajorAdmin(id)
           loadMajors()
-          // alert('专业删除成功')
+          toastStore.success('专业删除成功')
         } catch (error) {
           console.error('删除专业失败:', error)
-          alert('删除专业失败')
+          toastStore.error('删除专业失败')
         }
       }
     }
@@ -840,7 +843,8 @@ export default {
       getDepartmentName,
       resetFilters,
       onNewMajorFacultyChange,
-      onEditMajorFacultyChange
+      onEditMajorFacultyChange,
+      toastStore
     }
   }
 }

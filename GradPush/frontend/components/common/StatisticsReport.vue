@@ -228,11 +228,13 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useApplicationsStore } from '../../stores/applications'
+import { useToastStore } from '../../stores/toast'
 import * as XLSX from 'xlsx'
 import api from '../../utils/api'
 
 
 const applicationsStore = useApplicationsStore()
+const toastStore = useToastStore()
 const filters = reactive({
   faculty: '',
   department: '',
@@ -563,7 +565,7 @@ const clearFilters = () => {
 
 const generateReport = () => {
   if (filteredStudents.value.length === 0) {
-    alert('当前没有数据可导出');
+    toastStore.error('当前没有数据可导出');
     return;
   }
 

@@ -179,10 +179,12 @@ import { ref, computed, onMounted } from 'vue'
 import ApplicationDetailModal from '../common/ApplicationDetailModal.vue'
 import { useApplicationsStore } from '../../stores/applications'
 import { useAuthStore } from '../../stores/auth'
+import { useToastStore } from '../../stores/toast'
 import api from '../../utils/api'
 
 const applicationsStore = useApplicationsStore()
 const authStore = useAuthStore()
+const toastStore = useToastStore()
 const selectedApplication = ref(null)
 
 // 编辑弹窗相关
@@ -460,14 +462,14 @@ const handleApproveApplication = async (approveData) => {
     const { applicationId, finalScore, approveComment } = approveData
     const success = await applicationsStore.approveApplication(applicationId, finalScore, approveComment, authStore.userName)
     if (success) {
-      // alert('审核通过成功')
+      toastStore.success('审核通过成功')
       closeEditDialog()
     } else {
-      alert('审核通过失败')
+      toastStore.error('审核通过失败')
     }
   } catch (error) {
     console.error('审核通过失败:', error)
-    alert('审核通过失败，请重试')
+    toastStore.error('审核通过失败，请重试')
   }
 }
 
@@ -476,14 +478,14 @@ const handleRejectApplication = async (rejectData) => {
     const { applicationId, rejectComment } = rejectData
     const success = await applicationsStore.rejectApplication(applicationId, rejectComment, authStore.userName)
     if (success) {
-      // alert('驳回成功')
+      toastStore.success('驳回成功')
       closeEditDialog()
     } else {
-      alert('驳回失败')
+      toastStore.error('驳回失败')
     }
   } catch (error) {
     console.error('驳回失败:', error)
-    alert('驳回失败，请重试')
+    toastStore.error('驳回失败，请重试')
   }
 }
 
@@ -521,7 +523,7 @@ onMounted(async () => {
     ])
   } catch (error) {
     console.error('数据加载失败:', error)
-    alert('数据加载失败，请稍后重试')
+    toastStore.error('数据加载失败，请稍后重试')
   }
 })
 

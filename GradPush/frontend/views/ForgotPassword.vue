@@ -62,9 +62,11 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useToastStore } from '../stores/toast'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const toastStore = useToastStore()
 const loading = ref(false)
 
 const resetForm = reactive({
@@ -76,25 +78,25 @@ const resetForm = reactive({
 const handleResetPassword = async () => {
   // 检测输入框是否为空
   if (!resetForm.username.trim()) {
-    alert('请输入学号/工号')
+    toastStore.error('请输入学号/工号')
     return
   }
   if (!resetForm.newPassword) {
-    alert('请设置新密码')
+    toastStore.error('请设置新密码')
     return
   }
   if (!resetForm.confirmPassword) {
-    alert('请确认新密码')
+    toastStore.error('请确认新密码')
     return
   }
 
   // 密码一致性和长度验证
   if (resetForm.newPassword !== resetForm.confirmPassword) {
-    alert('两次输入的密码不一致')
+    toastStore.error('两次输入的密码不一致')
     return
   }
   if (resetForm.newPassword.length < 6) {
-    alert('密码长度不能少于6位')
+    toastStore.error('密码长度不能少于6位')
     return
   }
 
@@ -104,11 +106,11 @@ const handleResetPassword = async () => {
     // 调用密码重置函数
     const message = await authStore.resetPassword(resetForm.username, resetForm.newPassword)
 
-    // alert('密码重置成功！请使用新密码登录')
+    toastStore.success('密码重置成功！请使用新密码登录')
     router.push('/login')
   } catch (error) {
     console.error('密码重置错误:', error)
-    alert(`密码重置失败: ${error.message || '请稍后重试'}`)
+    toastStore.error(`密码重置失败: ${error.message || '请稍后重试'}`)
   } finally {
     loading.value = false
   }

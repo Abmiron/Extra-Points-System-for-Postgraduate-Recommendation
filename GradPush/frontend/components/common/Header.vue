@@ -28,6 +28,8 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
+import { useToastStore } from '../../stores/toast'
+const toastStore = useToastStore()
 
 const props = defineProps({
   userName: String,
@@ -53,7 +55,7 @@ const notificationCount = computed(() => {
 })
 
 const showNotifications = () => {
-  //alert(`您有${notificationCount.value}条未读通知`)
+  toastStore.info(`您有${notificationCount.value}条未读通知`)
 }
 
 const goToProfile = () => {

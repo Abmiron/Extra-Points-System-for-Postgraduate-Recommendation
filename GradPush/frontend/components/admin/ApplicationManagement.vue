@@ -290,11 +290,13 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import ApplicationDetailModal from '../common/ApplicationDetailModal.vue'
 import { useApplicationsStore } from '../../stores/applications'
 import { useAuthStore } from '../../stores/auth'
+import { useToastStore } from '../../stores/toast'
 import api from '../../utils/api'
 
 // 初始化store
 const applicationsStore = useApplicationsStore()
 const authStore = useAuthStore()
+const toastStore = useToastStore()
 const selectedApplication = ref(null)
 const selectAll = ref(false)
 const selectedApplications = ref([])
@@ -522,7 +524,7 @@ const toggleSelectAll = () => {
 }
 
 const exportData = () => {
-  //alert('数据导出功能开发中...')
+  toastStore.info('数据导出功能开发中...')
 }
 
 const batchDelete = async () => {
@@ -547,10 +549,10 @@ const batchDelete = async () => {
       selectAll.value = false
 
       // 显示结果
-      //alert(`批量删除完成：成功 ${successCount} 条，失败 ${failCount} 条`)
+      toastStore.success(`批量删除完成：成功 ${successCount} 条，失败 ${failCount} 条`)
     } catch (error) {
       console.error('批量删除失败:', error)
-      alert('批量删除过程中发生错误，请重试')
+      toastStore.error('批量删除过程中发生错误，请重试')
     } finally {
       isLoading.value = false
     }
@@ -572,15 +574,15 @@ const handleApproveApplication = async (reviewData) => {
     isLoading.value = true
     const success = await applicationsStore.updateApplicationStatus(reviewData.applicationId, 'approved', reviewData.approveComment, reviewData.finalScore, authStore.userName)
     if (success) {
-      // alert('审核通过成功')
+      toastStore.success('审核通过成功')
       reviewDetailModalVisible.value = false
       selectedApplication.value = null
     } else {
-      alert('审核通过失败')
+      toastStore.error('审核通过失败')
     }
   } catch (error) {
     console.error('审核通过失败:', error)
-    alert('审核通过失败，请重试')
+    toastStore.error('审核通过失败，请重试')
   } finally {
     isLoading.value = false
   }
@@ -591,15 +593,15 @@ const handleRejectApplication = async (reviewData) => {
     isLoading.value = true
     const success = await applicationsStore.updateApplicationStatus(reviewData.applicationId, 'rejected', reviewData.rejectComment, 0, authStore.userName)
     if (success) {
-      // alert('驳回成功')
+      toastStore.success('驳回成功')
       reviewDetailModalVisible.value = false
       selectedApplication.value = null
     } else {
-      alert('驳回失败')
+      toastStore.error('驳回失败')
     }
   } catch (error) {
     console.error('驳回失败:', error)
-    alert('驳回失败，请重试')
+    toastStore.error('驳回失败，请重试')
   } finally {
     isLoading.value = false
   }
@@ -615,13 +617,13 @@ const deleteApplication = async (applicationId) => {
     try {
       const success = await applicationsStore.deleteApplication(applicationId)
       if (success) {
-        // alert('删除成功')
+        toastStore.success('删除成功')
       } else {
-        alert('删除失败')
+        toastStore.error('删除失败')
       }
     } catch (error) {
       console.error('删除申请失败:', error)
-      alert('删除失败，请重试')
+      toastStore.error('删除失败，请重试')
     }
   }
 }

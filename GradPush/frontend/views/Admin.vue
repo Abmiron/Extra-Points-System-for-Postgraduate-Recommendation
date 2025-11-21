@@ -18,6 +18,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useToastStore } from '../stores/toast'
 
 import Header from '../components/common/Header.vue'
 import Sidebar from '../components/common/Sidebar.vue'
@@ -34,6 +35,7 @@ import ScoreManagement from '../components/admin/ScoreManagement.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const toastStore = useToastStore()
 
 // 当前活动页面
 const currentPage = ref('user-management')
@@ -72,7 +74,7 @@ const goToProfile = () => {
 // 权限验证
 onMounted(() => {
   if (authStore.role !== 'admin') {
-    alert('您没有权限访问管理员端')
+    toastStore.error('您没有权限访问管理员端')
     router.push('/login')
   }
 })

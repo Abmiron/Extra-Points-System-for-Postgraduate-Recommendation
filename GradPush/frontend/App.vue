@@ -1,6 +1,8 @@
 <template>
   <div id="app">
     <router-view />
+    <!-- 全局Toast组件 -->
+    <Toast />
   </div>
 </template>
 
@@ -8,6 +10,7 @@
 import { onMounted } from 'vue'
 import { useAuthStore } from './stores/auth'
 import { useApplicationsStore } from './stores/applications'
+import Toast from './components/common/Toast.vue'
 
 const authStore = useAuthStore()
 const applicationsStore = useApplicationsStore()

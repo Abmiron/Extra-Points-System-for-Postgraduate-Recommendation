@@ -109,11 +109,12 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useToastStore } from '../stores/toast'
 import api from '../utils/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
-
+const toastStore = useToastStore()
 const loading = ref(false)
 const loadingOptions = ref(false)
 
@@ -174,7 +175,7 @@ const loadFaculties = async () => {
     faculties.value = response.faculties
   } catch (error) {
     console.error('加载学院列表失败:', error)
-    alert('加载学院列表失败，请刷新页面重试')
+    toastStore.error('加载学院列表失败，请刷新页面重试')
   } finally {
     loadingOptions.value = false
   }
@@ -194,7 +195,7 @@ const loadDepartments = async (facultyId) => {
     }
   } catch (error) {
     console.error('加载系列表失败:', error)
-    alert('加载系列表失败，请重试')
+    toastStore.error('加载系列表失败，请重试')
   } finally {
     loadingOptions.value = false
   }
@@ -212,7 +213,7 @@ const loadMajors = async (departmentId) => {
     }
   } catch (error) {
     console.error('加载专业列表失败:', error)
-    alert('加载专业列表失败，请重试')
+    toastStore.error('加载专业列表失败，请重试')
   } finally {
     loadingOptions.value = false
   }
@@ -255,45 +256,45 @@ const handleDepartmentChange = () => {
 const handleRegister = async () => {
   // 检测输入框是否为空
   if (!registerForm.username.trim()) {
-    alert('请输入学号/工号')
+    toastStore.error('请输入学号/工号')
     return
   }
   if (!registerForm.name.trim()) {
-    alert('请输入姓名')
+    toastStore.error('请输入姓名')
     return
   }
   if (!registerForm.password) {
-    alert('请设置密码')
+    toastStore.error('请设置密码')
     return
   }
   if (!registerForm.confirmPassword) {
-    alert('请确认密码')
+    toastStore.error('请确认密码')
     return
   }
   if (!registerForm.role) {
-    alert('请选择角色')
+    toastStore.error('请选择角色')
     return
   }
   if (!registerForm.facultyId) {
-    alert('请选择学院')
+    toastStore.error('请选择学院')
     return
   }
   if (registerForm.role === 'student' && !registerForm.departmentId) {
-    alert('请选择系')
+    toastStore.error('请选择系')
     return
   }
   if (registerForm.role === 'student' && !registerForm.majorId) {
-    alert('请选择专业')
+    toastStore.error('请选择专业')
     return
   }
 
   // 密码一致性和长度验证
   if (registerForm.password !== registerForm.confirmPassword) {
-    alert('两次输入的密码不一致')
+    toastStore.error('两次输入的密码不一致')
     return
   }
   if (registerForm.password.length < 6) {
-    alert('密码长度不能少于6位')
+    toastStore.error('密码长度不能少于6位')
     return
   }
 
@@ -312,11 +313,11 @@ const handleRegister = async () => {
     })
 
     // 注册成功后跳转到登录页面
-    // alert('注册成功！请使用您的账号密码登录')
+    toastStore.success('注册成功！请使用您的账号密码登录')
     router.push('/login')
   } catch (error) {
     console.error('注册错误:', error)
-    alert(`注册失败: ${error.message || '请稍后重试'}`)
+    toastStore.error(`注册失败: ${error.message || '请稍后重试'}`)
   } finally {
     loading.value = false
   }

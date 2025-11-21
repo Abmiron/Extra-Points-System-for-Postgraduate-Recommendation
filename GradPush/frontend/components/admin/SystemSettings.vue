@@ -173,6 +173,8 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import api from '../../utils/api'
+import { useToastStore } from '../../stores/toast'
+const toastStore = useToastStore()
 
 // 动态生成学术年度选项（最近5年）
 const generateAcademicYearOptions = () => {
@@ -220,10 +222,10 @@ const saveAcademicSettings = async () => {
       applicationStart: settings.applicationStart,
       applicationEnd: settings.applicationEnd
     })
-    //alert('设置已保存')
+    toastStore.success('设置已保存')
   } catch (error) {
     console.error('保存设置失败:', error)
-    alert('保存设置失败')
+    toastStore.error('保存设置失败')
   }
 }
 
@@ -234,10 +236,10 @@ const saveStorageSettings = async () => {
       totalFileSizeLimit: settings.totalFileSizeLimit,
       allowedFileTypes: settings.allowedFileTypes
     })
-    //alert('设置已保存')
+    toastStore.success('设置已保存')
   } catch (error) {
     console.error('保存设置失败:', error)
-    alert('保存设置失败')
+    toastStore.error('保存设置失败')
   }
 }
 
@@ -248,15 +250,15 @@ const saveScoreWeightSettings = async () => {
       specialtyMaxScore: settings.specialtyMaxScore,
       performanceMaxScore: settings.performanceMaxScore
     })
-    //alert('设置已保存')
+    toastStore.success('设置已保存')
   } catch (error) {
     console.error('保存设置失败:', error)
-    alert('保存设置失败')
+    toastStore.error('保存设置失败')
   }
 }
 
 const publishAnnouncement = () => {
-  //alert('公告发布功能正在开发中...')
+  toastStore.info('公告发布功能正在开发中...')
 }
 
 const backupDatabase = async () => {
@@ -266,19 +268,19 @@ const backupDatabase = async () => {
       lastBackup: new Date().toISOString()
     })
     settings.lastBackup = new Date().toLocaleString('zh-CN')
-    //alert('数据库备份完成')
+    toastStore.success('数据库备份完成')
   } catch (error) {
     console.error('数据库备份失败:', error)
-    alert('数据库备份失败')
+    toastStore.error('数据库备份失败')
   }
 }
 
 const viewSystemLogs = () => {
-  //alert('系统日志查看功能开发中...')
+  toastStore.info('系统日志查看功能开发中...')
 }
 
 const clearCache = () => {
-  //alert('缓存清理功能正在开发中...')
+  toastStore.info('缓存清理功能正在开发中...')
 }
 
 const toggleSystemStatus = async () => {
@@ -289,18 +291,18 @@ const toggleSystemStatus = async () => {
         await api.updateSystemSettings({
           systemStatus: systemStatusApiValue.value
         })
-        //alert('系统已进入维护模式')
+        toastStore.success('系统已进入维护模式')
       }
     } else {
       systemStatus.value = 'online'
       await api.updateSystemSettings({
         systemStatus: systemStatusApiValue.value
       })
-      //alert('系统已恢复正常运行')
+      toastStore.success('系统已恢复正常运行')
     }
   } catch (error) {
     console.error('切换系统状态失败:', error)
-    alert('切换系统状态失败')
+    toastStore.error('切换系统状态失败')
   }
 }
 
@@ -340,7 +342,7 @@ async function loadSystemSettings() {
     systemStatus.value = data.systemStatus === '维护中' ? 'maintenance' : 'online'
   } catch (error) {
     console.error('加载系统设置失败:', error)
-    alert('加载系统设置失败')
+    toastStore.error('加载系统设置失败')
   }
 }
 </script>

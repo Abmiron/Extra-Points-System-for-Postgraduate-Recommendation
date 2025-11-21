@@ -167,6 +167,7 @@
 import { ref, computed, onMounted, onActivated, watch } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useApplicationsStore } from '../../stores/applications'
+import { useToastStore } from '../../stores/toast'
 import ApplicationDetailModal from '../common/ApplicationDetailModal.vue'
 import api from '../../utils/api'
 
@@ -175,6 +176,7 @@ const emit = defineEmits(['switch-page', 'edit-application'])
 
 const authStore = useAuthStore()
 const applicationsStore = useApplicationsStore()
+const toastStore = useToastStore()
 
 // 筛选条件
 const filters = ref({
@@ -464,13 +466,24 @@ const editApplication = (application) => {
 // 删除申请
 const deleteApplication = async (application) => {
   if (confirm(`确定要删除申请「${application.projectName || application.eventName || '未命名'}」吗？`)) {
-    // 调用store中的删除方法
-    const success = await applicationsStore.deleteApplication(application.id)
-    if (success) {
-      // 重置到第一页
-      if (paginatedApplications.value.length === 0 && currentPage.value > 1) {
-        currentPage.value--
+    try {
+      // 调用store中的删除方法
+      const success = await applicationsStore.deleteApplication(application.id)
+      if (success) {
+        // 显示删除成功的toast提示
+        toastStore.success('申请删除成功')
+        // 重置到第一页
+        if (paginatedApplications.value.length === 0 && currentPage.value > 1) {
+          currentPage.value--
+        }
+      } else {
+        // 显示删除失败的toast提示
+        toastStore.error('申请删除失败，请重试')
       }
+    } catch (error) {
+      console.error('删除申请失败:', error)
+      // 显示错误的toast提示
+      toastStore.error('系统错误，请稍后重试')
     }
   }
 }
@@ -498,7 +511,8 @@ const refreshData = async () => {
     currentPage.value = 1
   } catch (error) {
     console.error('刷新数据失败:', error)
-    // 可以在这里添加错误提示
+    // 显示错误的toast提示
+    toastStore.error('数据刷新失败，请稍后重试')
   }
 }
 

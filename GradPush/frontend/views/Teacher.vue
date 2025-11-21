@@ -19,6 +19,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useApplicationsStore } from '../stores/applications'
+import { useToastStore } from '../stores/toast'
 
 import Header from '../components/common/Header.vue'
 import Sidebar from '../components/common/Sidebar.vue'
@@ -32,6 +33,7 @@ import Profile from '../components/common/Profile.vue'
 const router = useRouter()
 const authStore = useAuthStore()
 const applicationsStore = useApplicationsStore()
+const toastStore = useToastStore()
 
 // 当前活动页面
 const currentPage = ref('pending-review')
@@ -71,7 +73,7 @@ const goToProfile = () => {
 // 权限验证和数据加载
 onMounted(() => {
   if (authStore.role !== 'teacher') {
-    alert('您没有权限访问教师端')
+    toastStore.error('您没有权限访问教师端')
     router.push('/login')
   } else {
     // 确保数据已加载

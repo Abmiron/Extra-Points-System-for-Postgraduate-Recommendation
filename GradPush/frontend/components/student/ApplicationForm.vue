@@ -626,6 +626,7 @@
 import { ref, reactive, watch, onMounted } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useApplicationsStore } from '../../stores/applications'
+import { useToastStore } from '../../stores/toast'
 
 // 定义事件，用于通知父组件切换页面
 const emit = defineEmits(['switch-page'])
@@ -635,6 +636,7 @@ const props = defineProps(['editApplicationId'])
 
 const authStore = useAuthStore()
 const applicationsStore = useApplicationsStore()
+const toastStore = useToastStore()
 const fileInput = ref(null)
 const previewFileData = ref(null)
 
@@ -1092,7 +1094,7 @@ const handleFileSelect = (event) => {
   }
 
   if (totalSizeWithNewFiles > systemSettings.value.totalFileSizeLimit * 1024 * 1024) {
-    alert(`总文件大小超过${systemSettings.value.totalFileSizeLimit}MB限制`)
+    toastStore.error(`总文件大小超过${systemSettings.value.totalFileSizeLimit}MB限制`)
     event.target.value = ''
     return
   }
@@ -1100,13 +1102,13 @@ const handleFileSelect = (event) => {
   // 检查单个文件大小和类型
   files.forEach(file => {
     if (file.size > systemSettings.value.singleFileSizeLimit * 1024 * 1024) {
-      alert(`文件 ${file.name} 大小超过${systemSettings.value.singleFileSizeLimit}MB限制`)
+      toastStore.error(`文件 ${file.name} 大小超过${systemSettings.value.singleFileSizeLimit}MB限制`)
       return
     }
 
     const fileExt = `.${file.name.split('.').pop().toLowerCase()}`
     if (!systemSettings.value.allowedFileTypes.includes(fileExt)) {
-      alert(`文件 ${file.name} 类型不支持，仅支持${systemSettings.value.allowedFileTypes.join(', ')}格式`)
+      toastStore.error(`文件 ${file.name} 类型不支持，仅支持${systemSettings.value.allowedFileTypes.join(', ')}格式`)
       return
     }
 
@@ -1129,20 +1131,20 @@ const handleDrop = (event) => {
   }
 
   if (totalSizeWithNewFiles > systemSettings.value.totalFileSizeLimit * 1024 * 1024) {
-    alert(`总文件大小超过${systemSettings.value.totalFileSizeLimit}MB限制`)
+    toastStore.error(`总文件大小超过${systemSettings.value.totalFileSizeLimit}MB限制`)
     return
   }
 
   // 检查单个文件大小和类型
   files.forEach(file => {
     if (file.size > systemSettings.value.singleFileSizeLimit * 1024 * 1024) {
-      alert(`文件 ${file.name} 大小超过${systemSettings.value.singleFileSizeLimit}MB限制`)
+      toastStore.error(`文件 ${file.name} 大小超过${systemSettings.value.singleFileSizeLimit}MB限制`)
       return
     }
 
     const fileExt = `.${file.name.split('.').pop().toLowerCase()}`
     if (!systemSettings.value.allowedFileTypes.includes(fileExt)) {
-      alert(`文件 ${file.name} 类型不支持，仅支持${systemSettings.value.allowedFileTypes.join(', ')}格式`)
+      toastStore.error(`文件 ${file.name} 类型不支持，仅支持${systemSettings.value.allowedFileTypes.join(', ')}格式`)
       return
     }
 
@@ -1279,31 +1281,31 @@ const saveDraft = async () => {
     }
 
     if (success) {
-      alert('草稿已保存')
+      toastStore.success('草稿已保存')
       // 保存成功后继续留在当前页面
     } else {
-      alert('保存草稿失败，请稍后重试')
+      toastStore.error('保存草稿失败，请稍后重试')
     }
   } catch (error) {
     console.error('保存草稿失败:', error)
-    alert('保存草稿失败，请稍后重试')
+    toastStore.error('保存草稿失败，请稍后重试')
   }
 }
 
 const submitForm = async () => {
   // 通用验证
   if (!formData.projectName) {
-    alert('请输入项目全称')
+    toastStore.error('请输入项目全称')
     return
   }
 
   if (!formData.awardDate) {
-    alert('请输入获得时间')
+    toastStore.error('请输入获得时间')
     return
   }
 
   if (!formData.description) {
-    alert('请输入项目描述')
+    toastStore.error('请输入项目描述')
     return
   }
 
@@ -1311,29 +1313,29 @@ const submitForm = async () => {
   if (formData.applicationType === 'academic') {
     // 新增：验证学术类型已选择
     if (!formData.academicType) {
-      alert('请选择学术类型（科研成果/学业竞赛/创新创业训练）')
+      toastStore.error('请选择学术类型（科研成果/学业竞赛/创新创业训练）')
       return
     }
 
     // 学业竞赛特有验证
     if (formData.academicType === 'competition') {
       if (!formData.awardLevel) {
-        alert('请选择奖项级别')
+        toastStore.error('请选择奖项级别')
         return
       }
       if (!formData.awardGrade) { // 新增：验证奖项等级
-        alert('请选择奖项等级')
+        toastStore.error('请选择奖项等级')
         return
       }
       if (!formData.awardCategory) {
-        alert('请选择奖项类别')
+        toastStore.error('请选择奖项类别')
         return
       }
       // 新增：团队奖项的排序验证
       if (formData.awardType === 'team') {
         // 当选择"有排名"时必须填写作者排序
         if (formData.authorRankType === 'ranked' && !formData.authorOrder) {
-          alert('请输入作者排序')
+          toastStore.error('请输入作者排序')
           return
         }
       }
@@ -1342,7 +1344,7 @@ const submitForm = async () => {
     // 新增：科研成果验证
     if (formData.academicType === 'research') {
       if (!formData.researchType) {
-        alert('请选择成果类型')
+        toastStore.error('请选择成果类型')
         return
       }
     }
@@ -1350,12 +1352,12 @@ const submitForm = async () => {
     // 新增：创新创业验证
     if (formData.academicType === 'innovation') {
       if (!formData.innovationLevel) {
-        alert('请选择项目级别')
+        toastStore.error('请选择项目级别')
         return
       }
 
       if (!formData.innovationRole) {
-        alert('请选择您的角色（组长/组员）')
+        toastStore.error('请选择您的角色（组长/组员）')
         return
       }
     }
@@ -1364,23 +1366,23 @@ const submitForm = async () => {
   // 综合表现特有验证
   if (formData.applicationType === 'comprehensive') {
     if (!formData.performanceType) {
-      alert('请选择表现类型')
+      toastStore.error('请选择表现类型')
       return
     }
     if (!formData.performanceLevel) {
-      alert('请选择奖项级别')
+      toastStore.error('请选择奖项级别')
       return
     }
   }
 
   // 通用字段验证
   if (!formData.selfScore) {
-    alert('请输入自评加分')
+    toastStore.error('请输入自评加分')
     return
   }
 
   if (formData.files.length === 0) {
-    alert('请上传证明文件')
+    toastStore.error('请上传证明文件')
     return
   }
 
@@ -1421,7 +1423,7 @@ const submitForm = async () => {
     }
 
     if (success) {
-      alert('申请已提交，等待审核中...')
+      toastStore.success('申请已提交，等待审核中...')
 
       // 重置表单，但保持默认的加分申请类型
       Object.assign(formData, {
@@ -1459,11 +1461,11 @@ const submitForm = async () => {
 
       // 不再自动切换到申请历史页面，保持在加分申请页面
     } else {
-      alert('提交失败，请稍后重试')
+      toastStore.error('提交失败，请稍后重试')
     }
   } catch (error) {
     console.error('提交申请失败:', error)
-    alert('提交失败，请稍后重试')
+    toastStore.error('提交失败，请稍后重试')
   }
 }
 </script>

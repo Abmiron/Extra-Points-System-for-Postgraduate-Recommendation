@@ -408,6 +408,8 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import api from '../../utils/api'
+import { useToastStore } from '../../stores/toast'
+const toastStore = useToastStore()
 
 const showAddRuleModal = ref(false)
 const editingRule = ref(null)
@@ -568,7 +570,7 @@ const loadRules = async () => {
     rules.value = response.rules
   } catch (error) {
     console.error('加载规则失败:', error)
-    alert('加载规则失败')
+    toastStore.error('加载规则失败')
   } finally {
     loading.value = false
   }
@@ -642,7 +644,7 @@ const saveRule = async () => {
       if ((ruleForm.type !== 'academic' || !(ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation')) &&
         (ruleForm.type !== 'comprehensive' || needLevel.includes(ruleForm.sub_type)) &&
         !ruleForm.level) {
-        alert('请填写必填字段')
+        toastStore.warning('请填写必填字段')
         return
       }
     }
@@ -650,19 +652,19 @@ const saveRule = async () => {
     // 检查等级字段是否必填
     // 综合表现类型不需要等级，只有学术类型需要等级（科研成果和创新创业训练除外）
     if (ruleForm.type !== 'comprehensive' && !(ruleForm.type === 'academic' && (ruleForm.sub_type === 'research' || ruleForm.sub_type === 'innovation')) && !ruleForm.grade) {
-      alert('请选择等级')
+      toastStore.warning('请选择等级')
       return
     }
 
     // 对于学业竞赛，奖项类别是必填的
     if (ruleForm.type === 'academic' && ruleForm.sub_type === 'competition' && !ruleForm.category) {
-      alert('请选择奖项类别')
+      toastStore.warning('请选择奖项类别')
       return
     }
 
     // 对于科研成果，科研成果类型是必填的
     if (ruleForm.type === 'academic' && ruleForm.sub_type === 'research' && !ruleForm.research_type) {
-      alert('请选择科研成果类型')
+      toastStore.warning('请选择科研成果类型')
       return
     }
 
@@ -708,18 +710,18 @@ const saveRule = async () => {
     if (editingRule.value) {
       // 更新规则
       await api.updateRule(editingRule.value.id, ruleData)
-      // alert('规则更新成功')
+      toastStore.success('规则更新成功')
     } else {
       // 添加新规则
       await api.createRule(ruleData)
-      // alert('规则添加成功')
+      toastStore.success('规则添加成功')
     }
 
     closeModal()
     loadRules() // 重新加载规则数据
   } catch (error) {
     console.error('保存规则失败:', error)
-    alert('保存规则失败')
+    toastStore.error('保存规则失败')
   }
 }
 
@@ -729,7 +731,7 @@ const toggleRuleStatus = async (ruleId) => {
     await loadRules() // 重新加载规则数据
   } catch (error) {
     console.error('切换规则状态失败:', error)
-    alert('切换规则状态失败')
+    toastStore.error('切换规则状态失败')
   }
 }
 
@@ -742,10 +744,10 @@ const deleteRule = async (rule) => {
       if (paginatedRules.value.length === 0 && currentPage.value > 1) {
         currentPage.value--
       }
-      // alert('规则删除成功')
+      toastStore.success('规则删除成功')
     } catch (error) {
       console.error('删除规则失败:', error)
-      alert('删除规则失败')
+      toastStore.error('删除规则失败')
     }
   }
 }

@@ -18,6 +18,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useToastStore } from '../stores/toast'
 import { useApplicationsStore } from '../stores/applications'
 import Header from '../components/common/Header.vue'
 import Sidebar from '../components/common/Sidebar.vue'
@@ -28,6 +29,7 @@ import Profile from '../components/common/Profile.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const toastStore = useToastStore()
 const applicationsStore = useApplicationsStore()
 
 const currentPage = ref('application-form')
@@ -78,7 +80,7 @@ const handleEditApplication = (applicationId) => {
 // 权限验证和数据加载
 onMounted(() => {
   if (authStore.role !== 'student') {
-    alert('您没有权限访问学生端')
+    toastStore.error('您没有权限访问学生端')
     router.push('/login')
   } else {
     // 确保数据已加载

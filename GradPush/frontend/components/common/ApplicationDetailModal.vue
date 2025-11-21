@@ -264,6 +264,9 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
+import { useToastStore } from '../../stores/toast'
+
+const toastStore = useToastStore()
 
 const props = defineProps({
   application: {
@@ -577,7 +580,7 @@ const downloadFile = async (file) => {
     }
 
     if (!downloadUrl) {
-      alert(`无法下载文件: ${file.name}`)
+      toastStore.error(`无法下载文件: ${file.name}`)
       return
     }
 
@@ -607,7 +610,7 @@ const downloadFile = async (file) => {
     }, 0)
   } catch (error) {
     console.error('文件下载失败:', error)
-    alert(`文件下载失败: ${error.message}`)
+    toastStore.error(`文件下载失败: ${error.message}`)
   }
 }
 
@@ -626,7 +629,7 @@ const approveApplication = () => {
 const rejectApplication = () => {
   // 验证驳回理由是否填写
   if (!reviewData.rejectComment || reviewData.rejectComment.trim() === '') {
-    alert('请填写驳回理由')
+    toastStore.error('请填写驳回理由')
     return
   }
   // 拒绝的申请将最终分数设置为0
