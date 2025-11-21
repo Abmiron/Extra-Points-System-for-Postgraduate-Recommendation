@@ -12,7 +12,7 @@ from flask_migrate import Migrate
 import os
 from werkzeug.utils import safe_join
 from urllib.parse import quote
-from extensions import db
+from extensions import db, session
 import datetime
 import pytz
 
@@ -38,6 +38,9 @@ app.config["JSONIFY_MIMETYPE"] = "application/json; charset=utf-8"  # 设置响�
 # 初始化数据库
 db.init_app(app)
 migrate = Migrate(app, db)
+
+# 初始化session
+session.init_app(app)
 
 # 先创建数据库对象，再导入模型
 from models import User, Application, Rule

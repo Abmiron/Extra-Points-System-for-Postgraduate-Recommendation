@@ -23,3 +23,11 @@ class Config:
     AVATAR_FOLDER = os.path.join(UPLOAD_FOLDER, "avatars")
     FILE_FOLDER = os.path.join(UPLOAD_FOLDER, "files")
     MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100MB，支持多文件上传
+    
+    # Session配置
+    SESSION_TYPE = 'filesystem'  # 使用文件系统存储session
+    SESSION_FILE_DIR = os.path.join(os.getcwd(), 'cache')  # session文件存储路径
+    SESSION_PERMANENT = False  # 不是永久session
+    SESSION_USE_SIGNER = True  # 使用签名
+    SESSION_KEY_PREFIX = 'gradpush:'  # session键前缀
+    PERMANENT_SESSION_LIFETIME = 1800  # session有效期（秒）

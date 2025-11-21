@@ -57,6 +57,7 @@ export default {
   login: (data) => apiRequest('/login', 'POST', data),
   register: (data) => apiRequest('/register', 'POST', data),
   resetPassword: (data) => apiRequest('/reset-password', 'POST', data),
+  generateCaptcha: () => apiRequest('/generate-captcha', 'GET'),
   getFaculties: () => apiRequest('/faculties'),
   getDepartmentsByFaculty: (facultyId) => apiRequest(`/departments/${facultyId}`),
   getMajorsByDepartment: (departmentId) => apiRequest(`/majors/${departmentId}`),

@@ -74,6 +74,19 @@
               <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
               <input type="password" v-model="loginForm.password" placeholder="请输入密码" required>
             </div>
+            <div class="input-group captcha-group">
+              <font-awesome-icon :icon="['fas', 'shield-alt']" class="input-icon" />
+              <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                <input type="text" v-model="loginForm.captcha" placeholder="请输入验证码" required style="flex: 1; height: 50px;">
+                <img 
+                  :src="captchaImage" 
+                  alt="验证码" 
+                  style="max-height: 50px; height: auto; cursor: pointer; border-radius: 8px;" 
+                  @click="refreshCaptcha"
+                  title="点击刷新"
+                >
+              </div>
+            </div>
 
             <div class="form-actions">
               <div class="links-container">
@@ -258,6 +271,11 @@ const router = useRouter()
 const authStore = useAuthStore()
 const toastStore = useToastStore()
 
+// 组件挂载时自动获取验证码
+onMounted(() => {
+  refreshCaptcha()
+})
+
 // 标签页状态管理
 const activeTab = ref('login') // 'login', 'register', 'forgot'
 const loading = ref(false)
@@ -271,8 +289,28 @@ const switchTab = (tab) => {
 // 登录表单数据
 const loginForm = reactive({
   username: '',
-  password: ''
+  password: '',
+  captcha: ''
 })
+
+// 验证码相关
+const captchaImage = ref('')
+const captchaToken = ref('')
+
+// 获取验证码
+const refreshCaptcha = async () => {
+  try {
+    // 使用项目已有的api模块获取验证码
+    const response = await api.generateCaptcha()
+    // 将base64字符串转换为可显示的图片
+    captchaImage.value = `data:image/png;base64,${response.image}`
+    // 保存验证码token
+    captchaToken.value = response.token
+  } catch (error) {
+    console.error('获取验证码失败:', error)
+    toastStore.error('获取验证码失败，请刷新页面重试')
+  }
+}
 
 // 注册表单数据
 const registerForm = reactive({
@@ -336,6 +374,8 @@ onMounted(async () => {
     loadFaculties(),
     loadPublicSystemInfo()
   ])
+  // 加载验证码
+  refreshCaptcha()
 })
 
 // 加载公开系统信息，获取申请时间
@@ -505,11 +545,23 @@ const handleDepartmentChange = () => {
 
 // 登录处理
 const handleLogin = async () => {
+  // 验证验证码是否输入
+  if (!loginForm.captcha.trim()) {
+    toastStore.error('请输入验证码')
+    return
+  }
+  
+  // 验证验证码token是否存在
+  if (!captchaToken.value) {
+    toastStore.error('验证码已失效，请刷新页面重新获取验证码')
+    return
+  }
+  
   loading.value = true
 
   try {
-    // 使用auth store的登录方法
-    await authStore.login(loginForm.username, loginForm.password)
+    // 使用auth store的登录方法，包含验证码和验证码token
+    await authStore.login(loginForm.username, loginForm.password, loginForm.captcha, captchaToken.value)
     
     // 学生角色登录时间验证
     if (authStore.role === 'student') {
@@ -580,6 +632,8 @@ const handleLogin = async () => {
   } catch (error) {
     console.error('登录错误:', error)
     toastStore.error(error.message || '登录失败，请稍后重试')
+    // 登录失败后刷新验证码
+    refreshCaptcha()
   } finally {
     loading.value = false
   }
@@ -967,6 +1021,18 @@ const handleResetPassword = async () => {
   transition: all 0.3s ease;
   background: #f9fafb;
   box-sizing: border-box;
+}
+
+.captcha-group .input-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.captcha-group > div {
+  padding-left: 45px;
+  width: 100%;
 }
 
 .input-group input:focus,

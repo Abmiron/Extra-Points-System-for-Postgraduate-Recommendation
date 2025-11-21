@@ -66,9 +66,9 @@ export const useAuthStore = defineStore('auth', () => {
 }
 
   // 登录
-  const login = async (username, password) => {
+  const login = async (username, password, captcha, captchaToken) => {
     try {
-      const data = await api.apiRequest('/login', 'POST', { username, password })
+      const data = await api.apiRequest('/login', 'POST', { username, password, captcha, captchaToken })
       user.value = data.user
       role.value = data.user.role
       isAuthenticated.value = true

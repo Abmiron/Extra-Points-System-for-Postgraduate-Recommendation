@@ -7,6 +7,10 @@
 """
 
 from flask_sqlalchemy import SQLAlchemy
+from flask_session import Session
 
 # 创建数据库对象，供其他模块导入
 db = SQLAlchemy()
+
+# 创建session对象，用于存储验证码等临时数据
+session = Session()

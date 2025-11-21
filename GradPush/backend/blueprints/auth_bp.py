@@ -8,14 +8,76 @@
 - 密码重置
 """
 
-from flask import Blueprint, request, jsonify, make_response
+from flask import Blueprint, request, jsonify, make_response, session
 from models import User, Faculty, Department, Major, Student
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 from extensions import db
+from utils.captcha import generate_captcha
+import base64
+from io import BytesIO
+import uuid
+import threading
+
+# 用于存储验证码的临时字典
+# 使用token作为键，值为(验证码文本, 生成时间)的元组
+captcha_store = {}
+# 用于线程安全的锁
+captcha_lock = threading.Lock()
+
+# 清理过期验证码的函数
+def cleanup_expired_captchas():
+    current_time = datetime.now()
+    with captcha_lock:
+        # 找出所有过期的验证码（超过5分钟）
+        expired_tokens = [
+            token for token, (_, timestamp) in captcha_store.items()
+            if (current_time - timestamp).total_seconds() > 300
+        ]
+        # 删除过期的验证码
+        for token in expired_tokens:
+            del captcha_store[token]
+        if expired_tokens:
+            print(f"清理了{len(expired_tokens)}个过期验证码")
 
 # 创建蓝图
-auth_bp = Blueprint("auth", __name__, url_prefix="/api")
+auth_bp = Blueprint('auth', __name__, url_prefix="/api")
+
+
+# 验证码生成接口
+@auth_bp.route("/generate-captcha", methods=["GET"])
+def get_captcha():
+    try:
+        # 先清理过期的验证码
+        cleanup_expired_captchas()
+        
+        # 生成验证码图片和文本
+        # 注意：根据captcha.py的实现，返回值顺序是 (captcha_image, captcha_text)
+        captcha_image, captcha_text = generate_captcha()
+        
+        print(f"生成验证码: {captcha_text}")
+        
+        # 生成唯一的token
+        captcha_token = str(uuid.uuid4())
+        
+        # 存储验证码和生成时间
+        with captcha_lock:
+            captcha_store[captcha_token] = (captcha_text.lower(), datetime.now())
+        print(f"验证码已存储，token: {captcha_token}")
+        
+        # 将图片转换为base64字符串
+        buffer = BytesIO()
+        captcha_image.save(buffer, format='PNG')
+        buffer.seek(0)
+        img_str = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        
+        return jsonify({
+            'image': img_str,
+            'token': captcha_token
+        }), 200
+    except Exception as e:
+        print(f"验证码生成错误: {str(e)}")
+        return jsonify({"message": "验证码生成失败"}), 500
 
 
 # 登录接口 - OPTIONS请求处理
@@ -31,6 +93,53 @@ def login():
     data = request.get_json()
     username = data.get("username")
     password = data.get("password")
+    captcha_input = data.get("captcha")
+    captcha_token = data.get("captchaToken")
+    
+    if not username or not password:
+        return jsonify({"message": "用户名和密码不能为空"}), 400
+    
+    if not captcha_input:
+        return jsonify({"message": "验证码不能为空"}), 400
+    
+    if not captcha_token:
+        return jsonify({"message": "验证码token不能为空"}), 400
+    
+    # 验证验证码
+    print(f"验证验证码: 输入={captcha_input.lower()}, token={captcha_token}")
+    
+    # 检查验证码是否存在
+    with captcha_lock:
+        if captcha_token not in captcha_store:
+            print("验证码验证失败：未找到对应的验证码")
+            return jsonify({"message": "验证码不存在，请刷新页面获取验证码"}), 400
+        
+        # 获取存储的验证码和时间
+        stored_captcha, captcha_timestamp = captcha_store[captcha_token]
+    
+    # 检查验证码是否过期（5分钟过期）
+    current_time = datetime.now()
+    time_diff = (current_time - captcha_timestamp).total_seconds()
+    print(f"验证码时间差: {time_diff}秒")
+    
+    # 设置5分钟（300秒）的过期时间
+    if time_diff > 300:
+        print("验证码已过期")
+        # 清除过期的验证码
+        with captcha_lock:
+            captcha_store.pop(captcha_token, None)
+        return jsonify({"message": "验证码已过期，请刷新页面获取新验证码"}), 400
+    
+    # 验证验证码内容
+    if captcha_input.lower() != stored_captcha:
+        print(f"验证码不匹配：输入={captcha_input.lower()}, 存储={stored_captcha}")
+        return jsonify({"message": "验证码错误"}), 400
+    
+    # 验证成功后删除验证码
+    with captcha_lock:
+        captcha_store.pop(captcha_token, None)
+    
+    print("验证码验证成功")
 
     # 查找用户
     user = User.query.filter_by(username=username).first()
@@ -44,6 +153,8 @@ def login():
     # 验证密码
     if not user.check_password(password):
         return jsonify({"message": "密码错误"}), 401
+    
+    # 验证码已在验证成功后删除
 
     # 更新最后登录时间
     user.last_login = datetime.now(pytz.timezone("Asia/Shanghai"))
