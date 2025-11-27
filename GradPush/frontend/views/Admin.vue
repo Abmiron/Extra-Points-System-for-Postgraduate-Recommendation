@@ -4,9 +4,10 @@
       @go-to-profile="goToProfile" />
 
     <div class="content-wrapper">
-      <Sidebar :active-page="currentPage" @page-change="switchPage" :user-info="userInfo" user-type="admin" />
+      <Sidebar :active-page="currentPage" @page-change="switchPage" :user-info="userInfo" user-type="admin"
+        @sidebar-toggle="handleSidebarToggle" :collapsed="isSidebarCollapsed" />
 
-      <main class="main-content">
+      <main :class="['main-content', { 'sidebar-collapsed': isSidebarCollapsed }]">
         <!-- 动态显示当前页面 -->
         <component :is="currentPageComponent" />
       </main>
@@ -60,6 +61,15 @@ const userInfo = computed(() => ({
   faculty: authStore.user?.faculty || '信息学院',
   roleName: authStore.user?.roleName || '系统管理员'
 }))
+
+// 侧边栏收起状态
+const isSidebarCollapsed = ref(false)
+
+// 处理侧边栏切换事件
+const handleSidebarToggle = (isOpen) => {
+  isSidebarCollapsed.value = !isOpen
+  // 移除直接操作DOM的代码，改为通过CSS选择器和类名切换
+}
 
 // 切换页面
 const switchPage = (page) => {

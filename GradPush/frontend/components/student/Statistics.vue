@@ -32,7 +32,7 @@
     </div>
 
     <!-- 学术专长成绩明细 -->
-    <div class="card" :class="{ 'loading-content': loading }">
+    <div class="card">
       <div class="card-title">学术专长成绩明细</div>
       <div class="table-container">
         <table class="application-table">
@@ -68,7 +68,7 @@
     </div>
 
     <!-- 综合表现成绩明细 -->
-    <div class="card" :class="{ 'loading-content': loading }">
+    <div class="card">
       <div class="card-title">综合表现成绩明细</div>
       <div class="table-container">
         <table class="application-table">
@@ -318,42 +318,4 @@ onMounted(() => {
   position: relative;
 }
 
-.loading-content {
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-.loading-overlay {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 10;
-}
-
-.loading-spinner {
-  border: 4px solid rgba(0, 51, 102, 0.1);
-  border-left-color: #003366;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.loading-text {
-  margin-top: 16px;
-  color: #003366;
-  font-size: 16px;
-  font-weight: 500;
-}
 </style>

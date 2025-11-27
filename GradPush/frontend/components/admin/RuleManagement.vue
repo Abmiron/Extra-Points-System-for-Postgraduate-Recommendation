@@ -991,47 +991,14 @@ onMounted(() => {
 <style scoped>
 /* 组件特有样式 - 如果没有特殊样式，可以留空 */
 /* 覆盖或补充共享样式 */
-/* 加载状态样式 */
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(255, 255, 255, 0.8);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.loading-spinner {
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #007bff;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
-}
-
-.loading-text {
-  margin-top: 10px;
-  color: #007bff;
-  font-size: 16px;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
+/* 加载样式已移至shared-styles.css */
+  
+  /* 确保加载遮罩正确显示 */
+  .card {
+    position: relative;
   }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-.application-table th:last-child,
+  
+  .application-table th:last-child,
 .application-table td:last-child {
   width: 160px;
   /* 增加宽度以容纳删除按钮 */

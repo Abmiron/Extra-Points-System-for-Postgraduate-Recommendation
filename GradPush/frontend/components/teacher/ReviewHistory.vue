@@ -164,6 +164,12 @@
       </div>
     </div>
 
+    <!-- 加载遮罩 -->
+    <div v-if="loading" class="loading-overlay">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">正在加载中...</div>
+    </div>
+
     <!-- 查看申请详情模态框 -->
     <ApplicationDetailModal v-if="selectedApplication" :application="selectedApplication" @close="closeDetailModal"
       :is-review-mode="false" />

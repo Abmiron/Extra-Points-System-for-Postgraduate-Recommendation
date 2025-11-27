@@ -294,14 +294,14 @@
           <div class="help-area">
             <template v-if="activeTab === 'login'">
               <p class="help-text">首次登录请点击"注册账号"进行设置</p>
-              <p class="help-text">学生校友账号禁用可通过"忘记密码"进行重置</p>
+              <p class="help-text">若密码遗忘可通过"忘记密码"进行重置</p>
             </template>
             <template v-else-if="activeTab === 'register'">
               <p class="help-text">管理员账号请联系系统管理员开通</p>
               <p class="help-text">如有疑问，请联系系统技术支持</p>
             </template>
             <template v-else-if="activeTab === 'forgot'">
-              <p class="help-text">首次登录用户请输入学号/工号并设置密码</p>
+              <p class="help-text">请输入学号/工号以进行密码重置</p>
               <p class="help-text">请妥善保管您的密码信息</p>
             </template>
           </div>
@@ -432,8 +432,8 @@ const departments = ref([])
 const majors = ref([])
 
 // 申请时间相关数据
-const applicationTimeStart = ref('2025年9月1日 00:00')
-const applicationTimeEnd = ref('2025年9月30日 23:59')
+const applicationTimeStart = ref('')
+const applicationTimeEnd = ref('')
 const settingsLoading = ref(false)
 
 // 注册表单验证
@@ -890,7 +890,7 @@ const handleResetPassword = async () => {
 </script>
 
 <style scoped>
-/* 登录页面整体容器样式 - 保持原有风格 */
+/* 登录页面整体容器样式*/
 .login-page {
   font-family: "Microsoft Yahei", "PingFang SC", "Helvetica Neue", sans-serif;
   line-height: 1.6;
@@ -933,7 +933,7 @@ const handleResetPassword = async () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(170, 196, 229, 0.05);
+  background: rgba(40, 103, 186, 0.12);
   z-index: 1;
 }
 
@@ -954,10 +954,10 @@ const handleResetPassword = async () => {
 .login-content {
   display: flex;
   width: 100%;
-  max-width: 900px;
+  max-width: 1300px;
   border-radius: 16px;
-  background: linear-gradient(90deg,#215493db 20%, #001736e9 100%);
-  box-shadow: 0 20px 30px rgba(2, 6, 21, 0.549);
+  background: linear-gradient(135deg,#4176b68c 20%, #0527549f 100%);
+  box-shadow: 0 5px 20px rgba(4, 10, 31, 0.279);
   overflow: hidden;
   position: relative;
   z-index: 1;
@@ -967,7 +967,7 @@ const handleResetPassword = async () => {
 
 /* 左侧信息面板样式*/
 .info-panel {
-  flex: 1;
+  flex:2;
   color: rgba(255, 255, 255, 0.95);
   padding: 50px 40px;
   display: flex;
@@ -1052,7 +1052,7 @@ const handleResetPassword = async () => {
   padding: 25px;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  margin-bottom: 40px;
+  margin-bottom: 30px;
   margin-top: 25px;
 }
 
@@ -1061,12 +1061,12 @@ const handleResetPassword = async () => {
   align-items: center;
   gap: 10px;
   margin-bottom: 15px;
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 600;
 }
 
 .time-title svg {
-  color: #f59e0b;
+  color: #ffffff;
 }
 
 .time-dates {
@@ -1078,7 +1078,7 @@ const handleResetPassword = async () => {
 .time-item {
   display: flex;
   justify-content: space-between;
-  font-size: 16px;
+  font-size: 22px;
 }
 
 .time-label {

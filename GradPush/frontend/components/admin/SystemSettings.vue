@@ -165,6 +165,12 @@
         </div>
       </div>
     </div>
+    
+    <!-- 加载遮罩 -->
+    <div v-if="loading" class="loading-overlay">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">加载中...</div>
+    </div>
   </div>
 </template>
 
@@ -204,7 +210,8 @@ const settings = reactive({
   performanceMaxScore: ''
 })
 
-
+// 加载状态变量
+const loading = ref(false)
 
 const announcement = reactive({
   title: '',
@@ -237,6 +244,7 @@ function prepareDateTimeForApi(dateTimeString) {
 }
 
 const saveAcademicSettings = async () => {
+  loading.value = true
   try {
     // 验证时间范围
     if (settings.applicationStart && settings.applicationEnd) {
@@ -267,10 +275,13 @@ const saveAcademicSettings = async () => {
   } catch (error) {
     console.error('保存设置失败:', error)
     toastStore.error('保存设置失败')
+  } finally {
+    loading.value = false
   }
 }
 
 const saveStorageSettings = async () => {
+  loading.value = true
   try {
     await api.updateSystemSettings({
       singleFileSizeLimit: settings.singleFileSizeLimit,
@@ -285,6 +296,7 @@ const saveStorageSettings = async () => {
 }
 
 const saveScoreWeightSettings = async () => {
+  loading.value = true
   try {
     await api.updateSystemSettings({
       academicScoreWeight: settings.academicScoreWeight,
@@ -303,6 +315,7 @@ const publishAnnouncement = () => {
 }
 
 const backupDatabase = async () => {
+  loading.value = true
   try {
     // 更新最后备份时间
     await api.updateSystemSettings({
@@ -313,6 +326,8 @@ const backupDatabase = async () => {
   } catch (error) {
     console.error('数据库备份失败:', error)
     toastStore.error('数据库备份失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -325,6 +340,7 @@ const clearCache = () => {
 }
 
 const toggleSystemStatus = async () => {
+  loading.value = true
   try {
     if (systemStatus.value === 'online') {
       if (confirm('确定要进入系统维护模式吗？在此期间用户将无法访问系统。')) {
@@ -344,6 +360,8 @@ const toggleSystemStatus = async () => {
   } catch (error) {
     console.error('切换系统状态失败:', error)
     toastStore.error('切换系统状态失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -389,6 +407,7 @@ function formatDateTimeForInput(dateTimeString) {
 
 // 加载系统设置
 async function loadSystemSettings() {
+  loading.value = true
   try {
     const response = await api.getSystemSettings()
     const data = response.settings
@@ -410,6 +429,8 @@ async function loadSystemSettings() {
   } catch (error) {
     console.error('加载系统设置失败:', error)
     toastStore.error('加载系统设置失败')
+  } finally {
+    loading.value = false
   }
 }
 </script>

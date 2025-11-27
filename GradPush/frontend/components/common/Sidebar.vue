@@ -1,29 +1,34 @@
 <template>
-  <aside class="sidebar">
-    <div class="user-info">
-      <img :src="userAvatar" alt="用户头像" class="user-avatar">
-      <div class="user-details">
-        <div class="user-name">{{ userInfo.name }}</div>
-        <div class="user-faculty">{{ userInfo.faculty }}</div>
-        <div class="user-role">{{ userInfo.roleName || '用户' }}</div>
+  <div class="sidebar-container">
+    <aside class="sidebar" :class="{ 'sidebar-collapsed': !isSidebarOpen }">
+      <div class="user-info">
+        <img :src="userAvatar" alt="用户头像" class="user-avatar">
+        <div class="user-details">
+          <div class="user-name">{{ userInfo.name }}</div>
+          <div class="user-faculty">{{ userInfo.faculty }}</div>
+          <div class="user-role">{{ userInfo.roleName || '用户' }}</div>
+        </div>
       </div>
-    </div>
-    <nav class="sidebar-nav">
-      <ul>
-        <li v-for="item in menuItems" :key="item.key" :class="{ active: activePage === item.key }"
-          @click="$emit('page-change', item.key)">
-          <a href="#" @click.prevent>
-            <font-awesome-icon :icon="item.icon" />
-            <span>{{ item.title }}</span>
-          </a>
-        </li>
-      </ul>
-    </nav>
-  </aside>
+      <nav class="sidebar-nav">
+        <ul>
+          <li v-for="item in menuItems" :key="item.key" :class="{ active: activePage === item.key }"
+            @click="$emit('page-change', item.key)">
+            <a href="#" @click.prevent>
+              <font-awesome-icon :icon="item.icon" />
+              <span>{{ item.title }}</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+    <button class="sidebar-toggle-btn" @click="toggleSidebar" aria-label="展开/收起侧边栏">
+      <font-awesome-icon :icon="isSidebarOpen ? ['fas', 'angle-left'] : ['fas', 'angle-right']" />
+    </button>
+  </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 
 const props = defineProps({
@@ -35,11 +40,20 @@ const props = defineProps({
   }
 })
 
-defineEmits(['page-change'])
+const emit = defineEmits(['page-change', 'sidebar-toggle'])
 
 const authStore = useAuthStore()
 
 const userAvatar = computed(() => authStore.userAvatar)
+
+// 侧边栏展开/收起状态
+const isSidebarOpen = ref(true)
+
+// 切换侧边栏展开/收起状态
+const toggleSidebar = () => {
+  isSidebarOpen.value = !isSidebarOpen.value
+  emit('sidebar-toggle', isSidebarOpen.value)
+}
 
 // 菜单配置
 const menuConfig = {
@@ -71,6 +85,12 @@ const menuItems = computed(() => menuConfig[props.userType] || [])
 </script>
 
 <style scoped>
+.sidebar-container {
+  display: flex;
+  align-items: stretch;
+  position: relative;
+}
+
 .sidebar {
   width: 240px;
   background-color: #ffffff;
@@ -78,9 +98,70 @@ const menuItems = computed(() => menuConfig[props.userType] || [])
   padding: 20px 0;
   display: flex;
   flex-direction: column;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+  box-shadow: 2px 0 3px rgba(0, 0, 0, 0.05);
   flex-shrink: 0;
   overflow-y: auto;
+  transition: width 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+}
+
+.sidebar-nav li span {
+  transition: opacity 0.2s ease;
+}
+
+.sidebar-toggle-btn {
+  position: absolute;
+  right: -18px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 60px;
+  background-color: #ffffff;
+  color: #0057b1;
+  border: none;
+  border-radius: 0 4px 4px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.sidebar-toggle-btn svg {
+  font-size: 16px;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-toggle-btn:hover {
+  background-color: #0057b1;
+  color:#ffffff;
+}
+
+.sidebar-collapsed {
+  width: 0;
+  padding: 20px 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+/* 为用户信息区域添加过渡效果，避免收起时突然上移 */
+.user-info {
+  transition: all 0.3s ease;
+}
+
+/* 为导航项添加位置过渡效果 */
+.sidebar-nav li {
+  transition: all 0.3s ease;
+}
+
+.sidebar-collapsed .user-details div,
+.sidebar-collapsed .sidebar-nav li span {
+  opacity: 0;
+  transform: translateX(-10px);
+  /* 不使用display: none，以保持过渡效果 */
+  visibility: hidden;
 }
 
 .user-info {
@@ -89,6 +170,9 @@ const menuItems = computed(() => menuConfig[props.userType] || [])
   padding: 0 20px 20px;
   border-bottom: 1px solid #e1e4e8;
   margin-bottom: 20px;
+  /* 固定用户信息区域高度，防止展开时高度变化 */
+  height: 80px;
+  overflow: hidden;
 }
 
 .user-info .user-avatar {
@@ -108,6 +192,8 @@ const menuItems = computed(() => menuConfig[props.userType] || [])
   display: flex;
   flex-direction: column;
   gap: 4px;
+  /* 确保用户详情文本即使透明度变化也保持占位 */
+  min-height: 50px;
 }
 
 .user-name {
@@ -130,6 +216,40 @@ const menuItems = computed(() => menuConfig[props.userType] || [])
 .sidebar-nav li {
   margin-bottom: 4px;
   cursor: pointer;
+  transition: all 0.3s ease;
+  /* 固定导航项高度，防止展开时高度变化 */
+  height: 44px;
+}
+
+.sidebar-nav li a {
+  height: 100%;
+  /* 确保文本内容区域固定，不影响高度计算 */
+  position: relative;
+}
+
+/* 为文本设置绝对定位，确保即使透明度变化也不会影响高度 */
+.sidebar-nav li span {
+  /* 改进过渡效果，添加transform使其平滑滑出 */
+  transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s;
+  position: relative;
+  display: inline-block;
+  /* 确保展开状态下有正确的transform值 */
+  transform: translateX(0);
+  visibility: visible;
+}
+
+/* 为用户详情文本也添加平滑过渡效果 */
+.user-details div {
+  transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s;
+  position: relative;
+  /* 确保展开状态下有正确的transform值 */
+  transform: translateX(0);
+  visibility: visible;
+}
+
+.sidebar-collapsed .sidebar-nav li {
+  /* 收起状态保持相同高度 */
+  height: 44px;
 }
 
 .sidebar-nav li a {

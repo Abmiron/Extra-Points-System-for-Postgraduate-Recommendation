@@ -4,9 +4,10 @@
       @go-to-profile="goToProfile" />
 
     <div class="content-wrapper">
-      <Sidebar :active-page="currentPage" @page-change="switchPage" :user-info="userInfo" user-type="student" />
+      <Sidebar :active-page="currentPage" @page-change="switchPage" :user-info="userInfo" user-type="student"
+        @sidebar-toggle="handleSidebarToggle" :collapsed="isSidebarCollapsed" />
 
-      <main class="main-content">
+      <main :class="['main-content', { 'sidebar-collapsed': isSidebarCollapsed }]">
         <component :is="currentPageComponent" @switch-page="switchPage" @edit-application="handleEditApplication"
           :edit-application-id="editApplicationId" />
       </main>
@@ -50,6 +51,14 @@ const userInfo = computed(() => ({
   major: authStore.user?.major?.name || '计算机科学与技术',
   studentId: authStore.user?.studentId || ''
 }))
+
+// 侧边栏收起状态
+const isSidebarCollapsed = ref(false)
+
+// 处理侧边栏切换事件
+const handleSidebarToggle = (isOpen) => {
+  isSidebarCollapsed.value = !isOpen
+}
 
 // 切换页面
 const switchPage = (page) => {

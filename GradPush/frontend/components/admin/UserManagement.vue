@@ -279,53 +279,6 @@
   </div>
 </template>
 
-<style scoped>
-/* 卡片相对定位，确保加载状态只在卡片内显示 */
-.card {
-  position: relative;
-}
-
-/* 加载状态样式 */
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(255, 255, 255, 0.7);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 10;
-}
-
-.loading-spinner {
-  border: 4px solid rgba(0, 0, 0, 0.1);
-  border-top: 4px solid #007bff;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-.loading-text {
-  margin-top: 10px;
-  color: #666;
-  font-size: 14px;
-}
-</style>
-
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '../../stores/auth'
@@ -461,17 +414,24 @@ const loadMajors = async (departmentId = null) => {
         filters.major = 'all'
       }
     } else {
-      // 加载所有专业（类似审核记录组件的实现）
+      // 优化：使用并行请求加载所有专业
       try {
-        // 获取所有系，然后获取每个系的专业
-        const allMajors = []
-        for (const dept of departments.value) {
-          const response = await api.getMajorsAdmin(dept.id)
-          if (response.majors) {
-            allMajors.push(...response.majors)
-          }
+        if (departments.value.length > 0) {
+          // 并行获取所有系的专业数据
+          const promises = departments.value.map(dept => 
+            api.getMajorsAdmin(dept.id).catch(error => {
+              console.warn(`获取系 ${dept.name} 的专业数据失败:`, error)
+              return { majors: [] }
+            })
+          )
+          
+          const results = await Promise.all(promises)
+          // 合并所有专业数据
+          const allMajors = results.flatMap(result => result.majors || [])
+          majors.value = allMajors
+        } else {
+          majors.value = []
         }
-        majors.value = allMajors
       } catch (error) {
         console.error('获取所有专业列表失败:', error)
         // 如果都失败，使用空数组
@@ -993,19 +953,26 @@ const activeTabChanged = async () => {
   filters.keyword = ''
   filters.status = 'all'
   currentPage.value = 1
-  // 如果是学生选项卡，加载系和专业数据
+  
+  // 如果是学生选项卡，并行加载系和专业数据，然后立即开始加载用户数据
   if (activeTab.value === 'student') {
-    try {
-      await loadDepartments()
-      await loadMajors()
-    } catch (error) {
-      console.error('切换到学生选项卡时加载系专业数据失败:', error)
-    }
+    // 并行加载系和专业数据
+    Promise.all([
+      loadDepartments().catch(error => {
+        console.error('加载系列表失败:', error)
+      })
+    ]).then(() => {
+      // 系加载完成后再加载专业数据
+      loadMajors().catch(error => {
+        console.error('加载专业列表失败:', error)
+      })
+    })
   } else {
     departments.value = []
     majors.value = []
   }
-  // 重新加载用户数据
+  
+  // 立即开始加载用户数据，不需要等待系和专业数据加载完成
   loadUsersFromAPI()
 }
 
@@ -1074,18 +1041,9 @@ onMounted(async () => {
 })
 
 // 监听activeTab变化
-watch(activeTab, async (newTab, oldTab) => {
+watch(activeTab, (newTab, oldTab) => {
   activeTabChanged()
-  // 当切换到学生选项卡时，如果已经选择了学院，加载对应的系列表
-  if (newTab === 'student' && oldTab !== 'student' && filters.faculty && filters.faculty !== 'all') {
-    await loadDepartments(filters.faculty)
-  } else if (newTab !== 'student') {
-    // 切换到其他选项卡时，重置系和专业筛选
-    filters.department = 'all'
-    filters.major = 'all'
-    departments.value = []
-    majors.value = []
-  }
+  // 移除重复的逻辑处理，避免多次加载数据
 })
 </script>
 
@@ -1136,9 +1094,7 @@ watch(activeTab, async (newTab, oldTab) => {
   font-size: 12px;
   font-weight: 500;
 }
-</style>
 
-<style>
 /* 引入共享样式 */
 @import '../common/shared-styles.css';
 </style>

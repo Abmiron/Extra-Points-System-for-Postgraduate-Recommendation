@@ -569,46 +569,14 @@ export default {
 @import '../common/shared-styles.css';
 
 /* 加载状态样式 */
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(255, 255, 255, 0.7);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 10;
-}
-
-.loading-spinner {
-  border: 4px solid rgba(0, 0, 0, 0.1);
-  border-top: 4px solid #007bff;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
+/* 加载样式已移至shared-styles.css */
+  
+  /* 确保加载遮罩正确显示 */
+  .card {
+    position: relative;
   }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-.loading-text {
-  margin-top: 10px;
-  color: #666;
-  font-size: 14px;
-}
-
-/* 只读字段样式 */
+  
+  /* 只读字段样式 */
 .form-control[readonly] {
   background-color: #f5f5f5;
   border-color: #ddd;
