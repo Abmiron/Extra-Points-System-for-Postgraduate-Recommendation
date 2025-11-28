@@ -107,8 +107,8 @@
           <tbody>
             <tr v-for="user in paginatedUsers" :key="user.id">
               <td><input type="checkbox" v-model="selectedUsers" :value="user.id"
-                  :disabled="user.id === authStore.user.id"
-                  :class="{ 'checkbox-disabled': user.id === authStore.user.id }"></td>
+                  :disabled="user.id === authStore.user?.id"
+                  :class="{ 'checkbox-disabled': user.id === authStore.user?.id }"></td>
               <td>{{ user.username }}</td>
               <td>{{ user.name }}</td>
               <td>{{ user.faculty?.name || getFacultyText(user.faculty) }}</td>
@@ -124,33 +124,33 @@
               </td>
               <td>{{ formatDate(user.lastLogin) }}</td>
               <td v-if="activeTab === 'admin'">
-                <span v-if="user.id === authStore.user.id" class="current-login-badge">当前登录</span>
+                <span v-if="user.id === authStore.user?.id" class="current-login-badge">当前登录</span>
               </td>
               <td>
                 <div class="action-buttons">
                   <button class="btn-outline btn small-btn" @click="editUser(user)" title="编辑"
-                    :disabled="user.id === authStore.user.id"
-                    :class="{ 'btn-disabled': user.id === authStore.user.id }">
+                    :disabled="user.id === authStore.user?.id"
+                    :class="{ 'btn-disabled': user.id === authStore.user?.id }">
                     <font-awesome-icon :icon="['fas', 'edit']" />
                   </button>
                   <button v-if="user.status === 'active'" class="btn-outline btn small-btn"
-                    @click="toggleUserStatus(user.id, 'disabled')" title="禁用" :disabled="user.id === authStore.user.id"
-                    :class="{ 'btn-disabled': user.id === authStore.user.id }">
+                    @click="toggleUserStatus(user.id, 'disabled')" title="禁用" :disabled="user.id === authStore.user?.id"
+                    :class="{ 'btn-disabled': user.id === authStore.user?.id }">
                     <font-awesome-icon :icon="['fas', 'ban']" />
                   </button>
                   <button v-else class="btn-outline btn small-btn" @click="toggleUserStatus(user.id, 'active')"
-                    title="启用" :disabled="user.id === authStore.user.id"
-                    :class="{ 'btn-disabled': user.id === authStore.user.id }">
+                    title="启用" :disabled="user.id === authStore.user?.id"
+                    :class="{ 'btn-disabled': user.id === authStore.user?.id }">
                     <font-awesome-icon :icon="['fas', 'check']" />
                   </button>
                   <button class="btn-outline btn small-btn" @click="resetPassword(user.id)" title="重置密码"
-                    :disabled="user.id === authStore.user.id"
-                    :class="{ 'btn-disabled': user.id === authStore.user.id }">
+                    :disabled="user.id === authStore.user?.id"
+                    :class="{ 'btn-disabled': user.id === authStore.user?.id }">
                     <font-awesome-icon :icon="['fas', 'key']" />
                   </button>
                   <button class="btn-outline btn small-btn" @click="deleteUser(user.id)" title="删除"
-                    :disabled="user.id === authStore.user.id"
-                    :class="{ 'btn-disabled': user.id === authStore.user.id }">
+                    :disabled="user.id === authStore.user?.id"
+                    :class="{ 'btn-disabled': user.id === authStore.user?.id }">
                     <font-awesome-icon :icon="['fas', 'trash']" />
                   </button>
                 </div>
@@ -496,7 +496,7 @@ const loadUsersFromAPI = async () => {
 
     // 构建API请求URL
     const params = new URLSearchParams({
-      currentUserId: authStore.user.id,
+      currentUserId: authStore.user?.id || '',
       page: currentPage.value,
       per_page: pageSize,
       role: role,
@@ -585,7 +585,7 @@ const toggleSelectAll = () => {
   if (selectAll.value) {
     // 全选时排除当前登录用户
     selectedUsers.value = paginatedUsers.value
-      .filter(user => user.id !== authStore.user.id)
+      .filter(user => user.id !== authStore.user?.id)
       .map(user => user.id)
   } else {
     selectedUsers.value = []
@@ -596,7 +596,7 @@ const importUsers = () => {
   toastStore.info('用户导入功能开发中...')
 }
 
-const editUser = async (user) => {
+const editUser = (user) => {
   editingUser.value = user
 
   // 初始化表单，直接使用用户对象中的ID字段
@@ -613,15 +613,24 @@ const editUser = async (user) => {
     password: '' // 重置密码字段
   })
 
-  // 如果是学生用户，需要加载对应的系和专业列表
-  if (userForm.role === 'student' && userForm.facultyId) {
-    await loadDepartments(userForm.facultyId)
-    if (userForm.departmentId) {
-      await loadMajors(userForm.departmentId)
-    }
-  }
-
+  // 立即显示模态框，提升用户体验
   showAddUserModal.value = true
+
+  // 如果是学生用户，异步加载对应的系和专业列表
+  if (userForm.role === 'student' && userForm.facultyId) {
+    // 使用异步函数加载数据，不阻塞模态框显示
+    const loadUserRelatedData = async () => {
+      try {
+        await loadDepartments(userForm.facultyId)
+        if (userForm.departmentId) {
+          await loadMajors(userForm.departmentId)
+        }
+      } catch (error) {
+        console.error('加载用户相关数据失败:', error)
+      }
+    }
+    loadUserRelatedData()
+  }
 }
 
 const saveUser = async () => {
@@ -655,7 +664,7 @@ const saveUser = async () => {
     let response
     if (editingUser.value) {
       // 更新用户 - 调用PUT API
-      response = await fetch(`http://localhost:5001/api/admin/users/${editingUser.value.id}?currentUserId=${authStore.user.id}`, {
+      response = await fetch(`http://localhost:5001/api/admin/users/${editingUser.value.id}?currentUserId=${authStore.user?.id || ''}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -664,7 +673,7 @@ const saveUser = async () => {
       })
     } else {
       // 添加新用户 - 调用管理员专用接口
-      response = await fetch(`http://localhost:5001/api/admin/create-users?currentUserId=${authStore.user.id}`, {
+      response = await fetch(`http://localhost:5001/api/admin/create-users?currentUserId=${authStore.user?.id || ''}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -693,7 +702,7 @@ const toggleUserStatus = async (userId, status) => {
   try {
     isLoading.value = true
 
-    const response = await fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
+    const response = await fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user?.id || ''}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
@@ -722,7 +731,7 @@ const resetPassword = async (userId) => {
       isLoading.value = true
       const newPassword = prompt('请输入新密码（留空则使用默认密码123456）:', '') || '123456'
 
-      const response = await fetch(`http://localhost:5001/api/admin/users/${userId}/reset-password?currentUserId=${authStore.user.id}`, {
+      const response = await fetch(`http://localhost:5001/api/admin/users/${userId}/reset-password?currentUserId=${authStore.user?.id || ''}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -750,7 +759,7 @@ const deleteUser = async (userId) => {
     try {
       isLoading.value = true
 
-      const response = await fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
+      const response = await fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user?.id || ''}`, {
         method: 'DELETE'
       })
 
@@ -776,7 +785,7 @@ const batchDisable = async () => {
 
       // 批量禁用用户（逐个调用API）
       const promises = selectedUsers.value.map(userId =>
-        fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
+        fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user?.id || ''}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -814,7 +823,7 @@ const batchEnable = async () => {
 
       // 批量启用用户（逐个调用API）
       const promises = selectedUsers.value.map(userId =>
-        fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
+        fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user?.id || ''}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -853,7 +862,7 @@ const batchResetPassword = async () => {
 
       // 批量重置密码（逐个调用API）
       const promises = selectedUsers.value.map(userId =>
-        fetch(`http://localhost:5001/api/admin/users/${userId}/reset-password?currentUserId=${authStore.user.id}`, {
+        fetch(`http://localhost:5001/api/admin/users/${userId}/reset-password?currentUserId=${authStore.user?.id || ''}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -890,7 +899,7 @@ const batchDelete = async () => {
 
       // 批量删除用户（逐个调用API）
       const promises = selectedUsers.value.map(userId =>
-        fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user.id}`, {
+        fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user?.id || ''}`, {
           method: 'DELETE'
         })
       )

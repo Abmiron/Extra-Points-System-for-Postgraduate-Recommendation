@@ -313,7 +313,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
@@ -386,9 +386,17 @@ const loginForm = reactive({
 const captchaImage = ref('')
 const captchaToken = ref('')
 const captchaLoading = ref(false)
+const captchaTimer = ref(null)
+const CAPTCHA_EXPIRE_TIME = 300000 // 验证码过期时间，单位毫秒（5分钟）- 与后端保持一致
 
 // 获取验证码
 const refreshCaptcha = async () => {
+  // 清除之前的定时器
+  if (captchaTimer.value) {
+    clearTimeout(captchaTimer.value)
+    captchaTimer.value = null
+  }
+  
   captchaLoading.value = true
   try {
     // 使用项目已有的api模块获取验证码
@@ -397,6 +405,11 @@ const refreshCaptcha = async () => {
     captchaImage.value = `data:image/png;base64,${response.image}`
     // 保存验证码token
     captchaToken.value = response.token
+    
+    // 设置验证码过期定时器
+    captchaTimer.value = setTimeout(() => {
+      refreshCaptcha()
+    }, CAPTCHA_EXPIRE_TIME)
   } catch (error) {
     console.error('获取验证码失败:', error)
     toastStore.error('获取验证码失败，请刷新页面重试')
@@ -471,6 +484,14 @@ onMounted(async () => {
   ])
   // 加载验证码
   refreshCaptcha()
+})
+
+// 组件卸载时清除定时器，防止内存泄漏
+onUnmounted(() => {
+  if (captchaTimer.value) {
+    clearTimeout(captchaTimer.value)
+    captchaTimer.value = null
+  }
 })
 
 // 加载公开系统信息，获取申请时间

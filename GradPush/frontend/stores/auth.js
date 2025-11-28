@@ -105,11 +105,20 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  const logout = () => {
-    user.value = null
-    role.value = null
-    isAuthenticated.value = false
-    localStorage.removeItem('user')
+  const logout = async () => {
+    try {
+      // 调用后端登出API
+      await api.logout()
+    } catch (error) {
+      console.error('调用后端登出API失败:', error)
+      // 即使API调用失败，也清除前端状态
+    } finally {
+      // 清除前端状态
+      user.value = null
+      role.value = null
+      isAuthenticated.value = false
+      localStorage.removeItem('user')
+    }
   }
 
   const initialize = async () => {
@@ -119,16 +128,38 @@ export const useAuthStore = defineStore('auth', () => {
       
       // 验证用户数据是否有效，防止username为"student"等错误值
       if (userData.username && userData.username !== 'student') {
-        user.value = userData
-        role.value = userData.role
-        isAuthenticated.value = true
-        
-        // 初始化后尝试从API获取最新的用户信息
+        // 先调用sessionCheck API验证后端会话是否有效
         try {
-          await getCurrentUser()
+          const sessionResponse = await api.sessionCheck()
+          
+          if (sessionResponse.logged_in) {
+            // 后端会话有效，使用localStorage中的用户数据
+            user.value = userData
+            role.value = userData.role
+            isAuthenticated.value = true
+            
+            // 初始化后尝试从API获取最新的用户信息
+            try {
+              await getCurrentUser()
+            } catch (error) {
+              console.error('初始化时获取用户信息失败:', error)
+              // 失败时继续使用localStorage中的数据
+            }
+          } else {
+            // 后端会话无效，清除前端状态
+            console.log('后端会话已过期或无效，清除前端状态')
+            localStorage.removeItem('user')
+            user.value = null
+            role.value = null
+            isAuthenticated.value = false
+          }
         } catch (error) {
-          console.error('初始化时获取用户信息失败:', error)
-          // 失败时继续使用localStorage中的数据
+          console.error('会话检查失败:', error)
+          // API调用失败时，保守处理，清除前端状态
+          localStorage.removeItem('user')
+          user.value = null
+          role.value = null
+          isAuthenticated.value = false
         }
       } else {
         // 如果用户数据无效，清除localStorage并重置状态

@@ -6,37 +6,42 @@
 - 学院管理（增删改查）
 - 系管理（增删改查）
 - 专业管理（增删改查）
+- 系统设置管理（获取、更新）
 """
 
 from flask import Blueprint, request, jsonify, make_response
-from models import Faculty, Department, Major, User, SystemSettings
+from models import (
+    Faculty,
+    Department,
+    Major,
+    User,
+    SystemSettings,
+    Student,
+    Application,
+)
 from datetime import datetime
 from extensions import db
 
+# 引入组织信息管理模块
+from .organization_bp import (
+    get_all_faculties,
+    get_departments_by_faculty_id,
+    get_all_departments,
+    get_all_majors,
+    get_majors_by_department_id,
+    get_majors_by_faculty_id,
+)
+
 # 创建蓝图实例
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
-
-# CORS已在app.py中全局配置，无需在此处重复设置
-
-# 学院管理API
 
 
 # 获取所有学院
 @admin_bp.route("/faculties", methods=["GET"])
 def get_faculties():
-    faculties = Faculty.query.all()
-    result = []
-    for faculty in faculties:
-        result.append(
-            {
-                "id": faculty.id,
-                "name": faculty.name,
-                "description": faculty.description,
-                "created_at": faculty.created_at.isoformat(),
-                "updated_at": faculty.updated_at.isoformat(),
-            }
-        )
-    return make_response(jsonify({"faculties": result}), 200)
+    # 使用通用函数获取学院列表（管理员接口需要详细信息）
+    faculties = get_all_faculties(detailed=True)
+    return make_response(jsonify({"faculties": faculties}), 200)
 
 
 # 创建学院
@@ -117,7 +122,6 @@ def delete_faculty(faculty_id):
         return jsonify({"message": "学院不存在"}), 404
 
     # 级联删除：学院 -> 系 -> 专业 -> 学生 -> 用户
-    from models import Student, Department, Major, Application, User
 
     # 1. 先获取所有关联的申请记录
     applications = Application.query.filter_by(faculty_id=faculty.id).all()
@@ -164,39 +168,27 @@ def delete_faculty(faculty_id):
         return jsonify({"message": f"删除学院失败: {str(e)}"}), 500
 
 
-# 系管理API
-
-
 # 获取所有系（可按学院筛选）
 @admin_bp.route("/departments", methods=["GET"])
 def get_departments():
     faculty_id = request.args.get("faculty_id")
 
     if faculty_id:
-        departments = Department.query.filter_by(faculty_id=faculty_id).all()
+        # 使用通用函数根据学院ID获取系列表（管理员接口需要详细信息）
+        departments = get_departments_by_faculty_id(int(faculty_id), detailed=True)
+
+        # 为按学院筛选的结果添加学院名称信息
+        faculty_dict = {
+            faculty.id: faculty.name
+            for faculty in Faculty.query.filter(Faculty.id == faculty_id).all()
+        }
+        for dept in departments:
+            dept["faculty_name"] = faculty_dict.get(dept["faculty_id"], "未知学院")
     else:
-        departments = Department.query.all()
+        # 使用通用函数获取所有系（管理员接口需要详细信息）
+        departments = get_all_departments(detailed=True)
 
-    result = []
-    # 获取所有相关学院信息以避免N+1查询问题
-    faculty_ids = {dept.faculty_id for dept in departments}
-    faculties = Faculty.query.filter(Faculty.id.in_(faculty_ids)).all()
-    faculty_dict = {f.id: f.name for f in faculties}
-
-    result = []
-    for department in departments:
-        result.append(
-            {
-                "id": department.id,
-                "name": department.name,
-                "faculty_id": department.faculty_id,
-                "faculty_name": faculty_dict.get(department.faculty_id, "未知学院"),
-                "description": department.description,
-                "created_at": department.created_at.isoformat(),
-                "updated_at": department.updated_at.isoformat(),
-            }
-        )
-    return make_response(jsonify({"departments": result}), 200)
+    return make_response(jsonify({"departments": departments}), 200)
 
 
 # 创建系
@@ -318,57 +310,20 @@ def delete_department(department_id):
         return jsonify({"message": f"删除系失败: {str(e)}"}), 500
 
 
-# 专业管理API
-
-
 # 获取所有专业（可按学院或系筛选）
 @admin_bp.route("/majors", methods=["GET"])
 def get_majors():
     department_id = request.args.get("department_id")
     faculty_id = request.args.get("faculty_id")
 
+    # 使用通用函数获取专业列表（管理员接口需要详细信息）
     if department_id:
-        majors = Major.query.filter_by(department_id=department_id).all()
+        majors = get_majors_by_department_id(int(department_id), detailed=True)
     elif faculty_id:
-        # 按学院筛选专业（通过系表关联）
-        majors = (
-            Major.query.join(Department)
-            .filter(Department.faculty_id == faculty_id)
-            .all()
-        )
+        majors = get_majors_by_faculty_id(int(faculty_id), detailed=True)
     else:
-        majors = Major.query.all()
-
-    result = []
-    # 获取所有相关系和学院信息以避免N+1查询问题
-    department_ids = {maj.department_id for maj in majors}
-    departments = Department.query.filter(Department.id.in_(department_ids)).all()
-    department_dict = {d.id: d.name for d in departments}
-
-    faculty_ids = {d.faculty_id for d in departments}
-    faculties = Faculty.query.filter(Faculty.id.in_(faculty_ids)).all()
-    faculty_dict = {f.id: f.name for f in faculties}
-    faculty_id_map = {d.id: d.faculty_id for d in departments}
-
-    result = []
-    for major in majors:
-        dept_id = major.department_id
-        result.append(
-            {
-                "id": major.id,
-                "name": major.name,
-                "department_id": dept_id,
-                "department_name": department_dict.get(dept_id, "未知系"),
-                "faculty_id": faculty_id_map.get(dept_id, 0),
-                "faculty_name": faculty_dict.get(
-                    faculty_id_map.get(dept_id), "未知学院"
-                ),
-                "description": major.description,
-                "created_at": major.created_at.isoformat(),
-                "updated_at": major.updated_at.isoformat(),
-            }
-        )
-    return make_response(jsonify({"majors": result}), 200)
+        majors = get_all_majors(detailed=True)
+    return make_response(jsonify({"majors": majors}), 200)
 
 
 # 创建专业
@@ -485,9 +440,6 @@ def delete_major(major_id):
         return jsonify({"message": f"删除专业失败: {str(e)}"}), 500
 
 
-# 系统设置API
-
-
 # 获取系统设置
 @admin_bp.route("/system-settings", methods=["GET"])
 def get_system_settings():
@@ -541,9 +493,7 @@ def update_system_settings():
         settings.academic_year = data["academicYear"]
 
     if "applicationStart" in data and data["applicationStart"]:
-        settings.application_start = datetime.fromisoformat(
-            data["applicationStart"]
-        )
+        settings.application_start = datetime.fromisoformat(data["applicationStart"])
 
     if "applicationEnd" in data and data["applicationEnd"]:
         settings.application_end = datetime.fromisoformat(data["applicationEnd"])

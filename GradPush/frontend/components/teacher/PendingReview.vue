@@ -20,7 +20,7 @@
 
       <div class="filter-group">
         <span class="filter-label">学院:</span>
-        <select v-model="filters.faculty" @change="filterApplications">
+        <select v-model="filters.faculty" @change="handleFacultyChange">
           <option value="all">全部</option>
           <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
             {{ faculty.name }}
@@ -29,9 +29,9 @@
       </div>
       <div class="filter-group">
         <span class="filter-label">所在系:</span>
-        <select v-model="filters.department" @change="filterApplications">
+        <select v-model="filters.department" @change="handleDepartmentChange">
           <option value="all">全部</option>
-          <option v-for="department in departments" :key="department.id" :value="department.name">
+          <option v-for="department in departments" :key="department.id" :value="department.id">
             {{ department.name }}
           </option>
         </select>
@@ -40,7 +40,7 @@
         <span class="filter-label">专业:</span>
         <select v-model="filters.major" @change="filterApplications">
           <option value="all">全部</option>
-          <option v-for="major in majors" :key="major.id" :value="major.name">
+          <option v-for="major in majors" :key="major.id" :value="major.id">
             {{ major.name }}
           </option>
         </select>
@@ -186,7 +186,7 @@ const loading = computed(() => applicationsStore.loading)
 // 筛选和分页处理后的申请数据
 const filteredAndPaginatedApplications = computed(() => {
   // 先筛选
-  let filtered = applicationsStore.filterApplications({
+  let filterParams = {
     faculty: filters.value.faculty !== 'all' ? filters.value.faculty : undefined,
     department: filters.value.department !== 'all' ? filters.value.department : undefined,
     major: filters.value.major !== 'all' ? filters.value.major : undefined,
@@ -196,7 +196,8 @@ const filteredAndPaginatedApplications = computed(() => {
     studentName: filters.value.studentName,
     startDate: filters.value.startDate,
     endDate: filters.value.endDate
-  })
+  }
+  let filtered = applicationsStore.filterApplications(filterParams)
 
   // 只保留待审核的
   filtered = filtered.filter(app => app.status === 'pending')
@@ -273,6 +274,18 @@ const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString('zh-CN')
 }
 
+// 处理学院选择变化
+const handleFacultyChange = async () => {
+  await loadDepartments(filters.value.faculty)
+  filterApplications()
+}
+
+// 处理系选择变化
+const handleDepartmentChange = async () => {
+  await loadMajors(filters.value.department)
+  filterApplications()
+}
+
 // 清空筛选条件
 const clearFilters = async () => {
   filters.value = {
@@ -288,12 +301,19 @@ const clearFilters = async () => {
   }
   // 重置到第一页
   pagination.value.currentPage = 1
-  // 重新加载数据
+  // 重新加载所有数据
+  await Promise.all([
+    loadDepartments(),
+    loadMajors()
+  ])
+  // 重新加载申请数据
   await applicationsStore.fetchApplications()
 }
 
 const filterApplications = () => {
   pagination.value.currentPage = 1
+  // 重新加载申请数据以应用新的筛选条件
+  applicationsStore.fetchApplications()
 }
 
 const applyFilters = () => {
@@ -313,11 +333,7 @@ const nextPage = () => {
 }
 
 const reviewApplication = (application) => {
-  //console.log('点击审核按钮，申请信息:', application)
   selectedApplication.value = { ...application }
-  //console.log('selectedApplication 已设置:', selectedApplication.value)
-  // 确保对象结构正确
-  //console.log('selectedApplication 属性:', Object.keys(selectedApplication.value || {}))
 }
 
 const handleApprove = async (approveData) => {
@@ -390,12 +406,15 @@ const refreshData = async () => {
 // 生命周期
 onMounted(async () => {
   try {
-    // 并行获取数据
+    // 先获取学院
+    await loadFaculties()
+    // 然后根据默认学院加载系（默认显示所有系）
+    await loadDepartments()
+    // 最后根据默认系加载专业（默认显示所有专业）
+    await loadMajors()
+    // 并行获取其他数据
     await Promise.all([
       loadPendingApplications(),
-      loadFaculties(),
-      loadDepartments(),
-      loadMajors(),
       fetchRules()
     ])
   } catch (error) {
@@ -414,25 +433,31 @@ const loadPendingApplications = async () => {
   }
 }
 
-// 从后端获取所有系
-const loadDepartments = async () => {
+// 从后端获取系（根据学院ID）
+const loadDepartments = async (facultyId = null) => {
   try {
     loadingDepartments.value = true
-    // 这里使用管理员接口，因为老师也需要查看所有系
-    const response = await api.getDepartmentsAdmin()
+    let response
+    if (facultyId && facultyId !== 'all') {
+      // 根据学院ID获取系
+      response = await api.getDepartmentsByFaculty(facultyId)
+    } else {
+      // 获取所有系
+      response = await api.getDepartmentsAdmin()
+    }
     departments.value = response.departments || []
+    
+    // 重置专业选择和列表
+    filters.value.major = 'all'
+    majors.value = []
+    
+    // 如果有系被选中但不在新列表中，重置系选择
+    if (filters.value.department !== 'all' && !departments.value.some(dept => dept.id === filters.value.department)) {
+      filters.value.department = 'all'
+    }
   } catch (error) {
     console.error('获取系列表失败:', error)
-    // 如果管理员接口不可用，尝试使用普通接口
-    try {
-      // 假设facultyId为1（信息学院）
-      const response = await api.getDepartmentsByFaculty(1)
-      departments.value = response.departments || []
-    } catch (error) {
-      console.error('获取系列表失败:', error)
-      // 如果都失败，使用默认值
-      departments.value = []
-    }
+    departments.value = []
   } finally {
     loadingDepartments.value = false
   }
@@ -450,16 +475,26 @@ const loadFaculties = async () => {
   }
 }
 
-// 从后端获取所有专业
-const loadMajors = async () => {
+// 从后端获取专业（根据系ID）
+const loadMajors = async (departmentId = null) => {
   try {
     loadingMajors.value = true
-    // 获取所有专业
-    const response = await api.getMajors()
+    let response
+    if (departmentId && departmentId !== 'all') {
+      // 根据系ID获取专业
+      response = await api.getMajorsByDepartment(departmentId)
+    } else {
+      // 获取所有专业
+      response = await api.getMajors()
+    }
     majors.value = response.majors || []
+    
+    // 如果有专业被选中但不在新列表中，重置专业选择
+    if (filters.value.major !== 'all' && !majors.value.some(major => major.id === filters.value.major)) {
+      filters.value.major = 'all'
+    }
   } catch (error) {
     console.error('获取专业列表失败:', error)
-    // 如果失败，使用默认值
     majors.value = []
   } finally {
     loadingMajors.value = false

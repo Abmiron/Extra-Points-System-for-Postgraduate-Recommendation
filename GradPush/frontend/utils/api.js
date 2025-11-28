@@ -10,14 +10,12 @@ async function apiRequest(endpoint, method = 'GET', data = null, token = null) {
   const options = {
     method,
     headers: {},
+    credentials: 'include' // 确保发送cookies，支持session认证
   };
   
-  // 获取认证token，如果没有传入则从auth store获取
-  const authToken = token || useAuthStore()?.user?.token;
-  
   // 如果有token，添加到请求头
-  if (authToken) {
-    options.headers['Authorization'] = `Bearer ${authToken}`;
+  if (token) {
+    options.headers['Authorization'] = `Bearer ${token}`;
   }
   
   if (data) {
@@ -58,6 +56,8 @@ export default {
   register: (data) => apiRequest('/register', 'POST', data),
   resetPassword: (data) => apiRequest('/reset-password', 'POST', data),
   generateCaptcha: () => apiRequest('/generate-captcha', 'GET'),
+  logout: () => apiRequest('/logout', 'POST'),
+  sessionCheck: () => apiRequest('/session-check', 'GET'),
   getFaculties: () => apiRequest('/faculties'),
   getDepartmentsByFaculty: (facultyId) => apiRequest(`/departments/${facultyId}`),
   getMajorsByDepartment: (departmentId) => apiRequest(`/majors/${departmentId}`),
@@ -65,7 +65,6 @@ export default {
   
   // 用户相关
   getCurrentUser: (username) => apiRequest(`/user/current?username=${username}`),
-  getUser: (username) => apiRequest(`/user/${username}`),
   updateProfile: (data) => apiRequest('/user/profile', 'PUT', data),
   uploadAvatar: (username, avatarFile) => {
     const formData = new FormData();
@@ -73,10 +72,10 @@ export default {
     formData.append('avatar', avatarFile);
     return apiRequest('/user/avatar', 'POST', formData);
   },
-  resetAvatar: (username) => {
+  resetAvatar: (username, token) => {
     const formData = new FormData();
     formData.append('username', username);
-    return apiRequest('/user/avatar/reset', 'POST', formData);
+    return apiRequest('/user/avatar/reset', 'POST', formData, token);
   },
   changePassword: (data) => apiRequest('/user/change-password', 'POST', data),
   
@@ -92,16 +91,13 @@ export default {
     const queryParams = new URLSearchParams(filteredParams).toString();
     return apiRequest(`/applications?${queryParams}`);
   },
-  getApplication: (id) => apiRequest(`/applications/${id}`),
   createApplication: (data) => apiRequest('/applications', 'POST', data),
   updateApplication: (id, data) => apiRequest(`/applications/${id}`, 'PUT', data),
-  deleteApplication: (id) => apiRequest(`/applications/${id}`, 'DELETE'),
-  // 规则相关
-  matchRules: (data) => apiRequest('/rules/match', 'POST', data),
-  getStatistics: (studentId) => apiRequest(`/applications/statistics?studentId=${studentId}`),
-  
-  // 规则管理相关
-getRules: (filters) => {
+
+  getStatistics: (studentId) => apiRequest(`/students/statistics?studentId=${studentId}`),
+    
+    // 规则管理相关
+  getRules: (filters) => {
     const filteredParams = { ...filters };
     // 排除值为'all'的参数
     Object.keys(filteredParams).forEach(key => {
@@ -146,7 +142,6 @@ getRules: (filters) => {
   
   // 学院管理相关API
   getFacultiesAdmin: () => apiRequest('/admin/faculties'),
-  getFacultyAdmin: (facultyId) => apiRequest(`/admin/faculties/${facultyId}`),
   createFacultyAdmin: (data) => apiRequest('/admin/faculties', 'POST', data),
   updateFacultyAdmin: (facultyId, data) => apiRequest(`/admin/faculties/${facultyId}`, 'PUT', data),
   deleteFacultyAdmin: (facultyId) => apiRequest(`/admin/faculties/${facultyId}`, 'DELETE'),
@@ -154,7 +149,6 @@ getRules: (filters) => {
     const queryParams = facultyId ? `?faculty_id=${facultyId}` : '';
     return apiRequest(`/admin/departments${queryParams}`);
   },
-  getDepartmentAdmin: (departmentId) => apiRequest(`/admin/departments/${departmentId}`),
   createDepartmentAdmin: (data) => apiRequest('/admin/departments', 'POST', data),
   updateDepartmentAdmin: (departmentId, data) => apiRequest(`/admin/departments/${departmentId}`, 'PUT', data),
   deleteDepartmentAdmin: (departmentId) => apiRequest(`/admin/departments/${departmentId}`, 'DELETE'),
@@ -167,7 +161,6 @@ getRules: (filters) => {
     }
     return apiRequest(`/admin/majors${queryParams}`);
   },
-  getMajorAdmin: (majorId) => apiRequest(`/admin/majors/${majorId}`),
   createMajorAdmin: (data) => apiRequest('/admin/majors', 'POST', data),
   updateMajorAdmin: (majorId, data) => apiRequest(`/admin/majors/${majorId}`, 'PUT', data),
   deleteMajorAdmin: (majorId) => apiRequest(`/admin/majors/${majorId}`, 'DELETE'),
@@ -175,17 +168,13 @@ getRules: (filters) => {
   // 学生管理相关API
   getStudentsAdmin: (params = '') => {
     const queryParams = params ? `?${params}` : '';
-    return apiRequest(`/admin/students${queryParams}`);
+    return apiRequest(`/students${queryParams}`);
   },
-  getStudentAdmin: (studentId) => apiRequest(`/admin/students/${studentId}`),
-  createStudentAdmin: (data) => apiRequest('/admin/students', 'POST', data),
-  updateStudentAdmin: (studentId, data) => apiRequest(`/admin/students/${studentId}`, 'PUT', data),
-  deleteStudentAdmin: (studentId) => apiRequest(`/admin/students/${studentId}`, 'DELETE'),
-  
+  updateStudentAdmin: (studentId, data) => apiRequest(`/students/${studentId}`, 'PUT', data),
   // 综合成绩计算相关API
   recalculateComprehensiveScores: (params) => {
     const queryParams = params ? new URLSearchParams(params).toString() : '';
-    const endpoint = `/applications/recalculate-comprehensive-scores${queryParams ? `?${queryParams}` : ''}`;
+    const endpoint = `/students/recalculate-comprehensive-scores${queryParams ? `?${queryParams}` : ''}`;
     return apiRequest(endpoint, 'POST');
   }
 };

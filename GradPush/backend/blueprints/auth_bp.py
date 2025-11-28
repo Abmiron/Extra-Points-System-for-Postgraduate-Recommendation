@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-用户认证蓝图
+认证相关蓝图
 
 该文件负责处理用户认证相关的API端点，包括：
 - 登录
 - 注册
 - 密码重置
+- 验证码
+- 学院、系、专业列表获取（用于注册选择）
+- 用户登出、登录状态检查
 """
 
 from flask import Blueprint, request, jsonify, make_response, session
 from models import User, Faculty, Department, Major, Student
-from datetime import datetime, timedelta
+from datetime import datetime
 import pytz
 from extensions import db
 from utils.captcha import generate_captcha
@@ -19,11 +22,21 @@ from io import BytesIO
 import uuid
 import threading
 
+# 引入组织信息管理模块
+from .organization_bp import (
+    get_all_faculties,
+    get_departments_by_faculty_id,
+    get_all_majors,
+    get_majors_by_department_id,
+    get_majors_by_faculty_id,
+)
+
 # 用于存储验证码的临时字典
 # 使用token作为键，值为(验证码文本, 生成时间)的元组
 captcha_store = {}
 # 用于线程安全的锁
 captcha_lock = threading.Lock()
+
 
 # 清理过期验证码的函数
 def cleanup_expired_captchas():
@@ -31,7 +44,8 @@ def cleanup_expired_captchas():
     with captcha_lock:
         # 找出所有过期的验证码（超过5分钟）
         expired_tokens = [
-            token for token, (_, timestamp) in captcha_store.items()
+            token
+            for token, (_, timestamp) in captcha_store.items()
             if (current_time - timestamp).total_seconds() > 300
         ]
         # 删除过期的验证码
@@ -40,8 +54,59 @@ def cleanup_expired_captchas():
         if expired_tokens:
             print(f"清理了{len(expired_tokens)}个过期验证码")
 
+
+# 验证码验证函数
+def validate_captcha(captcha_input, captcha_token):
+    """
+    验证验证码是否有效
+
+    Args:
+        captcha_input: 用户输入的验证码
+        captcha_token: 验证码对应的token
+
+    Returns:
+        tuple: (是否验证成功, 错误消息)
+    """
+    # 验证验证码
+    print(f"验证验证码: 输入={captcha_input.lower()}, token={captcha_token}")
+
+    # 检查验证码是否存在
+    with captcha_lock:
+        if captcha_token not in captcha_store:
+            print("验证码验证失败：未找到对应的验证码")
+            return False, "验证码不存在，请刷新页面获取验证码"
+
+        # 获取存储的验证码和时间
+        stored_captcha, captcha_timestamp = captcha_store[captcha_token]
+
+    # 检查验证码是否过期（5分钟过期）
+    current_time = datetime.now()
+    time_diff = (current_time - captcha_timestamp).total_seconds()
+    print(f"验证码时间差: {time_diff}秒")
+
+    # 设置5分钟（300秒）的过期时间
+    if time_diff > 300:
+        print("验证码已过期")
+        # 清除过期的验证码
+        with captcha_lock:
+            captcha_store.pop(captcha_token, None)
+        return False, "验证码已过期，请刷新页面获取新验证码"
+
+    # 验证验证码内容
+    if captcha_input.lower() != stored_captcha:
+        print(f"验证码不匹配：输入={captcha_input.lower()}, 存储={stored_captcha}")
+        return False, "验证码错误"
+
+    # 验证成功后删除验证码
+    with captcha_lock:
+        captcha_store.pop(captcha_token, None)
+
+    print("验证码验证成功")
+    return True, None
+
+
 # 创建蓝图
-auth_bp = Blueprint('auth', __name__, url_prefix="/api")
+auth_bp = Blueprint("auth", __name__, url_prefix="/api")
 
 
 # 验证码生成接口
@@ -50,31 +115,28 @@ def get_captcha():
     try:
         # 先清理过期的验证码
         cleanup_expired_captchas()
-        
+
         # 生成验证码图片和文本
         # 注意：根据captcha.py的实现，返回值顺序是 (captcha_image, captcha_text)
         captcha_image, captcha_text = generate_captcha()
-        
+
         print(f"生成验证码: {captcha_text}")
-        
+
         # 生成唯一的token
         captcha_token = str(uuid.uuid4())
-        
+
         # 存储验证码和生成时间
         with captcha_lock:
             captcha_store[captcha_token] = (captcha_text.lower(), datetime.now())
         print(f"验证码已存储，token: {captcha_token}")
-        
+
         # 将图片转换为base64字符串
         buffer = BytesIO()
-        captcha_image.save(buffer, format='PNG')
+        captcha_image.save(buffer, format="PNG")
         buffer.seek(0)
-        img_str = base64.b64encode(buffer.getvalue()).decode('utf-8')
-        
-        return jsonify({
-            'image': img_str,
-            'token': captcha_token
-        }), 200
+        img_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+        return jsonify({"image": img_str, "token": captcha_token}), 200
     except Exception as e:
         print(f"验证码生成错误: {str(e)}")
         return jsonify({"message": "验证码生成失败"}), 500
@@ -95,50 +157,21 @@ def login():
     password = data.get("password")
     captcha_input = data.get("captcha")
     captcha_token = data.get("captchaToken")
-    
+
     if not username or not password:
         return jsonify({"message": "用户名和密码不能为空"}), 400
-    
+
     if not captcha_input:
         return jsonify({"message": "验证码不能为空"}), 400
-    
+
     if not captcha_token:
         return jsonify({"message": "验证码token不能为空"}), 400
-    
-    # 验证验证码
-    print(f"验证验证码: 输入={captcha_input.lower()}, token={captcha_token}")
-    
-    # 检查验证码是否存在
-    with captcha_lock:
-        if captcha_token not in captcha_store:
-            print("验证码验证失败：未找到对应的验证码")
-            return jsonify({"message": "验证码不存在，请刷新页面获取验证码"}), 400
-        
-        # 获取存储的验证码和时间
-        stored_captcha, captcha_timestamp = captcha_store[captcha_token]
-    
-    # 检查验证码是否过期（5分钟过期）
-    current_time = datetime.now()
-    time_diff = (current_time - captcha_timestamp).total_seconds()
-    print(f"验证码时间差: {time_diff}秒")
-    
-    # 设置5分钟（300秒）的过期时间
-    if time_diff > 300:
-        print("验证码已过期")
-        # 清除过期的验证码
-        with captcha_lock:
-            captcha_store.pop(captcha_token, None)
-        return jsonify({"message": "验证码已过期，请刷新页面获取新验证码"}), 400
-    
-    # 验证验证码内容
-    if captcha_input.lower() != stored_captcha:
-        print(f"验证码不匹配：输入={captcha_input.lower()}, 存储={stored_captcha}")
-        return jsonify({"message": "验证码错误"}), 400
-    
-    # 验证成功后删除验证码
-    with captcha_lock:
-        captcha_store.pop(captcha_token, None)
-    
+
+    # 使用通用验证码验证函数
+    captcha_valid, error_message = validate_captcha(captcha_input, captcha_token)
+    if not captcha_valid:
+        return jsonify({"message": error_message}), 400
+
     print("验证码验证成功")
 
     # 查找用户
@@ -153,12 +186,19 @@ def login():
     # 验证密码
     if not user.check_password(password):
         return jsonify({"message": "密码错误"}), 401
-    
+
     # 验证码已在验证成功后删除
 
     # 更新最后登录时间
     user.last_login = datetime.now(pytz.timezone("Asia/Shanghai"))
     db.session.commit()
+
+    # 设置会话变量
+    session["user_id"] = user.id
+    session["username"] = user.username
+    session["role"] = user.role
+    session["logged_in"] = True
+    print(f"已设置会话信息: 用户ID={user.id}, 用户名={user.username}")
 
     # 获取学院、系和专业名称
 
@@ -195,7 +235,12 @@ def login():
     }
 
     # 返回用户信息（不包含密码）
-    return jsonify({"user": user_data, "message": "登录成功"}), 200
+    return (
+        jsonify(
+            {"user": user_data, "message": "登录成功", "session_id": session.get("_id")}
+        ),
+        200,
+    )
 
 
 # 注册接口
@@ -206,51 +251,22 @@ def register():
     # 基本数据验证
     if not data:
         return jsonify({"message": "请求数据不能为空"}), 400
-    
+
     # 验证码验证
     captcha_input = data.get("captcha")
     captcha_token = data.get("captchaToken")
-    
+
     if not captcha_input:
         return jsonify({"message": "验证码不能为空"}), 400
-    
+
     if not captcha_token:
         return jsonify({"message": "验证码token不能为空"}), 400
-    
-    # 验证验证码
-    print(f"验证验证码: 输入={captcha_input.lower()}, token={captcha_token}")
-    
-    # 检查验证码是否存在
-    with captcha_lock:
-        if captcha_token not in captcha_store:
-            print("验证码验证失败：未找到对应的验证码")
-            return jsonify({"message": "验证码不存在，请刷新页面获取验证码"}), 400
-        
-        # 获取存储的验证码和时间
-        stored_captcha, captcha_timestamp = captcha_store[captcha_token]
-    
-    # 检查验证码是否过期（5分钟过期）
-    current_time = datetime.now()
-    time_diff = (current_time - captcha_timestamp).total_seconds()
-    print(f"验证码时间差: {time_diff}秒")
-    
-    # 设置5分钟（300秒）的过期时间
-    if time_diff > 300:
-        print("验证码已过期")
-        # 清除过期的验证码
-        with captcha_lock:
-            captcha_store.pop(captcha_token, None)
-        return jsonify({"message": "验证码已过期，请刷新页面获取新验证码"}), 400
-    
-    # 验证验证码内容
-    if captcha_input.lower() != stored_captcha:
-        print(f"验证码不匹配：输入={captcha_input.lower()}, 存储={stored_captcha}")
-        return jsonify({"message": "验证码错误"}), 400
-    
-    # 验证成功后删除验证码
-    with captcha_lock:
-        captcha_store.pop(captcha_token, None)
-    
+
+    # 使用通用验证码验证函数
+    captcha_valid, error_message = validate_captcha(captcha_input, captcha_token)
+    if not captcha_valid:
+        return jsonify({"message": error_message}), 400
+
     print("验证码验证成功")
 
     required_fields = ["username", "name", "role", "password"]
@@ -341,53 +357,24 @@ def register():
 @auth_bp.route("/reset-password", methods=["POST"])
 def reset_password():
     data = request.get_json()
-    
+
     # 验证码验证
     captcha_input = data.get("captcha")
     captcha_token = data.get("captchaToken")
-    
+
     if not captcha_input:
         return jsonify({"message": "验证码不能为空"}), 400
-    
+
     if not captcha_token:
         return jsonify({"message": "验证码token不能为空"}), 400
-    
-    # 验证验证码
-    print(f"验证验证码: 输入={captcha_input.lower()}, token={captcha_token}")
-    
-    # 检查验证码是否存在
-    with captcha_lock:
-        if captcha_token not in captcha_store:
-            print("验证码验证失败：未找到对应的验证码")
-            return jsonify({"message": "验证码不存在，请刷新页面获取验证码"}), 400
-        
-        # 获取存储的验证码和时间
-        stored_captcha, captcha_timestamp = captcha_store[captcha_token]
-    
-    # 检查验证码是否过期（5分钟过期）
-    current_time = datetime.now()
-    time_diff = (current_time - captcha_timestamp).total_seconds()
-    print(f"验证码时间差: {time_diff}秒")
-    
-    # 设置5分钟（300秒）的过期时间
-    if time_diff > 300:
-        print("验证码已过期")
-        # 清除过期的验证码
-        with captcha_lock:
-            captcha_store.pop(captcha_token, None)
-        return jsonify({"message": "验证码已过期，请刷新页面获取新验证码"}), 400
-    
-    # 验证验证码内容
-    if captcha_input.lower() != stored_captcha:
-        print(f"验证码不匹配：输入={captcha_input.lower()}, 存储={stored_captcha}")
-        return jsonify({"message": "验证码错误"}), 400
-    
-    # 验证成功后删除验证码
-    with captcha_lock:
-        captcha_store.pop(captcha_token, None)
-    
+
+    # 使用通用验证码验证函数
+    captcha_valid, error_message = validate_captcha(captcha_input, captcha_token)
+    if not captcha_valid:
+        return jsonify({"message": error_message}), 400
+
     print("验证码验证成功")
-    
+
     username = data.get("username")
     new_password = data.get("newPassword")
 
@@ -408,38 +395,90 @@ def reset_password():
 # 获取所有学院（用于注册选择）
 @auth_bp.route("/faculties", methods=["GET"])
 def get_faculties():
-    faculties = Faculty.query.all()
-    result = []
-    for faculty in faculties:
-        result.append({"id": faculty.id, "name": faculty.name})
-    return jsonify({"faculties": result}), 200
+    # 使用通用函数获取学院列表
+    faculties = get_all_faculties(detailed=False)
+    return jsonify({"faculties": faculties}), 200
 
 
 # 根据学院ID获取系列表（用于注册选择）
 @auth_bp.route("/departments/<int:faculty_id>", methods=["GET"])
 def get_departments_by_faculty(faculty_id):
-    departments = Department.query.filter_by(faculty_id=faculty_id).all()
-    result = []
-    for department in departments:
-        result.append({"id": department.id, "name": department.name})
-    return jsonify({"departments": result}), 200
+    # 使用通用函数根据学院ID获取系列表
+    departments = get_departments_by_faculty_id(faculty_id, detailed=False)
+    return jsonify({"departments": departments}), 200
 
 
 # 获取所有专业列表
 @auth_bp.route("/majors", methods=["GET"])
-def get_all_majors():
-    majors = Major.query.all()
-    result = []
-    for major in majors:
-        result.append({"id": major.id, "name": major.name})
-    return jsonify({"majors": result}), 200
+def get_all_majors_api():
+    # 使用通用函数获取所有专业列表
+    majors = get_all_majors(detailed=False)
+    return jsonify({"majors": majors}), 200
 
 
 # 根据系ID获取专业列表（用于注册选择）
 @auth_bp.route("/majors/<int:department_id>", methods=["GET"])
 def get_majors_by_department(department_id):
-    majors = Major.query.filter_by(department_id=department_id).all()
-    result = []
-    for major in majors:
-        result.append({"id": major.id, "name": major.name})
-    return jsonify({"majors": result}), 200
+    # 使用通用函数根据系ID获取专业列表
+    majors = get_majors_by_department_id(department_id, detailed=False)
+    return jsonify({"majors": majors}), 200
+
+
+@auth_bp.route("/majors/faculty/<int:faculty_id>", methods=["GET"])
+def get_majors_by_faculty(faculty_id):
+    """根据学院ID获取专业列表"""
+    try:
+        # 调用organization_bp中的通用函数
+        majors = get_majors_by_faculty_id(faculty_id)
+        return jsonify({"success": True, "majors": majors}), 200
+    except Exception as e:
+        print(f"根据学院获取专业列表时出错: {str(e)}")
+        return jsonify({"success": False, "message": "获取专业列表失败"}), 500
+
+
+@auth_bp.route("/logout", methods=["POST"])
+def logout():
+    """用户登出功能"""
+    try:
+        # 检查用户是否已登录
+        if "logged_in" not in session:
+            return jsonify({"success": True, "message": "您尚未登录"}), 200
+
+        # 获取用户名用于日志记录
+        username = session.get("username", "未知用户")
+        print(f"用户{username}登出系统")
+
+        # 清除所有会话变量
+        session.clear()
+
+        return jsonify({"success": True, "message": "登出成功"}), 200
+    except Exception as e:
+        print(f"用户登出时出错: {str(e)}")
+        return jsonify({"success": False, "message": "登出失败"}), 500
+
+
+@auth_bp.route("/session-check", methods=["GET"])
+def session_check():
+    """检查用户会话是否有效"""
+    try:
+        if "logged_in" in session and session["logged_in"]:
+            return (
+                jsonify(
+                    {
+                        "success": True,
+                        "logged_in": True,
+                        "user": {
+                            "id": session.get("user_id"),
+                            "username": session.get("username"),
+                            "user_type": session.get("user_type")
+                            or session.get("role"),
+                        },
+                    }
+                ),
+                200,
+            )
+        else:
+            return jsonify({"success": True, "logged_in": False}), 200
+    except Exception as e:
+        print(f"会话检查时出错: {str(e)}")
+        return jsonify({"success": False, "message": "会话检查失败"}), 500

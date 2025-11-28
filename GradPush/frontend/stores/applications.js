@@ -75,9 +75,17 @@ export const useApplicationsStore = defineStore('applications', () => {
       const queryParams = new URLSearchParams()
       if (filters.studentId) queryParams.append('studentId', filters.studentId)
       if (filters.studentName) queryParams.append('studentName', filters.studentName)
-      if (filters.faculty) queryParams.append('facultyId', filters.faculty)
-      if (filters.department) queryParams.append('department', filters.department)
-      if (filters.major) queryParams.append('major', filters.major)
+      if (filters.faculty) {
+        queryParams.append('facultyId', filters.faculty)
+      }
+      // 使用departmentId而不是department来传递系ID
+      if (filters.department && filters.department !== 'all') {
+        queryParams.append('departmentId', filters.department)
+      }
+      // 使用majorId而不是major来传递专业ID
+      if (filters.major && filters.major !== 'all') {
+        queryParams.append('majorId', filters.major)
+      }
       if (filters.status) queryParams.append('status', filters.status)
       if (filters.applicationType) queryParams.append('applicationType', filters.applicationType)
       if (filters.rule) queryParams.append('ruleId', filters.rule)
@@ -123,9 +131,17 @@ export const useApplicationsStore = defineStore('applications', () => {
     
     try {
       const queryParams = new URLSearchParams()
-      if (filters.faculty) queryParams.append('facultyId', filters.faculty)
-      if (filters.department) queryParams.append('department', filters.department)
-      if (filters.major) queryParams.append('major', filters.major)
+      if (filters.faculty) {
+        queryParams.append('facultyId', filters.faculty)
+      }
+      // 使用departmentId而不是department来传递系ID
+      if (filters.department && filters.department !== 'all') {
+        queryParams.append('departmentId', filters.department)
+      }
+      // 使用majorId而不是major来传递专业ID
+      if (filters.major && filters.major !== 'all') {
+        queryParams.append('majorId', filters.major)
+      }
       if (filters.applicationType) queryParams.append('applicationType', filters.applicationType)
       if (filters.rule) queryParams.append('ruleId', filters.rule)
       if (filters.studentId) queryParams.append('studentId', filters.studentId)
@@ -347,18 +363,64 @@ export const useApplicationsStore = defineStore('applications', () => {
   const filterApplications = (filters = {}) => {
     return applications.value.filter(application => {
       // 按学院筛选
-      if (filters.faculty && filters.faculty !== 'all' && application.facultyId !== filters.faculty) {
-        return false
+      if (filters.faculty && filters.faculty !== 'all' && filters.faculty !== undefined) {
+        const filterFaculty = String(filters.faculty);
+        const appFaculty = String(application.facultyId || '');
+        if (appFaculty !== filterFaculty) {
+          return false;
+        }
       }
       
-      // 按部门筛选
-      if (filters.department && filters.department !== 'all' && application.department !== filters.department) {
-        return false
+      // 按部门筛选 - 改进的ID匹配逻辑
+      if (filters.department && filters.department !== 'all' && filters.department !== undefined) {
+        const filterDept = String(filters.department);
+        
+        // 尝试匹配多种可能的字段格式
+        const matchFields = [
+          application.departmentId,     // 标准ID字段
+          application.department,       // 可能包含ID的字段
+          application.deptId,           // 可能的备用字段名
+          application.dept              // 可能的备用字段名
+        ];
+        
+        // 检查是否有任何字段匹配
+        let matched = false;
+        for (const field of matchFields) {
+          if (field && String(field) === filterDept) {
+            matched = true;
+            break;
+          }
+        }
+        
+        if (!matched) {
+          return false;
+        }
       }
       
-      // 按专业筛选
-      if (filters.major && filters.major !== 'all' && application.major !== filters.major) {
-        return false
+      // 按专业筛选 - 改进的ID匹配逻辑
+      if (filters.major && filters.major !== 'all' && filters.major !== undefined) {
+        const filterMajor = String(filters.major);
+        
+        // 尝试匹配多种可能的字段格式
+        const matchFields = [
+          application.majorId,          // 标准ID字段
+          application.major,            // 可能包含ID的字段
+          application.majId,            // 可能的备用字段名
+          application.maj               // 可能的备用字段名
+        ];
+        
+        // 检查是否有任何字段匹配
+        let matched = false;
+        for (const field of matchFields) {
+          if (field && String(field) === filterMajor) {
+            matched = true;
+            break;
+          }
+        }
+        
+        if (!matched) {
+          return false;
+        }
       }
       
       // 按类型筛选
@@ -433,7 +495,7 @@ export const useApplicationsStore = defineStore('applications', () => {
     error.value = null
     
     try {
-      const data = await api.apiRequest(`/applications/statistics?studentId=${studentId}`)
+      const data = await api.getStatistics(studentId)
       return data
     } catch (err) {
       console.error('加载加分统计数据失败:', err)
@@ -468,7 +530,7 @@ export const useApplicationsStore = defineStore('applications', () => {
       }
       
       const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ''
-      const data = await api.apiRequest(`/applications/students-ranking${queryString}`)
+      const data = await api.apiRequest(`/students/ranking${queryString}`)
       return data
     } catch (err) {
       console.error('加载学生排名数据失败:', err)

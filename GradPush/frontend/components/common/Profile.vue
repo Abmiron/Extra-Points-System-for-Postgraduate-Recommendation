@@ -286,8 +286,8 @@ const resetAvatar = async () => {
 
   uploadingAvatar.value = true
   try {
-    // 调用恢复默认头像API
-    const response = await api.resetAvatar(authStore.user.username)
+    // 调用恢复默认头像API，传入token参数
+    const response = await api.resetAvatar(authStore.user.username, authStore.user.token)
 
     // 更新用户信息
     authStore.updateUserInfo(response.user)

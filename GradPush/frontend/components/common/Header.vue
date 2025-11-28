@@ -62,10 +62,20 @@ const goToProfile = () => {
   emit('go-to-profile')
 }
 
-const handleLogout = () => {
+const handleLogout = async () => {
   if (confirm('确定要退出登录吗？')) {
-    authStore.logout()
-    router.push('/login')
+    try {
+      // 调用authStore中的logout方法，该方法已包含后端API调用
+      await authStore.logout()
+      // 跳转到登录页面
+      router.push('/login')
+      toastStore.success('退出登录成功')
+    } catch (error) {
+      console.error('退出登录失败:', error)
+      // 即使出现错误，也确保跳转到登录页面
+      router.push('/login')
+      toastStore.error('退出登录失败，请重试')
+    }
   }
 }
 </script>

@@ -727,8 +727,17 @@ const saveRule = async () => {
 
 const toggleRuleStatus = async (ruleId) => {
   try {
+    const rule = rules.value.find(r => r.id === ruleId)
+    const isCurrentlyActive = rule?.status === 'active'
     await api.toggleRuleStatus(ruleId)
     await loadRules() // 重新加载规则数据
+    
+    // 根据之前的状态显示对应的成功提示
+    if (isCurrentlyActive) {
+      toastStore.success('规则已禁用')
+    } else {
+      toastStore.success('规则已启用')
+    }
   } catch (error) {
     console.error('切换规则状态失败:', error)
     toastStore.error('切换规则状态失败')
