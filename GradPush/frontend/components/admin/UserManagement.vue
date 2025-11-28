@@ -211,7 +211,7 @@
               </div>
               <div class="form-group">
                 <label class="form-label">学院</label>
-                <select class="form-control" v-model="userForm.facultyId" required @change="handleFacultyChange">
+                <select class="form-control" v-model="userForm.facultyId" :required="userForm.role !== 'admin'" @change="handleFacultyChange">
                   <option value="">请选择学院</option>
                   <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
                     {{ faculty.name }}
@@ -458,10 +458,11 @@ const handleRoleChange = () => {
 
 // 学院变化处理
 const handleFacultyChange = () => {
-  if (userForm.facultyId) {
+  // 只有当角色不是管理员时才加载系和专业
+  if (userForm.role !== 'admin' && userForm.facultyId) {
     loadDepartments(userForm.facultyId)
-  } else {
-    // 重置系和专业选择
+  } else if (userForm.role !== 'admin') {
+    // 重置系和专业选择（仅非管理员角色）
     userForm.departmentId = ''
     userForm.majorId = ''
     departments.value = []
@@ -633,8 +634,9 @@ const saveUser = async () => {
       role: userForm.role,
       username: username,
       name: userForm.name,
-      facultyId: userForm.facultyId,
       status: userForm.status,
+      // 仅当角色不是管理员时包含学院ID
+      ...(userForm.role !== 'admin' ? { facultyId: userForm.facultyId } : {}),
       ...(userForm.role === 'student' ? {
         departmentId: userForm.departmentId,
         majorId: userForm.majorId
@@ -661,8 +663,8 @@ const saveUser = async () => {
         body: JSON.stringify(userData)
       })
     } else {
-      // 添加新用户 - 调用POST API
-      response = await fetch(`http://localhost:5001/api/register`, {
+      // 添加新用户 - 调用管理员专用接口
+      response = await fetch(`http://localhost:5001/api/admin/create-users?currentUserId=${authStore.user.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -1048,6 +1050,9 @@ watch(activeTab, (newTab, oldTab) => {
 </script>
 
 <style scoped>
+/* 引入共享样式 */
+@import '../common/shared-styles.css';
+
 /* 组件特有样式 */
 .tabs {
   display: flex;
@@ -1095,6 +1100,4 @@ watch(activeTab, (newTab, oldTab) => {
   font-weight: 500;
 }
 
-/* 引入共享样式 */
-@import '../common/shared-styles.css';
 </style>

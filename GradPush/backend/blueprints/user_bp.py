@@ -305,6 +305,107 @@ def update_user(user_id):
     return jsonify({"message": "用户信息更新成功"}), 200
 
 
+# 管理员添加用户接口
+@user_bp.route("/admin/create-users", methods=["POST", "OPTIONS"])
+def create_user():
+    # 处理OPTIONS预检请求
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+    # 获取当前登录用户的ID
+    current_user_id = request.args.get("currentUserId", type=int)
+    
+    # 验证请求数据
+    data = request.get_json()
+    if not data:
+        return jsonify({"message": "请求数据不能为空"}), 400
+    
+    # 显式删除可能存在的student_id字段，避免使用前端传递的值
+    if "student_id" in data:
+        del data["student_id"]
+    
+    # 验证必填字段
+    required_fields = ["username", "name", "role", "status"]
+    for field in required_fields:
+        if field not in data or not data[field]:
+            return jsonify({"message": f"{field}是必填字段"}), 400
+    
+    # 检查用户名是否已存在
+    existing_user = User.query.filter_by(username=data["username"]).first()
+    if existing_user:
+        return jsonify({"message": "用户名已存在"}), 400
+    
+    # 获取关联ID
+    faculty_id = data.get("facultyId")
+    department_id = data.get("departmentId")
+    major_id = data.get("majorId")
+    
+    # 学生角色验证
+    if data["role"] == "student":
+        # 验证学生必填的关联字段
+        if not faculty_id or not department_id or not major_id:
+            return jsonify({"message": "学生用户必须选择学院、系和专业"}), 400
+        
+        # 验证关联ID是否存在
+        faculty = Faculty.query.get(faculty_id)
+        department = Department.query.get(department_id)
+        major = Major.query.get(major_id)
+        
+        if not faculty:
+            return jsonify({"message": "学院不存在"}), 400
+        if not department:
+            return jsonify({"message": "系不存在"}), 400
+        if not major:
+            return jsonify({"message": "专业不存在"}), 400
+    
+    try:
+        # 学生角色需要先处理Student记录
+        student_id = None
+        if data["role"] == "student":
+            # 检查是否已存在对应的Student记录
+            existing_student = Student.query.filter_by(
+                student_id=data["username"]
+            ).first()
+            if not existing_student:
+                # 如果不存在，创建新的Student记录
+                new_student = Student(
+                    student_id=data["username"],
+                    student_name=data["name"],  # 使用用户姓名作为学生姓名
+                    faculty_id=faculty_id,
+                    department_id=department_id,
+                    major_id=major_id
+                )
+                db.session.add(new_student)
+                db.session.flush()  # 确保学生记录已创建
+            student_id = data["username"]  # 使用username作为student_id，与注册接口保持一致
+        
+        # 创建用户记录，确保不使用前端传递的student_id
+        new_user = User(
+            username=data["username"],
+            name=data["name"],
+            role=data["role"],
+            faculty_id=faculty_id,
+            department_id=department_id,
+            major_id=major_id,
+            student_id=student_id,  # 只使用后端生成的student ID
+            role_name=data.get("roleName", "审核员" if data["role"] == "teacher" else "系统管理员"),
+            status=data["status"],
+            email=data.get("email", ""),
+            phone=data.get("phone", "")
+        )
+        
+        # 设置密码
+        password = data.get("password", "123456")
+        new_user.set_password(password)
+        
+        db.session.add(new_user)
+        db.session.commit()
+        
+        return jsonify({"message": "用户创建成功"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"用户创建失败: {str(e)}"}), 500
+
+
 # 管理员重置用户密码接口
 @user_bp.route("/admin/users/<int:user_id>/reset-password", methods=["POST"])
 def admin_reset_password(user_id):

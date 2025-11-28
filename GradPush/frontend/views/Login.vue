@@ -956,7 +956,7 @@ const handleResetPassword = async () => {
   width: 100%;
   max-width: 1300px;
   border-radius: 16px;
-  background: linear-gradient(135deg,#4176b68c 20%, #0527549f 100%);
+  background: linear-gradient(135deg,#2b588e6d 20%, #0a2e5d69 100%);
   box-shadow: 0 5px 20px rgba(4, 10, 31, 0.279);
   overflow: hidden;
   position: relative;

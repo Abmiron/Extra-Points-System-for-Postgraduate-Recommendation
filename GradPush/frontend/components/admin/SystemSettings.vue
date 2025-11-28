@@ -289,9 +289,13 @@ const saveStorageSettings = async () => {
       allowedFileTypes: settings.allowedFileTypes
     })
     toastStore.success('设置已保存')
+    // 重新加载设置以验证保存结果
+    await loadSystemSettings()
   } catch (error) {
     console.error('保存设置失败:', error)
     toastStore.error('保存设置失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -304,9 +308,13 @@ const saveScoreWeightSettings = async () => {
       performanceMaxScore: settings.performanceMaxScore
     })
     toastStore.success('设置已保存')
+    // 重新加载设置以验证保存结果
+    await loadSystemSettings()
   } catch (error) {
     console.error('保存设置失败:', error)
     toastStore.error('保存设置失败')
+  } finally {
+    loading.value = false
   }
 }
 

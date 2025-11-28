@@ -5,7 +5,7 @@
 ## 一、核心优化策略（按优先级排序）
 
 ### 高优先级（立即实施）
-1. **后端分页与筛选实现** - 对所有列表组件（UserManagement、ApplicationManagement、ApplicationHistory等）实现后端分页，这是解决大数据量性能问题的最有效方法
+1. **后端分页与筛选实现** - 对所有列表组件（UserManagement、FacultyManagement.vue、RuleManagement.vue、ScoreManagement.vue、ApplicationManagement、ApplicationHistory、PendingReview.vue、ReviewHistory.vue）实现后端分页，这是解决大数据量性能问题的最有效方法
 2. **计算属性优化** - 重构所有复杂计算属性，避免重复计算，添加适当的缓存机制
 3. **并行数据加载** - 将所有组件中的串行数据请求改为Promise.all并行加载，显著提升初始加载速度
 
