@@ -28,39 +28,7 @@
       </div>
     </div>
     
-    <!-- 综合成绩设置 -->
-    <div class="card">
-      <div class="card-title">综合成绩设置</div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">学业成绩比例</label>
-          <div class="input-with-unit">
-            <input type="number" class="form-control small-input" v-model="settings.academicScoreWeight" min="0"
-              max="100">
-            <span class="unit">%</span>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">学术专长分数上限</label>
-          <div class="input-with-unit">
-            <input type="number" class="form-control small-input" v-model="settings.specialtyMaxScore" min="0"
-              step="0.1">
-            <span class="unit">分</span>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">综合表现分数上限</label>
-          <div class="input-with-unit">
-            <input type="number" class="form-control small-input" v-model="settings.performanceMaxScore" min="0"
-              step="0.1">
-            <span class="unit">分</span>
-          </div>
-        </div>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn-outline" @click="saveScoreWeightSettings">保存设置</button>
-      </div>
-    </div>
+
 
     <!-- 文件存储设置 -->
     <div class="card">
@@ -182,10 +150,7 @@ const settings = reactive({
   totalFileSizeLimit: '',
   avatarFileSizeLimit: '',
   allowedFileTypes: '',
-  lastBackup: '',
-  academicScoreWeight: '',
-  specialtyMaxScore: '',
-  performanceMaxScore: ''
+  lastBackup: ''
 })
 
 // 加载状态变量
@@ -274,24 +239,7 @@ const saveStorageSettings = async () => {
   }
 }
 
-const saveScoreWeightSettings = async () => {
-  loading.value = true
-  try {
-    await api.updateSystemSettings({
-      academicScoreWeight: settings.academicScoreWeight,
-      specialtyMaxScore: settings.specialtyMaxScore,
-      performanceMaxScore: settings.performanceMaxScore
-    })
-    toastStore.success('设置已保存')
-    // 重新加载设置以验证保存结果
-    await loadSystemSettings()
-  } catch (error) {
-    console.error('保存设置失败:', error)
-    toastStore.error('保存设置失败')
-  } finally {
-    loading.value = false
-  }
-}
+
 
 
 
@@ -403,9 +351,6 @@ async function loadSystemSettings() {
     settings.avatarFileSizeLimit = data.avatarFileSizeLimit || ''
     settings.allowedFileTypes = data.allowedFileTypes || ''
     settings.lastBackup = data.lastBackup || ''
-    settings.academicScoreWeight = data.academicScoreWeight || ''
-    settings.specialtyMaxScore = data.specialtyMaxScore || ''
-    settings.performanceMaxScore = data.performanceMaxScore || ''
 
     systemStatus.value = data.systemStatus === '维护中' ? 'maintenance' : 'online'
   } catch (error) {

@@ -68,11 +68,7 @@ def get_system_info():
             # 添加文件上传相关设置
             "singleFileSizeLimit": system_settings.single_file_size_limit if system_settings else 10,
             "totalFileSizeLimit": system_settings.total_file_size_limit if system_settings else 50,
-            "allowedFileTypes": system_settings.allowed_file_types if system_settings else ".pdf, .jpg, .jpeg, .png",
-            # 添加统计相关设置
-            "academicScoreWeight": system_settings.academic_score_weight if system_settings else 0.8,
-            "specialtyMaxScore": system_settings.specialty_max_score if system_settings else 15,
-            "performanceMaxScore": system_settings.performance_max_score if system_settings else 5
+            "allowedFileTypes": system_settings.allowed_file_types if system_settings else ".pdf, .jpg, .jpeg, .png"
         }
 
         return jsonify(

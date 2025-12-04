@@ -140,6 +140,9 @@ const systemSettings = reactive({
   academicScoreWeight: 80
 })
 
+// 当前学生信息
+const currentStudent = ref(null)
+
 // 计算属性
 const academicApplications = computed(() => {
   // 学术专长包括：academic(旧类型)、research、competition、innovation
@@ -198,17 +201,24 @@ const formatDate = (dateString) => {
 
 const loadSystemSettings = async () => {
   try {
-    // 获取系统设置，包括满分值
-    const settingsData = await api.getPublicSystemInfo()
-    systemSettings.specialtyMaxScore = settingsData.data.specialtyMaxScore
-    systemSettings.performanceMaxScore = settingsData.data.performanceMaxScore
-    systemSettings.academicScoreWeight = settingsData.data.academicScoreWeight
+    if (currentStudent.value?.facultyId) {
+      // 从学院成绩设置中获取对应学院的设置
+      const facultySettingsData = await api.getFacultyScoreSetting(currentStudent.value.facultyId)
+      systemSettings.specialtyMaxScore = facultySettingsData.settings.specialty_max_score
+      systemSettings.performanceMaxScore = facultySettingsData.settings.performance_max_score
+      systemSettings.academicScoreWeight = facultySettingsData.settings.academic_score_weight
+    } else {
+      // 如果没有学院信息，使用默认值
+      systemSettings.specialtyMaxScore = 15
+      systemSettings.performanceMaxScore = 5
+      systemSettings.academicScoreWeight = 80
+    }
   } catch (err) {
-    console.error('加载系统设置失败:', err)
+    console.error('加载学院成绩设置失败:', err)
     // 使用默认值
     systemSettings.specialtyMaxScore = 15
     systemSettings.performanceMaxScore = 5
-    systemSettings.academicScoreWeight = 0.7
+    systemSettings.academicScoreWeight = 80
   }
 }
 
@@ -222,26 +232,23 @@ const loadStatistics = async () => {
       return
     }
 
-    // 获取系统设置
-    await loadSystemSettings()
-
-    // 调试：查看用户信息
-    //console.log('当前用户:', authStore.user)
-
     // 使用正确的学生学号字段（studentId）而不是用户ID（id）
     const studentId = authStore.user.studentId || 'student'
-    //console.log('使用的学生ID:', studentId)
 
     // 获取学生的所有申请
-    //console.log('开始获取申请记录...')
     const appData = await applicationsStore.fetchApplications({ studentId })
     applications.value = appData
-    //console.log('获取到的申请记录:', applications.value)
 
     // 获取加分统计数据
-    //console.log('开始获取加分统计数据...')
     const statsData = await applicationsStore.fetchStatistics(studentId)
-    //console.log('获取到的加分统计数据:', statsData)
+    
+    // 更新学生信息
+    currentStudent.value = {
+      facultyId: statsData.faculty_id
+    }
+
+    // 获取学院成绩设置
+    await loadSystemSettings()
 
     // 更新统计信息
     // 注意：后端返回的是下划线命名，前端使用的是驼峰式命名

@@ -20,6 +20,7 @@ from models import (
     Major,
     User,
     SystemSettings,
+    FacultyScoreSettings,
     Student,
     Application,
     GraduateFile,
@@ -63,6 +64,11 @@ def create_faculty():
     new_faculty = Faculty(name=data["name"], description=data.get("description", ""))
 
     db.session.add(new_faculty)
+    db.session.commit()
+
+    # 创建默认的学院成绩比例设置
+    default_settings = FacultyScoreSettings(faculty_id=new_faculty.id)
+    db.session.add(default_settings)
     db.session.commit()
 
     return (
@@ -125,6 +131,11 @@ def delete_faculty(faculty_id):
 
     if not faculty:
         return jsonify({"message": "学院不存在"}), 404
+
+    # 删除学院成绩比例设置
+    score_settings = FacultyScoreSettings.query.filter_by(faculty_id=faculty_id).first()
+    if score_settings:
+        db.session.delete(score_settings)
 
     # 级联删除：学院 -> 系 -> 专业 -> 学生 -> 用户
 
@@ -471,9 +482,6 @@ def get_system_settings():
         "totalFileSizeLimit": settings.total_file_size_limit,
         "avatarFileSizeLimit": settings.avatar_file_size_limit,
         "allowedFileTypes": settings.allowed_file_types,
-        "academicScoreWeight": settings.academic_score_weight,
-        "specialtyMaxScore": settings.specialty_max_score,
-        "performanceMaxScore": settings.performance_max_score,
         "systemStatus": settings.system_status,
         "lastBackup": (
             settings.last_backup.isoformat() if settings.last_backup else None
@@ -516,15 +524,6 @@ def update_system_settings():
     if "allowedFileTypes" in data:
         settings.allowed_file_types = data["allowedFileTypes"]
 
-    if "academicScoreWeight" in data:
-        settings.academic_score_weight = data["academicScoreWeight"]
-
-    if "specialtyMaxScore" in data:
-        settings.specialty_max_score = data["specialtyMaxScore"]
-
-    if "performanceMaxScore" in data:
-        settings.performance_max_score = data["performanceMaxScore"]
-
     if "systemStatus" in data:
         settings.system_status = data["systemStatus"]
 
@@ -548,9 +547,6 @@ def update_system_settings():
         "totalFileSizeLimit": settings.total_file_size_limit,
         "avatarFileSizeLimit": settings.avatar_file_size_limit,
         "allowedFileTypes": settings.allowed_file_types,
-        "academicScoreWeight": settings.academic_score_weight,
-        "specialtyMaxScore": settings.specialty_max_score,
-        "performanceMaxScore": settings.performance_max_score,
         "systemStatus": settings.system_status,
         "lastBackup": (
             settings.last_backup.isoformat() if settings.last_backup else None
@@ -558,6 +554,97 @@ def update_system_settings():
     }
 
     return jsonify({"message": "系统设置更新成功", "settings": updated_settings}), 200
+
+
+# 获取所有学院的成绩设置
+@admin_bp.route("/faculty-score-settings", methods=["GET"])
+def get_faculty_score_settings():
+    # 获取所有学院的成绩设置
+    settings = FacultyScoreSettings.query.all()
+    
+    # 转换为JSON格式
+    settings_data = []
+    for setting in settings:
+        settings_data.append({
+            "id": setting.id,
+            "faculty_id": setting.faculty_id,
+            "faculty_name": setting.faculty.name,
+            "academic_score_weight": setting.academic_score_weight,
+            "specialty_max_score": setting.specialty_max_score,
+            "performance_max_score": setting.performance_max_score
+        })
+    
+    return jsonify({"settings": settings_data}), 200
+
+
+# 获取特定学院的成绩设置
+@admin_bp.route("/faculty-score-settings/<int:faculty_id>", methods=["GET"])
+def get_faculty_score_setting(faculty_id):
+    # 获取特定学院的成绩设置，如果不存在则创建默认设置
+    setting = FacultyScoreSettings.query.filter_by(faculty_id=faculty_id).first()
+    if not setting:
+        # 检查学院是否存在
+        faculty = Faculty.query.get(faculty_id)
+        if not faculty:
+            return jsonify({"message": "学院不存在"}), 404
+            
+        # 创建默认设置
+        setting = FacultyScoreSettings(faculty_id=faculty_id)
+        db.session.add(setting)
+        db.session.commit()
+    
+    # 转换为JSON格式
+    settings_data = {
+        "id": setting.id,
+        "faculty_id": setting.faculty_id,
+        "faculty_name": setting.faculty.name,
+        "academic_score_weight": setting.academic_score_weight,
+        "specialty_max_score": setting.specialty_max_score,
+        "performance_max_score": setting.performance_max_score
+    }
+    
+    return jsonify({"settings": settings_data}), 200
+
+
+# 更新学院的成绩设置
+@admin_bp.route("/faculty-score-settings/<int:faculty_id>", methods=["PUT"])
+def update_faculty_score_setting(faculty_id):
+    data = request.get_json()
+    
+    # 获取特定学院的成绩设置，如果不存在则创建
+    setting = FacultyScoreSettings.query.filter_by(faculty_id=faculty_id).first()
+    if not setting:
+        # 检查学院是否存在
+        faculty = Faculty.query.get(faculty_id)
+        if not faculty:
+            return jsonify({"message": "学院不存在"}), 404
+            
+        setting = FacultyScoreSettings(faculty_id=faculty_id)
+        db.session.add(setting)
+    
+    # 更新设置
+    if "academic_score_weight" in data:
+        setting.academic_score_weight = data["academic_score_weight"]
+    
+    if "specialty_max_score" in data:
+        setting.specialty_max_score = data["specialty_max_score"]
+    
+    if "performance_max_score" in data:
+        setting.performance_max_score = data["performance_max_score"]
+    
+    db.session.commit()
+    
+    # 返回更新后的设置
+    updated_settings = {
+        "id": setting.id,
+        "faculty_id": setting.faculty_id,
+        "faculty_name": setting.faculty.name,
+        "academic_score_weight": setting.academic_score_weight,
+        "specialty_max_score": setting.specialty_max_score,
+        "performance_max_score": setting.performance_max_score
+    }
+    
+    return jsonify({"message": "学院成绩设置更新成功", "settings": updated_settings}), 200
 
 
 # 推免相关文件管理API

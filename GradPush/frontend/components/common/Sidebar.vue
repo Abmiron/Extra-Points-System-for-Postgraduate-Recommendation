@@ -4,9 +4,14 @@
       <div class="user-info">
         <img :src="userAvatar" alt="用户头像" class="user-avatar">
         <div class="user-details">
-          <div class="user-name">{{ userInfo.name }}</div>
-          <div class="user-faculty">{{ userInfo.faculty }}</div>
-          <div class="user-role">{{ userInfo.roleName || '用户' }}</div>
+          <div class="user-name">{{ currentUser.name }}</div>
+          <div class="user-faculty">{{ currentUser.faculty }}</div>
+          <div class="user-major" v-if="currentUserRole === 'student'">
+            {{ currentUser.major || '未分配专业' }}
+          </div>
+          <div class="user-role" v-if="currentUserRole !== 'student'">
+            {{ currentUser.roleName || '用户' }}
+          </div>
         </div>
       </div>
       <nav class="sidebar-nav">
@@ -32,12 +37,7 @@ import { computed, ref } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 
 const props = defineProps({
-  activePage: String,
-  userInfo: Object,
-  userType: {
-    type: String,
-    default: 'student'
-  }
+  activePage: String
 })
 
 const emit = defineEmits(['page-change', 'sidebar-toggle'])
@@ -82,7 +82,14 @@ const menuConfig = {
   ]
 }
 
-const menuItems = computed(() => menuConfig[props.userType] || [])
+// 从auth store获取当前用户角色
+const currentUserRole = computed(() => authStore.user?.role || 'student')
+
+// 获取当前用户信息
+const currentUser = computed(() => authStore.user || {})
+
+// 菜单配置
+const menuItems = computed(() => menuConfig[currentUserRole.value] || [])
 </script>
 
 <style scoped>
@@ -204,7 +211,8 @@ const menuItems = computed(() => menuConfig[props.userType] || [])
 }
 
 .user-faculty,
-.user-role {
+.user-role,
+.user-major {
   font-size: 13px;
   color: #666;
   line-height: 1.3;

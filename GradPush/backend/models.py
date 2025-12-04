@@ -360,6 +360,28 @@ class Rule(db.Model):
         return f"<Rule {self.name}>"
 
 
+# 学院成绩比例设置模型
+class FacultyScoreSettings(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    faculty_id = db.Column(db.Integer, db.ForeignKey("faculty.id"), nullable=False, unique=True)  # 学院ID，一对一关系
+    
+    # 综合成绩比例设置
+    academic_score_weight = db.Column(db.Float, default=80.0)  # 学业成绩比例（%）
+    specialty_max_score = db.Column(db.Float, default=15.0)  # 学术专长分数上限
+    performance_max_score = db.Column(db.Float, default=5.0)  # 综合表现分数上限
+    
+    # 关系
+    faculty = db.relationship("Faculty", backref=db.backref("score_settings", uselist=False))
+    
+    created_at = db.Column(db.DateTime, default=get_current_time)
+    updated_at = db.Column(
+        db.DateTime, default=get_current_time, onupdate=get_current_time
+    )
+
+    def __repr__(self):
+        return f"<FacultyScoreSettings faculty_id={self.faculty_id}>"
+
+
 # 系统设置模型
 class SystemSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -374,11 +396,6 @@ class SystemSettings(db.Model):
     total_file_size_limit = db.Column(db.Integer, default=50)  # 总文件大小限制（MB）
     avatar_file_size_limit = db.Column(db.Integer, default=2)  # 头像文件大小限制（MB）
     allowed_file_types = db.Column(db.String(200), default=".pdf, .jpg, .jpeg, .png")
-
-    # 综合成绩设置
-    academic_score_weight = db.Column(db.Float, default=80.0)  # 学业成绩比例
-    specialty_max_score = db.Column(db.Float, default=15.0)  # 学术专长分数上限
-    performance_max_score = db.Column(db.Float, default=5.0)  # 综合表现分数上限
 
     # 系统维护信息
     system_status = db.Column(db.String(20), default="online")  # online, maintenance

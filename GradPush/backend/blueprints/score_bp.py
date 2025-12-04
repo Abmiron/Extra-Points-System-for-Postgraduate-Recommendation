@@ -18,6 +18,7 @@ from models import (
     Student,
     Application,
     SystemSettings,
+    FacultyScoreSettings,
 )
 from extensions import db
 
@@ -54,31 +55,43 @@ def update_student_statistics(student_id):
     if not student:
         return None
 
-    # 获取系统设置
-    system_settings = SystemSettings.query.first()
+    # 获取学生所在学院的成绩设置
+    faculty_score_settings = FacultyScoreSettings.query.filter_by(faculty_id=student.faculty_id).first()
     
     # 应用满分限制
-    if system_settings:
-        academic_score_calculated = min(academic_score_calculated, system_settings.specialty_max_score)
-        comprehensive_score = min(comprehensive_score, system_settings.performance_max_score)
+    if faculty_score_settings:
+        academic_score_calculated = min(academic_score_calculated, faculty_score_settings.specialty_max_score)
+        comprehensive_score = min(comprehensive_score, faculty_score_settings.performance_max_score)
+    else:
+        # 如果没有学院成绩设置，使用默认值
+        academic_score_calculated = min(academic_score_calculated, 15.0)  # 默认学术专长满分15分
+        comprehensive_score = min(comprehensive_score, 5.0)  # 默认综合表现满分5分
     
     # 更新学生统计数据
     student.academic_specialty_total = academic_score_calculated  # 学术专长总分（已应用满分限制）
     student.comprehensive_performance_total = comprehensive_score  # 综合表现总分（已应用满分限制）
-    if system_settings:
-        # 计算综合成绩：学业成绩 * 学业成绩权重 / 100 + 学术专长总分 + 综合表现总分
-        academic_score = student.academic_score or 0.0
-        specialty_total = student.academic_specialty_total or 0.0
-        performance_total = student.comprehensive_performance_total or 0.0
+    
+    # 计算综合成绩：学业成绩 * 学业成绩权重 / 100 + 学术专长总分 + 综合表现总分
+    academic_score = student.academic_score or 0.0
+    specialty_total = student.academic_specialty_total or 0.0
+    performance_total = student.comprehensive_performance_total or 0.0
 
+    if faculty_score_settings:
         calculated_score = (
-            (academic_score * system_settings.academic_score_weight / 100)
+            (academic_score * faculty_score_settings.academic_score_weight / 100)
+            + specialty_total
+            + performance_total
+        )
+    else:
+        # 如果没有学院成绩设置，使用默认权重80%
+        calculated_score = (
+            (academic_score * 80.0 / 100)
             + specialty_total
             + performance_total
         )
 
-        # 更新综合成绩，保留四位小数
-        student.comprehensive_score = round(calculated_score, 4)
+    # 更新综合成绩，保留四位小数
+    student.comprehensive_score = round(calculated_score, 4)
 
     # 保存更改到数据库
     db.session.commit()
@@ -98,7 +111,7 @@ def recalculate_comprehensive_scores():
     仅允许管理员访问
     """
     from extensions import db
-    from models import SystemSettings, Student, User
+    from models import SystemSettings, Student, User, FacultyScoreSettings
 
     # 检查权限 - 仅管理员可以执行此操作
     username = request.args.get("username")
@@ -110,11 +123,6 @@ def recalculate_comprehensive_scores():
         return jsonify({"error": "无权限执行此操作"}), 403
 
     try:
-        # 获取系统设置中的权重比例
-        system_settings = SystemSettings.query.first()
-        if not system_settings:
-            return jsonify({"error": "未找到系统设置，请先配置权重比例"}), 404
-
         # 获取所有学生
         students = Student.query.all()
 
@@ -126,20 +134,27 @@ def recalculate_comprehensive_scores():
             specialty_total = student.academic_specialty_total or 0.0
             performance_total = student.comprehensive_performance_total or 0.0
 
-            # 应用满分限制（确保system_settings存在）
-            if system_settings:
-                specialty_total = min(specialty_total, system_settings.specialty_max_score)
-                performance_total = min(performance_total, system_settings.performance_max_score)
+            # 获取学生所在学院的成绩设置
+            faculty_score_settings = FacultyScoreSettings.query.filter_by(faculty_id=student.faculty_id).first()
+            
+            # 应用满分限制
+            if faculty_score_settings:
+                specialty_total = min(specialty_total, faculty_score_settings.specialty_max_score)
+                performance_total = min(performance_total, faculty_score_settings.performance_max_score)
+            else:
+                # 如果没有学院成绩设置，使用默认值
+                specialty_total = min(specialty_total, 15.0)  # 默认学术专长满分15分
+                performance_total = min(performance_total, 5.0)  # 默认综合表现满分5分
 
             # 计算综合成绩：学业成绩 * 学业成绩权重 / 100 + 学术专长总分 + 综合表现总分
-            if system_settings:
+            if faculty_score_settings:
                 calculated_score = (
-                    (academic_score * system_settings.academic_score_weight / 100)
+                    (academic_score * faculty_score_settings.academic_score_weight / 100)
                     + specialty_total
                     + performance_total
                 )
             else:
-                # 如果没有系统设置，使用默认权重80%
+                # 如果没有学院成绩设置，使用默认权重80%
                 calculated_score = (
                     (academic_score * 80.0 / 100)
                     + specialty_total
@@ -162,9 +177,6 @@ def recalculate_comprehensive_scores():
                 {
                     "message": "综合成绩重新计算完成",
                     "updated_students": updated_count,
-                    "weights": {
-                        "academic_score_weight": system_settings.academic_score_weight
-                    },
                 }
             ),
             200,
@@ -391,9 +403,6 @@ def update_student(student_id):
         return jsonify({"message": "学生不存在"}), 404
 
     data = request.get_json()
-    
-    # 获取系统设置
-    system_settings = SystemSettings.query.first()
 
     # 更新学生信息
     if "student_name" in data:
@@ -416,28 +425,41 @@ def update_student(student_id):
         student.academic_score = data["academic_score"]
     # academic_weighted字段已移除，由academic_score自动计算
     
+    # 获取学生所在学院的成绩设置
+    faculty_score_settings = FacultyScoreSettings.query.filter_by(faculty_id=student.faculty_id).first()
+    
     # 应用满分限制并更新学术专长总分
     if "academic_specialty_total" in data:
         academic_specialty_total = data["academic_specialty_total"]
-        if system_settings:
-            academic_specialty_total = min(academic_specialty_total, system_settings.specialty_max_score)
+        if faculty_score_settings:
+            academic_specialty_total = min(academic_specialty_total, faculty_score_settings.specialty_max_score)
+        else:
+            # 如果没有学院成绩设置，使用默认值
+            academic_specialty_total = min(academic_specialty_total, 15.0)  # 默认学术专长满分15分
         student.academic_specialty_total = academic_specialty_total
     
     # 应用满分限制并更新综合表现总分
     if "comprehensive_performance_total" in data:
         comprehensive_performance_total = data["comprehensive_performance_total"]
-        if system_settings:
-            comprehensive_performance_total = min(comprehensive_performance_total, system_settings.performance_max_score)
+        if faculty_score_settings:
+            comprehensive_performance_total = min(comprehensive_performance_total, faculty_score_settings.performance_max_score)
+        else:
+            # 如果没有学院成绩设置，使用默认值
+            comprehensive_performance_total = min(comprehensive_performance_total, 5.0)  # 默认综合表现满分5分
         student.comprehensive_performance_total = comprehensive_performance_total
     
     # 如果更新了学术成绩、学术专长总分或综合表现总分，重新计算综合成绩
-    if ("academic_score" in data or "academic_specialty_total" in data or "comprehensive_performance_total" in data) and system_settings:
+    if ("academic_score" in data or "academic_specialty_total" in data or "comprehensive_performance_total" in data):
         # 计算综合成绩：学业成绩 * 学业成绩权重 / 100 + 学术专长总分 + 综合表现总分
         academic_score = student.academic_score or 0.0
         specialty_total = student.academic_specialty_total or 0.0
         performance_total = student.comprehensive_performance_total or 0.0
         
-        calculated_score = (academic_score * system_settings.academic_score_weight / 100) + specialty_total + performance_total
+        if faculty_score_settings:
+            calculated_score = (academic_score * faculty_score_settings.academic_score_weight / 100) + specialty_total + performance_total
+        else:
+            # 如果没有学院成绩设置，使用默认权重80%
+            calculated_score = (academic_score * 80.0 / 100) + specialty_total + performance_total
         
         # 更新综合成绩，保留四位小数
         student.comprehensive_score = round(calculated_score, 4)
@@ -543,6 +565,7 @@ def get_student_statistics():
         "ranking": ranking,
         "major_total_students": major_total_students,
         "approved_count": len(applications),
+        "faculty_id": student.faculty_id if student else None,
     }
 
     return jsonify(statistics_data), 200

@@ -1,251 +1,340 @@
 <template>
   <div class="page-content">
+    <!-- 全局加载指示器 -->
+    <div v-if="loading" class="loading-overlay">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">加载中...</div>
+    </div>
+    
     <!-- 页面标题 -->
     <div class="page-title">
       <span>成绩管理</span>
     </div>
 
-    <!-- 筛选和搜索区域 -->
-    <div class="filters">
-      <div class="filter-group">
-        <span class="filter-label">姓名:</span>
-        <input type="text" class="form-control small" v-model="filters.studentName" placeholder="输入学生姓名">
-      </div>
-      <div class="filter-group">
-        <span class="filter-label">学号:</span>
-        <input type="text" class="form-control small" v-model="filters.studentId" placeholder="输入学生学号">
-      </div>
-
-      <div class="filter-group">
-        <span class="filter-label">学院:</span>
-        <select class="form-control small" v-model="filters.faculty" @change="onFacultyChange">
-          <option value="">全部学院</option>
-          <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.name">
-            {{ faculty.name }}
-          </option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <span class="filter-label">系:</span>
-        <select class="form-control small" v-model="filters.department" @change="onDepartmentChange">
-          <option value="">全部系</option>
-          <option v-for="dept in departments" :key="dept.id" :value="dept.name">
-            {{ dept.name }}
-          </option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <span class="filter-label">专业:</span>
-        <select class="form-control small" v-model="filters.major">
-          <option value="">全部专业</option>
-          <option v-for="major in majors" :key="major.id" :value="major.name">
-            {{ major.name }}
-          </option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <button class="btn btn-outline" @click="resetFilter">清空筛选</button>
-      </div>
-      <div class="filter-group">
-        <button class="btn btn-primary btn-outline" @click="recalculateComprehensiveScores">重新计算综合成绩</button>
-      </div>
-    </div>
-
-    <!-- 成绩表格 -->
+    <!-- 模块一：学院综合成绩比例设置 -->
     <div class="card">
       <div class="card-title">
-        <span>成绩管理</span>
+        <h3>学院综合成绩比例设置</h3>
       </div>
-      <!-- 加载状态指示器 -->
-      <div v-if="loading" class="loading-overlay">
-        <div class="loading-spinner"></div>
-        <div class="loading-text">加载中...</div>
-      </div>
-      <div class="table-container">
-        <table class="application-table">
-          <thead>
-            <tr>
-              <th>学号</th>
-              <th>姓名</th>
-              <th>CET4成绩</th>
-              <th>CET6成绩</th>
-              <th>GPA</th>
-              <th>学业成绩</th>
-              <th>学术专长</th>
-              <th>综合表现</th>
-              <th>考核总分</th>
-              <th>综合成绩</th>
-              <th>专业排名</th>
-              <th>排名人数</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="student in paginatedScores" :key="student.id">
-              <td>{{ student.student_id }}</td>
-              <td>{{ student.student_name }}</td>
-              <td>{{ student.cet4_score || '-' }}</td>
-              <td>{{ student.cet6_score || '-' }}</td>
-              <td>{{ student.gpa ? student.gpa.toFixed(4) : '-' }}</td>
-              <td>{{ student.academic_score ? student.academic_score.toFixed(4) : '-' }}</td>
-              <td>{{ student.academic_specialty_total || '-' }}</td>
-              <td>{{ student.comprehensive_performance_total || '-' }}</td>
-              <td>{{ student.total_score || '-' }}</td>
-              <td>{{ student.comprehensive_score || '-' }}</td>
-              <td>{{ student.major_ranking || '-' }}</td>
-              <td>{{ student.total_students || '-' }}</td>
-              <td>
-                <div class="action-buttons">
-                  <button class="btn-outline btn small-btn" @click="openEditModal(student)">
-                    <font-awesome-icon :icon="['fas', 'edit']" />
-                  </button>
-                </div>
-              </td>
-            </tr>
-            <tr v-if="paginatedScores.length === 0">
-              <td :colspan="14" class="no-data">暂无成绩数据</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="card-body">
+        <div class="score-settings-section">
+          <!-- 学院搜索框 -->
+          <div class="filter-group">
+            <span class="filter-label">学院名称:</span>
+            <input type="text" class="form-control small" v-model="scoreSettingsSearch" placeholder="输入学院名称">
+          </div>
+          <!-- 成绩设置表格 -->
+          <div class="table-container">
+            <table class="application-table">
+              <thead>
+                <tr>
+                  <th>学院名称</th>
+                  <th>学业成绩比例(%)</th>
+                  <th>学术专长上限</th>
+                  <th>综合表现上限</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="setting in filteredScoreSettings" :key="setting.faculty_id">
+                  <td>{{ getFacultyName(setting.faculty_id) }}</td>
+                  <td>{{ setting.academic_score_weight }}</td>
+                  <td>{{ setting.specialty_max_score }}</td>
+                  <td>{{ setting.performance_max_score }}</td>
+                  <td>
+                    <button class="btn-outline btn small-btn" @click="openScoreSettingsDialog(setting)">
+                      <font-awesome-icon :icon="['fas', 'gear']" class="me-1" /> 编辑
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- 分页控件 -->
-    <div class="pagination">
-      <div class="pagination-info">显示 {{ startIndex + 1 }}-{{ endIndex }} 条，共 {{ total }} 条记录</div>
-      <div class="pagination-controls">
-        <button class="btn-outline btn" :disabled="currentPage === 1" @click="prevPage">
-          <font-awesome-icon :icon="['fas', 'chevron-left']" /> 上一页
-        </button>
-        <button class="btn-outline btn" :disabled="currentPage >= totalPages" @click="nextPage">
-          下一页 <font-awesome-icon :icon="['fas', 'chevron-right']" />
-        </button>
+    <!-- 模块二：成绩管理与筛选 -->
+    <div class="card">
+      <div class="card-title">
+        <h3>学生成绩管理</h3>
       </div>
-    </div>
+      <div class="card-body">
+        <!-- 筛选和搜索区域 -->
+        <div class="filters">
+          <div class="filter-group">
+            <span class="filter-label">姓名:</span>
+            <input type="text" class="form-control small" v-model="filters.studentName" placeholder="输入学生姓名">
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">学号:</span>
+            <input type="text" class="form-control small" v-model="filters.studentId" placeholder="输入学生学号">
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">学院:</span>
+            <select class="form-control small" v-model="filters.faculty" @change="onFacultyChange">
+              <option value="">全部学院</option>
+              <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.name">
+                {{ faculty.name }}
+              </option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">系:</span>
+            <select class="form-control small" v-model="filters.department" @change="onDepartmentChange">
+              <option value="">全部系</option>
+              <option v-for="dept in departments" :key="dept.id" :value="dept.name">
+                {{ dept.name }}
+              </option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">专业:</span>
+            <select class="form-control small" v-model="filters.major">
+              <option value="">全部专业</option>
+              <option v-for="major in majors" :key="major.id" :value="major.name">
+                {{ major.name }}
+              </option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <button class="btn btn-outline" @click="resetFilter">清空筛选</button>
+          </div>
+          <div class="filter-group">
+            <button class="btn btn-outline" @click="recalculateComprehensiveScores">
+              <font-awesome-icon :icon="['fas', 'calculator']" class="me-1" /> 重新计算综合成绩
+            </button>
+          </div>
+        </div>
 
-    <!-- 添加/编辑学生模态框 -->
-    <div v-if="dialogVisible" class="modal-overlay" @click="dialogVisible = false">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>编辑成绩</h3>
-          <button class="close-btn" @click="dialogVisible = false">
-            <font-awesome-icon :icon="['fas', 'times']" />
+        <!-- 成绩表格 -->
+        <div class="score-table-section">
+          <div class="table-container">
+            <table class="application-table">
+              <thead>
+                <tr>
+                  <th>学号</th>
+                  <th>姓名</th>
+                  <th>CET4成绩</th>
+                  <th>CET6成绩</th>
+                  <th>GPA</th>
+                  <th>学业成绩</th>
+                  <th>学术专长</th>
+                  <th>综合表现</th>
+                  <th>考核总分</th>
+                  <th>综合成绩</th>
+                  <th>专业排名</th>
+                  <th>排名人数</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="student in paginatedScores" :key="student.id">
+                  <td>{{ student.student_id }}</td>
+                  <td>{{ student.student_name }}</td>
+                  <td>{{ student.cet4_score || '-' }}</td>
+                  <td>{{ student.cet6_score || '-' }}</td>
+                  <td>{{ student.gpa ? student.gpa.toFixed(4) : '-' }}</td>
+                  <td>{{ student.academic_score ? student.academic_score.toFixed(4) : '-' }}</td>
+                  <td>{{ student.academic_specialty_total || '-' }}</td>
+                  <td>{{ student.comprehensive_performance_total || '-' }}</td>
+                  <td>{{ student.total_score || '-' }}</td>
+                  <td>{{ student.comprehensive_score || '-' }}</td>
+                  <td>{{ student.major_ranking || '-' }}</td>
+                  <td>{{ student.total_students || '-' }}</td>
+                  <td>
+                    <div class="action-buttons">
+                      <button class="btn-outline btn small-btn" @click="openEditModal(student)">
+                        <font-awesome-icon :icon="['fas', 'edit']" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="paginatedScores.length === 0">
+                  <td :colspan="14" class="no-data">暂无成绩数据</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 分页控件 -->
+      <div class="pagination">
+        <div class="pagination-info">显示 {{ startIndex + 1 }}-{{ endIndex }} 条，共 {{ total }} 条记录</div>
+        <div class="pagination-controls">
+          <button class="btn-outline btn" :disabled="currentPage === 1" @click="prevPage">
+            <font-awesome-icon :icon="['fas', 'chevron-left']" /> 上一页
+          </button>
+          <button class="btn-outline btn" :disabled="currentPage >= totalPages" @click="nextPage">
+            下一页 <font-awesome-icon :icon="['fas', 'chevron-right']" />
           </button>
         </div>
-        <div class="modal-body">
-          <form @submit.prevent="handleSubmit">
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">学号</label>
-                <input type="text" class="form-control" v-model="formData.student_id" disabled />
+      </div>
+
+      <!-- 添加/编辑学生模态框 -->
+      <div v-if="dialogVisible" class="modal-overlay" @click="dialogVisible = false">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <h3>编辑成绩</h3>
+            <button class="close-btn" @click="dialogVisible = false">
+              <font-awesome-icon :icon="['fas', 'times']" />
+            </button>
+          </div>
+          <div class="modal-body">
+            <form @submit.prevent="handleSubmit">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">学号</label>
+                  <input type="text" class="form-control" v-model="formData.student_id" disabled />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">姓名</label>
+                  <input type="text" class="form-control" v-model="formData.student_name" disabled />
+                </div>
               </div>
-              <div class="form-group">
-                <label class="form-label">姓名</label>
-                <input type="text" class="form-control" v-model="formData.student_name" disabled />
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">性别</label>
+                  <select class="form-control" v-model="formData.gender" placeholder="请选择性别">
+                    <option value="">请选择性别</option>
+                    <option value="男">男</option>
+                    <option value="女">女</option>
+                  </select>
+                  <div v-if="errors.gender" class="error-message">{{ errors.gender }}</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">学院</label>
+                  <input type="text" class="form-control" :value="formData.facultyName" disabled />
+                </div>
               </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">性别</label>
-                <select class="form-control" v-model="formData.gender" placeholder="请选择性别">
-                  <option value="">请选择性别</option>
-                  <option value="男">男</option>
-                  <option value="女">女</option>
-                </select>
-                <div v-if="errors.gender" class="error-message">{{ errors.gender }}</div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">系</label>
+                  <input type="text" class="form-control" :value="formData.departmentName" disabled />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">专业</label>
+                  <input type="text" class="form-control" :value="formData.majorName" disabled />
+                </div>
               </div>
-              <div class="form-group">
-                <label class="form-label">学院</label>
-                <input type="text" class="form-control" :value="formData.facultyName" disabled />
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">CET4成绩</label>
+                  <input type="number" class="form-control" v-model="formData.cet4_score" placeholder="请输入CET4成绩"
+                    min="0" max="710" step="1" />
+                  <div v-if="errors.cet4_score" class="error-message">{{ errors.cet4_score }}</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">CET6成绩</label>
+                  <input type="number" class="form-control" v-model="formData.cet6_score" placeholder="请输入CET6成绩"
+                    min="0" max="710" step="1" />
+                  <div v-if="errors.cet6_score" class="error-message">{{ errors.cet6_score }}</div>
+                </div>
               </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">系</label>
-                <input type="text" class="form-control" :value="formData.departmentName" disabled />
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">GPA</label>
+                  <input type="number" class="form-control" v-model="formData.gpa" placeholder="请输入GPA" min="0" max="4"
+                    step="0.0001" />
+                  <div v-if="errors.gpa" class="error-message">{{ errors.gpa }}</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">学业成绩</label>
+                  <input type="number" class="form-control" v-model="formData.academic_score" placeholder="请输入学业成绩"
+                    min="0" max="100" step="0.0001" />
+                  <div v-if="errors.academic_score" class="error-message">{{ errors.academic_score }}</div>
+                </div>
               </div>
-              <div class="form-group">
-                <label class="form-label">专业</label>
-                <input type="text" class="form-control" :value="formData.majorName" disabled />
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">学术专长</label>
+                  <input type="number" class="form-control" v-model="formData.academic_specialty_total"
+                    placeholder="系统自动计算" min="0" max="12" step="0.01" readonly />
+                  <div class="help-text">由系统根据申请记录自动计算，直接计入综合成绩</div>
+                </div>
               </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">CET4成绩</label>
-                <input type="number" class="form-control" v-model="formData.cet4_score" placeholder="请输入CET4成绩" min="0"
-                  max="710" step="1" />
-                <div v-if="errors.cet4_score" class="error-message">{{ errors.cet4_score }}</div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">综合表现</label>
+                  <input type="number" class="form-control" v-model="formData.comprehensive_performance_total"
+                    placeholder="系统自动计算" min="0" max="8" step="0.01" readonly />
+                  <div class="help-text">由系统根据申请记录自动计算，直接计入综合成绩</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">考核总分</label>
+                  <input type="number" class="form-control" v-model="formData.total_score" placeholder="系统自动计算" min="0"
+                    max="100" step="0.01" readonly />
+                  <div class="help-text">由系统根据申请记录自动计算</div>
+                </div>
               </div>
-              <div class="form-group">
-                <label class="form-label">CET6成绩</label>
-                <input type="number" class="form-control" v-model="formData.cet6_score" placeholder="请输入CET6成绩" min="0"
-                  max="710" step="1" />
-                <div v-if="errors.cet6_score" class="error-message">{{ errors.cet6_score }}</div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">综合成绩</label>
+                  <input type="number" class="form-control" v-model="formData.comprehensive_score" placeholder="系统自动计算"
+                    min="0" max="100" step="0.01" readonly />
+                  <div class="help-text">计算方式：学业成绩 * 学业成绩权重 / 100 + 学术专长总分 + 综合表现总分</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">专业排名</label>
+                  <input type="number" class="form-control" v-model="formData.major_ranking" placeholder="系统自动计算"
+                    min="1" step="1" readonly />
+                  <div class="help-text">由系统根据申请记录自动计算</div>
+                </div>
               </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">GPA</label>
-                <input type="number" class="form-control" v-model="formData.gpa" placeholder="请输入GPA" min="0" max="4"
-                  step="0.0001" />
-                <div v-if="errors.gpa" class="error-message">{{ errors.gpa }}</div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">排名人数</label>
+                  <input type="number" class="form-control" v-model="formData.total_students" placeholder="系统自动计算"
+                    min="1" step="1" readonly />
+                  <div class="help-text">由系统根据申请记录自动计算</div>
+                </div>
               </div>
-              <div class="form-group">
-                <label class="form-label">学业成绩</label>
-                <input type="number" class="form-control" v-model="formData.academic_score" placeholder="请输入学业成绩"
-                  min="0" max="100" step="0.0001" />
-                <div v-if="errors.academic_score" class="error-message">{{ errors.academic_score }}</div>
+              <div class="form-actions">
+                <button type="button" class="btn btn-outline" @click="dialogVisible = false">取消</button>
+                <button type="submit" class="btn btn-primary">更新</button>
               </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">学术专长</label>
-                <input type="number" class="form-control" v-model="formData.academic_specialty_total"
-                  placeholder="系统自动计算" min="0" max="12" step="0.01" readonly />
-                <div class="help-text">由系统根据申请记录自动计算，直接计入综合成绩</div>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">综合表现</label>
-                <input type="number" class="form-control" v-model="formData.comprehensive_performance_total"
-                  placeholder="系统自动计算" min="0" max="8" step="0.01" readonly />
-                <div class="help-text">由系统根据申请记录自动计算，直接计入综合成绩</div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">考核总分</label>
-                <input type="number" class="form-control" v-model="formData.total_score" placeholder="系统自动计算" min="0"
-                  max="100" step="0.01" readonly />
-                <div class="help-text">由系统根据申请记录自动计算</div>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">综合成绩</label>
-                <input type="number" class="form-control" v-model="formData.comprehensive_score" placeholder="系统自动计算"
-                  min="0" max="100" step="0.01" readonly />
-                <div class="help-text">计算方式：学业成绩 * 学业成绩权重 / 100 + 学术专长总分 + 综合表现总分</div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">专业排名</label>
-                <input type="number" class="form-control" v-model="formData.major_ranking" placeholder="系统自动计算" min="1"
-                  step="1" readonly />
-                <div class="help-text">由系统根据申请记录自动计算</div>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">排名人数</label>
-                <input type="number" class="form-control" v-model="formData.total_students" placeholder="系统自动计算" min="1"
-                  step="1" readonly />
-                <div class="help-text">由系统根据申请记录自动计算</div>
-              </div>
-            </div>
-            <div class="form-actions">
-              <button type="button" class="btn btn-outline" @click="dialogVisible = false">取消</button>
-              <button type="submit" class="btn btn-primary">更新</button>
-            </div>
-          </form>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 学院成绩设置弹窗 -->
+  <div v-if="scoreSettingsDialogVisible" class="modal-overlay" @click.self="scoreSettingsDialogVisible = false">
+    <div class="modal-content" @click.stop>
+      <div class="modal-header">
+        <h3>学院成绩设置</h3>
+        <button class="close-btn" @click="scoreSettingsDialogVisible = false">
+          <font-awesome-icon :icon="['fas', 'times']" />
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="academic_score_weight">学业成绩比例(%)</label>
+          <div class="input-group">
+            <input type="number" class="form-control" id="academic_score_weight"
+              v-model.number="facultyScoreSettings.academic_score_weight" min="0" max="100" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="specialty_max_score">学术专长分数上限</label>
+          <input type="number" class="form-control" id="specialty_max_score"
+            v-model.number="facultyScoreSettings.specialty_max_score" min="0" max="100" />
+        </div>
+        <div class="form-group">
+          <label for="performance_max_score">综合表现分数上限</label>
+          <input type="number" class="form-control" id="performance_max_score"
+            v-model.number="facultyScoreSettings.performance_max_score" min="0" max="100" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="form-actions" style="margin-top: 0; padding-top: 0; border-top: none; gap: 12px;">
+          <button type="button" class="btn btn-outline"
+            @click="scoreSettingsDialogVisible = false">取消</button>
+          <button type="button" class="btn"
+            @click="saveFacultyScoreSettings">保存</button>
         </div>
       </div>
     </div>
@@ -310,7 +399,19 @@ export default {
         total_students: null
       },
       // 表单验证错误
-      errors: {}
+      errors: {},
+      // 学院成绩设置相关
+      scoreSettingsDialogVisible: false,
+      selectedFaculty: null,
+      selectedFacultyForSettings: '',
+      scoreSettings: [], // 存储所有学院的成绩设置
+      scoreSettingsSearch: '', // 学院成绩设置搜索框
+      facultyScoreSettings: {
+        faculty_id: null,
+        academic_score_weight: 80,
+        specialty_max_score: 15,
+        performance_max_score: 5
+      }
     }
   },
   computed: {
@@ -336,6 +437,16 @@ export default {
 
       return filtered
     },
+    filteredScoreSettings() {
+      if (!this.scoreSettingsSearch) {
+        return this.scoreSettings
+      }
+      const searchTerm = this.scoreSettingsSearch.toLowerCase()
+      return this.scoreSettings.filter(setting => {
+        const facultyName = this.getFacultyName(setting.faculty_id).toLowerCase()
+        return facultyName.includes(searchTerm)
+      })
+    },
     paginatedScores() {
       // 前端实现分页
       return this.filteredScores.slice(this.startIndex, this.endIndex)
@@ -352,13 +463,27 @@ export default {
     }
   },
   mounted() {
-    this.loadScoresFromAPI()
-    this.loadDropdownData()
+    this.loadAllData()
   },
   methods: {
+    // 统一加载所有数据
+    async loadAllData() {
+      this.loading = true
+      try {
+        await Promise.all([
+          this.loadScoresFromAPI(),
+          this.loadDropdownData()
+        ])
+      } catch (error) {
+        console.error('加载数据失败:', error)
+        this.toastStore.error('加载成绩数据失败')
+        console.error('Error loading scores:', error)
+      } finally {
+        this.loading = false
+      }
+    },
     // 从API加载成绩数据
     async loadScoresFromAPI() {
-      this.loading = true
       try {
         // 使用applicationsStore加载学生排名数据
         const applicationsStore = useApplicationsStore()
@@ -399,8 +524,6 @@ export default {
       } catch (error) {
         this.toastStore.error('加载成绩数据失败')
         console.error('Error loading scores:', error)
-      } finally {
-        this.loading = false
       }
     },
 
@@ -418,8 +541,41 @@ export default {
         // 加载所有专业列表（后续可以优化为按系筛选）
         const majorsResponse = await api.getMajorsAdmin()
         this.majors = majorsResponse.majors || []
+
+        // 加载所有学院的成绩设置
+        await this.loadAllFacultyScoreSettings()
       } catch (error) {
         console.error('加载下拉数据失败:', error)
+      }
+    },
+
+    // 加载所有学院的成绩设置
+    async loadAllFacultyScoreSettings() {
+      try {
+        // 调用API获取所有学院的成绩设置
+        const response = await api.getFacultyScoreSettings()
+        this.scoreSettings = response.settings || []
+
+        // 如果没有设置，为所有学院创建默认设置
+        if (this.scoreSettings.length === 0 && this.faculties.length > 0) {
+          this.scoreSettings = this.faculties.map(faculty => ({
+            faculty_id: faculty.id,
+            academic_score_weight: 80,
+            specialty_max_score: 15,
+            performance_max_score: 5
+          }))
+        }
+      } catch (error) {
+        console.error('加载所有学院成绩设置失败:', error)
+        // 如果API调用失败，为所有学院创建默认设置
+        if (this.faculties.length > 0) {
+          this.scoreSettings = this.faculties.map(faculty => ({
+            faculty_id: faculty.id,
+            academic_score_weight: 80,
+            specialty_max_score: 15,
+            performance_max_score: 5
+          }))
+        }
       }
     },
 
@@ -553,14 +709,95 @@ export default {
           this.toastStore.success('综合成绩重新计算完成')
         }
       } catch (error) {
-          console.error('Error recalculating comprehensive scores:', error)
-          this.toastStore.error('重新计算综合成绩失败')
+        console.error('Error recalculating comprehensive scores:', error)
+        this.toastStore.error('重新计算综合成绩失败')
       } finally {
         this.loading = false
       }
     },
 
+    // 打开成绩设置对话框
+    openScoreSettingsDialog(setting = null) {
+      if (setting) {
+        // 编辑已有设置
+        this.facultyScoreSettings = { ...setting };
+        this.selectedFaculty = this.faculties.find(f => f.id === setting.faculty_id);
+      } else {
+        // 创建新设置（默认使用第一个学院）
+        if (this.faculties.length > 0) {
+          this.selectedFaculty = this.faculties[0];
+          this.facultyScoreSettings = {
+            faculty_id: this.selectedFaculty.id,
+            academic_score_weight: 80,
+            specialty_max_score: 15,
+            performance_max_score: 5
+          };
+        }
+      }
+      this.scoreSettingsDialogVisible = true;
+    },
 
+    // 根据学院ID获取学院名称
+    getFacultyName(facultyId) {
+      const faculty = this.faculties.find(f => f.id === facultyId);
+      return faculty ? faculty.name : '未知学院';
+    },
+
+    // 加载学院成绩设置
+    async loadFacultyScoreSettings(facultyId) {
+      try {
+        this.loading = true
+        const settings = await api.getFacultyScoreSetting(facultyId)
+        if (settings) {
+          this.facultyScoreSettings = settings
+        } else {
+          // 如果没有找到设置，使用默认值
+          this.facultyScoreSettings = {
+            faculty_id: facultyId,
+            final_exam_weight: 0.5,
+            usual_score_weight: 0.3,
+            practice_score_weight: 0.2
+          }
+        }
+      } catch (error) {
+        console.error('Error loading faculty score settings:', error)
+        this.toastStore.error('加载学院成绩设置失败')
+        // 使用默认值
+        this.facultyScoreSettings = {
+          faculty_id: facultyId,
+          final_exam_weight: 0.5,
+          usual_score_weight: 0.3,
+          practice_score_weight: 0.2
+        }
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // 保存学院成绩设置
+    async saveFacultyScoreSettings() {
+      try {
+        // 调用API保存学院成绩设置
+        await api.updateFacultyScoreSetting(this.facultyScoreSettings.faculty_id, this.facultyScoreSettings)
+
+        // 更新本地的scoreSettings数组
+        const index = this.scoreSettings.findIndex(s => s.faculty_id === this.facultyScoreSettings.faculty_id)
+        if (index !== -1) {
+          this.scoreSettings[index] = { ...this.facultyScoreSettings }
+        } else {
+          this.scoreSettings.push({ ...this.facultyScoreSettings })
+        }
+
+        // 关闭对话框
+        this.scoreSettingsDialogVisible = false
+
+        // 显示成功消息
+        this.toastStore.success('学院成绩设置保存成功')
+      } catch (error) {
+        console.error('Error saving faculty score settings:', error)
+        this.toastStore.error('学院成绩设置保存失败')
+      }
+    }
   }
 }
 </script>
@@ -568,27 +805,63 @@ export default {
 <style scoped>
 @import '../common/shared-styles.css';
 
-/* 加载状态样式 */
-/* 加载样式已移至shared-styles.css */
-  
-  /* 确保加载遮罩正确显示 */
-  .card {
-    position: relative;
-  }
-  
-  /* 只读字段样式 */
+/* 学院成绩设置区域样式 */
+.score-settings-section {
+  margin-bottom: 20px;
+}
+
+.score-settings-section .filter-group {
+  margin-bottom: 10px;
+}
+
+.settings-description {
+  background-color: #e7f3ff;
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 25px;
+  border-left: 4px solid #0066cc;
+}
+
+.settings-description p {
+  margin: 0;
+  color: #004085;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* 成绩设置表格样式 - 与其他组件保持一致 */
+.score-settings-section .table-container {
+  margin-top: 0;
+}
+
+.score-settings-section .btn-sm {
+  padding: 4px 12px;
+  font-size: 0.875rem;
+}
+
+/* 成绩表格区域样式 */
+.score-table-section {
+  margin-top: 25px;
+}
+
+.section-header {
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e9ecef;
+  margin-bottom: 20px;
+}
+
+.section-header h4 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+/* 只读字段样式 */
 .form-control[readonly] {
   background-color: #f5f5f5;
   border-color: #ddd;
   cursor: not-allowed;
-}
-
-/* 帮助文本样式 */
-.help-text {
-  margin-top: 5px;
-  font-size: 12px;
-  color: #666;
-  font-style: italic;
 }
 
 /* 缩短输入框宽度 */
@@ -596,15 +869,19 @@ export default {
   width: 120px;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .filters {
-    flex-direction: column;
-    align-items: stretch;
-  }
+/* 表单操作按钮容器样式 - 使用共享样式 */
 
-  .filter-group {
-    margin-bottom: 10px;
-  }
+/* 编辑弹窗样式 - 使用共享样式 */
+
+/* 模态框底部按钮样式 */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 15px 20px;
+  border-top: 1px solid #e9ecef;
+  background-color: #fafafa;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
 }
 </style>

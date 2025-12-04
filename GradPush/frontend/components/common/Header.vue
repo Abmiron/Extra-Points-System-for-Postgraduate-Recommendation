@@ -21,6 +21,41 @@
         </button>
       </div>
     </div>
+    
+    <!-- 文件列表弹窗 -->
+    <div v-if="isFilesModalVisible" class="overlay" @click="closeFilesModal"></div>
+    <div v-if="isFilesModalVisible" class="files-modal">
+      <div class="modal-header">
+        <h4>推免相关文件</h4>
+        <button class="close-btn" @click="closeFilesModal" title="关闭">
+          <font-awesome-icon :icon="['fas', 'times']" />
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="table-container">
+          <table class="application-table">
+            <tbody>
+              <tr v-for="file in filesStore.files" :key="file.id" style="border-bottom: 1px solid #e9ecef; transition: background-color 0.2s ease;">
+                <td style="padding: 6px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <font-awesome-icon :icon="getFileIcon(file.filename)" style="font-size: 16px; color: #003d86;" />
+                    <span style="font-size: 13px;color: #333;">{{ file.filename }}</span>
+                  </div>
+                </td>
+                <td style="padding: 8px;font-size: 12px; color: #6c757d; white-space: nowrap;">{{ formatFileSize(file.file_size || 0) }}</td>
+                <td style="padding: 10px; text-align: center;">
+                  <div class="action-buttons">
+                    <a :href="'http://localhost:5001' + (file.file_url || '')" class="btn-outline btn small-btn" style="text-decoration: none;" title="下载">
+                      <font-awesome-icon :icon="['fas', 'download']" />
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </header>
 </template>
 
@@ -49,6 +84,7 @@ const filesStore = useFilesStore()
 
 // 计算属性，从filesStore获取文件数量
 const fileCount = computed(() => filesStore.fileCount)
+const isFilesModalVisible = ref(false)
 
 // 组件挂载时加载文件列表
 onMounted(async () => {
@@ -71,122 +107,33 @@ const showFiles = async () => {
     return
   }
   
-  // 创建文件列表HTML
-  let fileListHTML = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; padding-bottom: 12px; border-bottom: 2px solid #e9ecef;">' +
-    '<h4 style="margin: 0; color: #333; font-size: 18px; font-weight: 600;">推免相关文件</h4>' +
-    '<button id="modal-close-btn" style="background: none; border: none; color: #333; cursor: pointer; font-size: 20px; padding: 4px; border-radius: 4px; transition: all 0.2s ease;">' +
-    '<i class="fas fa-times"></i>' +
-    '</button>' +
-    '</div>'
-  
-  // 使用表格样式显示文件列表
-  fileListHTML += '<div style="overflow-x: auto;">' +
-    '<table style="width: 100%; border-collapse: collapse; font-size: 14px;">' +
-      '<tbody>'
-  
-  filesStore.files.forEach(file => {
-    // 确保file和必要的字段存在
-    if (!file || !file.filename) return;
-    
-    fileListHTML += `<tr style="border-bottom: 1px solid #e9ecef; transition: background-color 0.2s ease;">`
-    fileListHTML += `<td style="padding: 8px;">`
-    fileListHTML += `<div style="display: flex; align-items: center; gap: 8px;">`
-    fileListHTML += `<span style="font-size: 18px; color: #003d86;">${getFileIcon(file.filename)}</span>`
-    fileListHTML += `<span style="color: #333;">${file.filename}</span>`
-    fileListHTML += `</div>`
-    fileListHTML += `</td>`
-    fileListHTML += `<td style="padding: 12px; color: #6c757d; white-space: nowrap;">${formatFileSize(file.file_size || 0)}</td>`
-    fileListHTML += `<td style="padding: 12px; text-align: center;">`
-    fileListHTML += `<div class="action-buttons">`
-    fileListHTML += `<a href="http://localhost:5001${file.file_url || ''}" class="btn-outline btn small-btn" style="text-decoration: none;" title="下载">`
-    fileListHTML += `<i class="fas fa-download"></i>`
-    fileListHTML += `</a>`
-    fileListHTML += `</div>`
-    fileListHTML += `</td>`
-    fileListHTML += `</tr>`
-  })
-  
-  fileListHTML += '</tbody>' +
-    '</table>' +
-  '</div>'
-  
-  // 定义模态框显示文件列表
-  const customAlert = document.createElement('div')
-  customAlert.style.cssText = `
-    position: fixed;
-    top: 7%;
-    left: 66%;
-    background-color: white;
-    padding: 16px;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-    z-index: 10000;
-    max-width: 600px;
-    width: 90%;
-    max-height: 50vh;
-    overflow-y: auto;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  `
-  
-  customAlert.innerHTML = fileListHTML
-  
-  // 添加遮罩层
-  const overlay = document.createElement('div')
-  overlay.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0);
-    z-index: 9999;
-  `
-  
-  // 关闭函数
-  const closeModal = () => {
-    document.body.removeChild(customAlert)
-    document.body.removeChild(overlay)
-  }
-  
-  // 点击关闭图标关闭
-  const closeBtn = customAlert.querySelector('#modal-close-btn')
-  if (closeBtn) {
-    closeBtn.addEventListener('click', closeModal)
-    closeBtn.addEventListener('mouseover', () => {
-      closeBtn.style.color = '#333'
-      closeBtn.style.backgroundColor = '#f0f0f0'
-    })
-    closeBtn.addEventListener('mouseout', () => {
-      closeBtn.style.color = '#6c757d'
-      closeBtn.style.backgroundColor = 'transparent'
-    })
-  }
-  
-  // 点击遮罩层关闭
-  overlay.onclick = closeModal
-  
-  document.body.appendChild(overlay)
-  document.body.appendChild(customAlert)
+  // 显示文件列表弹窗
+  isFilesModalVisible.value = true
 }
 
-// 获取文件图标（使用Unicode字符确保在动态HTML中正确显示）
+// 关闭文件列表弹窗
+const closeFilesModal = () => {
+  isFilesModalVisible.value = false
+}
+
+// 获取文件图标（与GraduateFileManagement组件保持一致）
 const getFileIcon = (fileName) => {
-  if (!fileName) return '📄';
+  if (!fileName) return ['fas', 'file'];
   const ext = fileName.split('.').pop().toLowerCase()
   switch (ext) {
     case 'pdf':
-      return '📄'
+      return ['fas', 'file-pdf']
     case 'doc':
     case 'docx':
-      return '📝'
+      return ['fas', 'file-word']
     case 'xls':
     case 'xlsx':
-      return '📊'
+      return ['fas', 'file-excel']
     case 'ppt':
     case 'pptx':
-      return '📋'
+      return ['fas', 'file-powerpoint']
     default:
-      return '📄'
+      return ['fas', 'file']
   }
 }
 
@@ -225,6 +172,7 @@ const handleLogout = async () => {
 }
 </script>
 
+<style src="./shared-styles.css"></style>
 <style scoped>
 .header {
   display: flex;
@@ -237,6 +185,69 @@ const handleLogout = async () => {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
 }
+
+/* 文件列表弹窗样式 */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+}
+
+.files-modal {
+  position: fixed;
+  top: 7%;
+  left: 66%;
+  background-color: white;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  z-index: 10000;
+  max-width: 600px;
+  width: 90%;
+  max-height: 50vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.modal-header h4 {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #333;
+  cursor: pointer;
+  font-size: 20px;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background-color: #f8f9fa;
+}
+
+.modal-body {
+  max-height: calc(50vh - 60px);
+  overflow-y: auto;
+  padding: 4px;
+}
+
+/* 组件特定样式，共享样式中没有的部分 */
 
 .logo-area {
   display: flex;

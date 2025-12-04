@@ -85,11 +85,19 @@
           <div class="loading-text">加载中...</div>
         </div>
 
+        <!-- 批量操作工具栏 -->
+        <div class="batch-actions" style="margin-bottom: 20px;">
+          <button class="btn btn-outline" @click="batchDelete" :disabled="selectedFileIds.length === 0">
+            <font-awesome-icon :icon="['fas', 'trash']" /> 批量删除
+          </button>
+        </div>
+
         <!-- 文件列表 -->
         <div class="table-container">
           <table class="application-table">
             <thead>
               <tr>
+                <th><input type="checkbox" v-model="selectAll" @change="toggleSelectAll"></th>
                 <th>文件名称</th>
                 <th>所属学院</th>
                 <th>文件大小</th>
@@ -99,6 +107,7 @@
             </thead>
             <tbody>
               <tr v-for="file in filteredFiles" :key="file.id">
+                <td><input type="checkbox" v-model="selectedFileIds" :value="file.id"></td>
                 <td>
                   <div style="display: flex; align-items: center; gap: 8px;">
                     <font-awesome-icon :icon="getFileIcon(file.filename)" />
@@ -147,6 +156,10 @@ const selectedFiles = ref([])
 const loading = ref(false)
 const faculties = ref([])
 const selectedFacultyId = ref('')
+
+// 批量操作相关状态
+const selectAll = ref(false)
+const selectedFileIds = ref([])
 
 // 筛选条件
 const fileFilter = ref('')
@@ -250,9 +263,67 @@ const deleteFile = async (fileId) => {
     try {
       await filesStore.deleteFile(fileId)
       toastStore.success('文件删除成功')
+      // 如果删除的文件在选中列表中，移除它
+      const index = selectedFileIds.value.indexOf(fileId)
+      if (index > -1) {
+        selectedFileIds.value.splice(index, 1)
+      }
+      // 如果没有选中文件了，取消全选
+      if (selectedFileIds.value.length === 0) {
+        selectAll.value = false
+      }
     } catch (error) {
       console.error('文件删除失败:', error)
       toastStore.error('文件删除失败')
+    } finally {
+      loading.value = false
+    }
+  }
+}
+
+// 全选/取消全选
+const toggleSelectAll = () => {
+  if (selectAll.value) {
+    selectedFileIds.value = filteredFiles.value.map(file => file.id)
+  } else {
+    selectedFileIds.value = []
+  }
+}
+
+// 批量删除
+const batchDelete = async () => {
+  if (selectedFileIds.value.length === 0) {
+    return
+  }
+  
+  if (confirm(`确定要删除选中的 ${selectedFileIds.value.length} 个文件吗？`)) {
+    loading.value = true
+    try {
+      // 批量删除文件
+      const promises = selectedFileIds.value.map(fileId => 
+        filesStore.deleteFile(fileId).catch(error => {
+          console.error(`删除文件 ${fileId} 失败:`, error)
+          return false
+        })
+      )
+      
+      const results = await Promise.all(promises)
+      const successCount = results.filter(result => result !== false).length
+      
+      if (successCount > 0) {
+        toastStore.success(`成功删除 ${successCount} 个文件`)
+      }
+      
+      if (successCount < selectedFileIds.value.length) {
+        toastStore.warning(`部分文件删除失败`)
+      }
+      
+      // 清空选中列表
+      selectedFileIds.value = []
+      selectAll.value = false
+    } catch (error) {
+      console.error('批量删除文件失败:', error)
+      toastStore.error('批量删除文件失败')
     } finally {
       loading.value = false
     }

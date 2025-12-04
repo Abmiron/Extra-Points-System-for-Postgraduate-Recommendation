@@ -132,6 +132,11 @@ export default {
   getSystemSettings: () => apiRequest('/admin/system-settings', 'GET'),
   updateSystemSettings: (settingsData) => apiRequest('/admin/system-settings', 'PUT', settingsData),
   
+  // 学院成绩设置相关API
+  getFacultyScoreSettings: () => apiRequest('/admin/faculty-score-settings', 'GET'),
+  getFacultyScoreSetting: (facultyId) => apiRequest(`/admin/faculty-score-settings/${facultyId}`, 'GET'),
+  updateFacultyScoreSetting: (facultyId, settingsData) => apiRequest(`/admin/faculty-score-settings/${facultyId}`, 'PUT', settingsData),
+  
   // 推免相关文件API
   uploadGraduateFile: (file, uploader = "admin", description = "", category = "graduate", facultyId = null) => {
     const formData = new FormData();
