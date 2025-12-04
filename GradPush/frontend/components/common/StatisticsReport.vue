@@ -951,7 +951,7 @@ onMounted(async () => {
 
 /* 学生组之间的分割线 */
 .application-table tbody tr.student-group-start td {
-  border-top: 3px solid #adb5bd;
+  border-top: 3px solid #8b9096;
 }
 
 /* 第一个学生组不添加顶部边框 */
@@ -969,7 +969,7 @@ onMounted(async () => {
 /* 综合表现项目相关栏目的背景色 */
 .comprehensive-table th:nth-child(n+21):nth-child(-n+29),
 .comprehensive-table td:nth-child(n+21):nth-child(-n+29) {
-  background-color: rgba(237, 247, 237, 0.5);
+  background-color: rgba(237, 247, 237, 0.8);
   /* 浅绿色背景 */
 }
 

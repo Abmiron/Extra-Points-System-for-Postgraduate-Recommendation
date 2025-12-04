@@ -258,13 +258,37 @@ def get_students_ranking():
                     student.major_ranking = i + 1
                 student.total_students = total_students
 
+        # 获取所有学生的加分申请
+        student_applications = {}
+        for student in students:
+            # 获取该学生通过的学术专长申请
+            academic_applications = Application.query.filter_by(
+                student_id=student.student_id, 
+                application_type="academic", 
+                status="approved"
+            ).all()
+            
+            # 获取该学生通过的综合表现申请
+            comprehensive_applications = Application.query.filter_by(
+                student_id=student.student_id, 
+                application_type="comprehensive", 
+                status="approved"
+            ).all()
+            
+            student_applications[student.id] = {
+                "academic": academic_applications,
+                "comprehensive": comprehensive_applications
+            }
+
         # 按学生ID分组统计
         student_stats = {}
 
         # 从Student模型获取基本数据
         for student in students:
             student_id = student.id
-            student_stats[student_id] = {
+            
+            # 构建学生基本信息
+            student_info = {
                 "id": student.id,  # 添加主键ID字段
                 "student_id": student.student_id,
                 "student_name": student.student_name,
@@ -300,7 +324,42 @@ def get_students_ranking():
                 # 向前端提供final_score字段，用于显示综合成绩
                 "final_score": student.comprehensive_score or 0.0,
                 "sequence": 0,
+                # 添加加分项目信息
+                "academicItems": [],
+                "comprehensiveItems": []
             }
+            
+            # 添加学术专长申请数据
+            for app in student_applications[student_id]["academic"]:
+                academic_item = {
+                    "project_name": app.project_name,
+                    "award_time": app.award_date.isoformat() if app.award_date else None,
+                    "award_level": app.award_level,
+                    "individual_collective": app.award_type,
+                    "author_order": app.author_order,
+                    "self_eval_score": app.self_score,
+                    "score_basis": app.description,
+                    "college_approved_score": app.final_score,
+                    "total_score": app.final_score
+                }
+                student_info["academicItems"].append(academic_item)
+            
+            # 添加综合表现申请数据
+            for app in student_applications[student_id]["comprehensive"]:
+                comprehensive_item = {
+                    "project_name": app.project_name,
+                    "award_time": app.award_date.isoformat() if app.award_date else None,
+                    "award_level": app.award_level,
+                    "individual_collective": app.award_type,
+                    "author_order": app.author_order,
+                    "self_eval_score": app.self_score,
+                    "score_basis": app.description,
+                    "college_approved_score": app.final_score,
+                    "total_score": app.final_score
+                }
+                student_info["comprehensiveItems"].append(comprehensive_item)
+            
+            student_stats[student_id] = student_info
 
         # 转换为列表并按最终综合成绩排序
         sorted_students = sorted(
