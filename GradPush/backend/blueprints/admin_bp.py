@@ -7,9 +7,13 @@
 - 系管理（增删改查）
 - 专业管理（增删改查）
 - 系统设置管理（获取、更新）
+- 推免相关文件管理（上传、下载、删除）
 """
 
-from flask import Blueprint, request, jsonify, make_response
+import os
+import uuid
+from flask import Blueprint, request, jsonify, make_response, send_from_directory
+from werkzeug.utils import secure_filename
 from models import (
     Faculty,
     Department,
@@ -18,6 +22,7 @@ from models import (
     SystemSettings,
     Student,
     Application,
+    GraduateFile,
 )
 from datetime import datetime
 from extensions import db
@@ -464,6 +469,7 @@ def get_system_settings():
         ),
         "singleFileSizeLimit": settings.single_file_size_limit,
         "totalFileSizeLimit": settings.total_file_size_limit,
+        "avatarFileSizeLimit": settings.avatar_file_size_limit,
         "allowedFileTypes": settings.allowed_file_types,
         "academicScoreWeight": settings.academic_score_weight,
         "specialtyMaxScore": settings.specialty_max_score,
@@ -504,6 +510,9 @@ def update_system_settings():
     if "totalFileSizeLimit" in data:
         settings.total_file_size_limit = data["totalFileSizeLimit"]
 
+    if "avatarFileSizeLimit" in data:
+        settings.avatar_file_size_limit = data["avatarFileSizeLimit"]
+
     if "allowedFileTypes" in data:
         settings.allowed_file_types = data["allowedFileTypes"]
 
@@ -537,6 +546,7 @@ def update_system_settings():
         ),
         "singleFileSizeLimit": settings.single_file_size_limit,
         "totalFileSizeLimit": settings.total_file_size_limit,
+        "avatarFileSizeLimit": settings.avatar_file_size_limit,
         "allowedFileTypes": settings.allowed_file_types,
         "academicScoreWeight": settings.academic_score_weight,
         "specialtyMaxScore": settings.specialty_max_score,
@@ -548,3 +558,180 @@ def update_system_settings():
     }
 
     return jsonify({"message": "系统设置更新成功", "settings": updated_settings}), 200
+
+
+# 推免相关文件管理API
+
+# 上传推免相关文件
+@admin_bp.route("/graduate-files", methods=["POST"])
+def upload_graduate_file():
+    from flask import current_app  # 使用current_app代替直接导入app实例
+    
+    # 检查是否有文件部分
+    if "file" not in request.files:
+        return jsonify({"message": "没有文件部分"}), 400
+    
+    file = request.files["file"]
+    
+    # 检查文件名是否为空
+    if file.filename == "":
+        return jsonify({"message": "没有选择文件"}), 400
+    
+    # 检查文件是否允许上传
+    if file:
+        # 保留原始文件名
+        original_filename = file.filename
+        # 从原始文件名中提取扩展名
+        file_ext = os.path.splitext(original_filename)[1]
+        # 生成唯一的文件名用于存储（UUID+扩展名）
+        unique_filename = f"{uuid.uuid4()}{file_ext}"
+        
+        # 创建专门的推免文件目录
+        GRADUATE_FILES_FOLDER = os.path.join(current_app.config["UPLOAD_FOLDER"], "graduate-files")
+        
+        # 确保上传目录存在
+        if not os.path.exists(GRADUATE_FILES_FOLDER):
+            os.makedirs(GRADUATE_FILES_FOLDER)
+        
+        # 保存文件
+        file_path = os.path.join(GRADUATE_FILES_FOLDER, unique_filename)
+        file.save(file_path)
+        
+        # 从请求中获取其他信息
+        uploader = request.form.get("uploader", "admin")
+        description = request.form.get("description", "")
+        category = request.form.get("category", "graduate")
+        faculty_id = request.form.get("faculty_id", type=int)
+        
+        # 创建文件记录 - 合并filename和original_filename字段
+        # filename字段现在只存储原始文件名，从filepath中提取文件系统中的文件名
+        graduate_file = GraduateFile(
+            filename=original_filename,  # 只存储原始文件名
+            filepath=file_path,
+            file_size=os.path.getsize(file_path),
+            file_type=file.mimetype,
+            uploader=uploader,
+            description=description,
+            category=category,
+            faculty_id=faculty_id
+        )
+        
+        # 保存到数据库
+        from extensions import db
+        db.session.add(graduate_file)
+        db.session.commit()
+        
+        return jsonify({
+            "message": "文件上传成功",
+            "file": {
+                "id": graduate_file.id,
+                "filename": original_filename,  # 返回原始文件名用于前端显示
+                "file_size": graduate_file.file_size,
+                "file_type": graduate_file.file_type,
+                "upload_time": graduate_file.upload_time.isoformat(),
+                "uploader": graduate_file.uploader,
+                "description": graduate_file.description,
+                "category": graduate_file.category
+            }
+        }), 201
+
+
+# 获取所有推免相关文件
+@admin_bp.route("/graduate-files", methods=["GET"])
+def get_graduate_files():
+    # 获取所有推免相关文件，并预加载学院信息
+    graduate_files = GraduateFile.query.options(db.joinedload(GraduateFile.faculty)).all()
+    
+    # 转换为JSON格式
+    files_data = []
+    for file in graduate_files:
+        # 从filepath中提取文件系统中的文件名用于下载链接
+        file_system_filename = os.path.basename(file.filepath)
+        
+        # 学院信息
+        faculty_info = {
+            "id": file.faculty.id,
+            "name": file.faculty.name
+        } if file.faculty else None
+        
+        files_data.append({
+            "id": file.id,
+            "filename": file.filename,  # 原始文件名（用于显示和下载）
+            "file_url": f"/uploads/graduate-files/{file_system_filename}",  # 下载链接
+            "file_size": file.file_size,
+            "file_type": file.file_type,
+            "upload_time": file.upload_time.isoformat(),
+            "uploader": file.uploader,
+            "description": file.description,
+            "category": file.category,
+            "faculty": faculty_info
+        })
+    
+    return jsonify({"files": files_data}), 200
+
+
+# 删除推免相关文件
+@admin_bp.route("/graduate-files/<int:file_id>", methods=["DELETE"])
+def delete_graduate_file(file_id):
+    from flask import current_app  # 使用current_app代替直接导入app实例
+    
+    # 查找文件
+    graduate_file = GraduateFile.query.get(file_id)
+    if not graduate_file:
+        return jsonify({"message": "文件不存在"}), 404
+    
+    # 删除物理文件
+    try:
+        os.remove(graduate_file.filepath)
+    except Exception as e:
+        print(f"删除文件失败: {str(e)}")
+    
+    # 删除数据库记录
+    from extensions import db
+    db.session.delete(graduate_file)
+    db.session.commit()
+    
+    return jsonify({"message": "文件删除成功"}), 200
+
+
+# 前端获取推免相关文件（无需登录）
+@admin_bp.route("/public/graduate-files", methods=["GET"])
+def get_public_graduate_files():
+    # 获取请求参数中的学院ID
+    faculty_id = request.args.get("facultyId", type=int)
+    
+    # 构建查询
+    query = GraduateFile.query.options(db.joinedload(GraduateFile.faculty))
+    
+    # 根据学院ID过滤文件
+    if faculty_id:
+        query = query.filter_by(faculty_id=faculty_id)
+    
+    # 执行查询
+    graduate_files = query.all()
+    
+    # 转换为JSON格式
+    files_data = []
+    for file in graduate_files:
+        # 从filepath中提取文件系统中的文件名用于下载链接
+        file_system_filename = os.path.basename(file.filepath)
+        
+        # 学院信息
+        faculty_info = {
+            "id": file.faculty.id,
+            "name": file.faculty.name
+        } if file.faculty else None
+        
+        files_data.append({
+            "id": file.id,
+            "filename": file.filename,  # 原始文件名（用于显示和下载）
+            "file_url": f"/uploads/graduate-files/{file_system_filename}",  # 下载链接
+            "file_size": file.file_size,
+            "file_type": file.file_type,
+            "upload_time": file.upload_time.isoformat(),
+            "description": file.description,
+            "category": file.category,
+            "faculty": faculty_info
+        })
+    
+    return jsonify({"files": files_data}), 200

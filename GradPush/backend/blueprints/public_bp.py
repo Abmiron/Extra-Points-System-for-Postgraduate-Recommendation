@@ -3,10 +3,11 @@
 公开接口蓝图
 包含无需登录即可访问的接口
 """
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, current_app, send_from_directory
 from datetime import datetime, time
 from models import SystemSettings
 from extensions import db
+from urllib.parse import quote
 
 # 创建公开接口蓝图
 public_bp = Blueprint("public", __name__, url_prefix="/public")
@@ -64,6 +65,14 @@ def get_system_info():
                 if system_status == "online"
                 else ("维护中" if system_status else None)
             ),
+            # 添加文件上传相关设置
+            "singleFileSizeLimit": system_settings.single_file_size_limit if system_settings else 10,
+            "totalFileSizeLimit": system_settings.total_file_size_limit if system_settings else 50,
+            "allowedFileTypes": system_settings.allowed_file_types if system_settings else ".pdf, .jpg, .jpeg, .png",
+            # 添加统计相关设置
+            "academicScoreWeight": system_settings.academic_score_weight if system_settings else 0.8,
+            "specialtyMaxScore": system_settings.specialty_max_score if system_settings else 15,
+            "performanceMaxScore": system_settings.performance_max_score if system_settings else 5
         }
 
         return jsonify(
@@ -76,3 +85,6 @@ def get_system_info():
         return jsonify(
             {"code": 500, "message": f"获取系统信息失败: {str(e)}", "data": None}
         )
+
+
+

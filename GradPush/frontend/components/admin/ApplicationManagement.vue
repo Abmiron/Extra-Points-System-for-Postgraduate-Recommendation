@@ -125,9 +125,9 @@
               <th><input type="checkbox" v-model="selectAll" @change="toggleSelectAll"></th>
               <th>学生姓名</th>
               <th>学号</th>
-              <th>所在系</th>
               <th>专业</th>
               <th>申请类型</th>
+              <th>规则</th>
               <th>申请时间</th>
               <th>审核时间</th>
               <th>审核人</th>
@@ -142,14 +142,14 @@
               <td><input type="checkbox" v-model="selectedApplications" :value="application.id"></td>
               <td>{{ application.studentName }}</td>
               <td>{{ application.studentId }}</td>
-              <td>{{ getDepartmentText(application.department) }}</td>
               <td>{{ getMajorText(application.major) }}</td>
               <td>{{ getTypeText(application.applicationType) }}</td>
+              <td>{{ getRuleText(application.ruleId) }}</td>
               <td>{{ formatDate(application.appliedAt) }}</td>
               <td>{{ formatDate(application.reviewedAt) }}</td>
               <td>{{ application.reviewedBy || '-' }}</td>
               <td>{{ application.selfScore }}</td>
-              <td>{{ application.finalScore || '-' }}</td>
+              <td>{{ application.finalScore !== null && application.finalScore !== undefined ? application.finalScore : '-' }}</td>
               <td>
                 <span :class="`status-badge status-${application.status}`">
                   {{ getStatusText(application.status) }}
@@ -447,6 +447,18 @@ const getStatusText = (status) => {
     rejected: '未通过'
   }
   return statusText[status] || status
+}
+
+// 根据规则ID获取规则名称
+const getRuleText = (ruleId) => {
+  if (!ruleId) return '-'
+  // 使用类型转换确保ID匹配（处理字符串和数字类型不匹配的问题）
+  const rule = availableRules.value.find(r => r.id == ruleId)
+  if (rule) {
+    // 如果规则已禁用，添加提示信息
+    return rule.status === 'disabled' ? `${rule.name} (当前已禁用)` : rule.name
+  }
+  return ruleId
 }
 
 const formatDate = (dateString) => {

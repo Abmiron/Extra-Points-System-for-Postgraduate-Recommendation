@@ -199,15 +199,16 @@ const formatDate = (dateString) => {
 const loadSystemSettings = async () => {
   try {
     // 获取系统设置，包括满分值
-    const settingsData = await api.getSystemSettings()
-    systemSettings.specialtyMaxScore = settingsData.settings.specialtyMaxScore
-    systemSettings.performanceMaxScore = settingsData.settings.performanceMaxScore
-    systemSettings.academicScoreWeight = settingsData.settings.academicScoreWeight
+    const settingsData = await api.getPublicSystemInfo()
+    systemSettings.specialtyMaxScore = settingsData.data.specialtyMaxScore
+    systemSettings.performanceMaxScore = settingsData.data.performanceMaxScore
+    systemSettings.academicScoreWeight = settingsData.data.academicScoreWeight
   } catch (err) {
     console.error('加载系统设置失败:', err)
     // 使用默认值
     systemSettings.specialtyMaxScore = 15
     systemSettings.performanceMaxScore = 5
+    systemSettings.academicScoreWeight = 0.7
   }
 }
 

@@ -33,6 +33,7 @@ import SystemSettings from '../components/admin/SystemSettings.vue'
 import Profile from '../components/common/Profile.vue'
 import FacultyManagement from '../components/admin/FacultyManagement.vue'
 import ScoreManagement from '../components/admin/ScoreManagement.vue'
+import GraduateFileManagement from '../components/admin/GraduateFileManagement.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -50,7 +51,8 @@ const pageComponents = {
   'faculty-management': FacultyManagement,
   'statistics-report': StatisticsReport,
   'system-settings': SystemSettings,
-  'profile': Profile
+  'profile': Profile,
+  'graduate-file-management': GraduateFileManagement
 }
 
 const currentPageComponent = computed(() => pageComponents[currentPage.value])

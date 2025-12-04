@@ -548,11 +548,12 @@
             </div>
             <div class="upload-text">
               <p>点击或拖拽文件到此处上传</p>
-              <p class="help-text">支持 {{ systemSettings.allowedFileTypes.join(', ') }} 格式，单个文件不超过{{
-                systemSettings.singleFileSizeLimit }}MB，总文件大小不超过{{ systemSettings.totalFileSizeLimit }}MB</p>
+              <p class="help-text">支持 {{ fileUploadSettings.allowedFileTypesString }} 格式，单个文件不超过{{
+                  fileUploadSettings.singleFileSizeLimit }}MB，总文件大小不超过{{ fileUploadSettings.totalFileSizeLimit }}MB</p>
+
             </div>
           </div>
-          <input type="file" ref="fileInput" style="display: none;" accept=".pdf,.jpg,.jpeg,.png"
+          <input type="file" ref="fileInput" style="display: none;" :accept="fileUploadSettings.allowedFileTypes.join(',')"
             @change="handleFileSelect" multiple>
 
           <div class="file-list" v-if="formData.files.length > 0">
@@ -623,7 +624,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, onMounted } from 'vue'
+import { ref, reactive, watch, onMounted, computed } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useApplicationsStore } from '../../stores/applications'
 import { useToastStore } from '../../stores/toast'
@@ -705,8 +706,17 @@ const estimatedScore = ref(0)
 const systemSettings = ref({
   singleFileSizeLimit: 10, // 默认10MB
   totalFileSizeLimit: 50, // 默认50MB
-  allowedFileTypes: ['.pdf', '.jpg', '.jpeg', '.png']
+  allowedFileTypes: ['.pdf', '.jpg', '.jpeg', '.png'], // 数组格式，用于文件输入框的accept属性
+  allowedFileTypesString: '.pdf, .jpg, .jpeg, .png' // 字符串格式，直接用于显示
 })
+
+// 计算属性，确保模板始终能获取到正确的值
+const fileUploadSettings = computed(() => ({
+  allowedFileTypesString: systemSettings.value?.allowedFileTypesString || '.pdf, .jpg, .jpeg, .png, .webp',
+  singleFileSizeLimit: systemSettings.value?.singleFileSizeLimit || 10,
+  totalFileSizeLimit: systemSettings.value?.totalFileSizeLimit || 50,
+  allowedFileTypes: systemSettings.value?.allowedFileTypes || ['.pdf', '.jpg', '.jpeg', '.png', '.webp']
+}))
 
 // 加载编辑数据
 const loadEditData = async (applicationId) => {
@@ -1038,14 +1048,43 @@ onMounted(() => {
 // 加载系统设置
 const loadSystemSettings = async () => {
   try {
-    const settings = await api.getSystemSettings()
-    systemSettings.value = {
-      singleFileSizeLimit: settings.singleFileSizeLimit || 10,
-      totalFileSizeLimit: settings.totalFileSizeLimit || 50,
-      allowedFileTypes: settings.allowedFileTypes || ['.pdf', '.jpg', '.jpeg', '.png']
+    const response = await api.getPublicSystemInfo()
+    
+    // 检查response是否存在
+    if (response && response.data) {
+      const settings = response.data
+      
+      // 将allowedFileTypes转换为数组，并保存原始字符串
+      let allowedFileTypesArray = ['.pdf', '.jpg', '.jpeg', '.png']
+      let allowedFileTypesString = '.pdf, .jpg, .jpeg, .png'
+      
+      if (settings.allowedFileTypes !== undefined && settings.allowedFileTypes !== null) {
+        if (typeof settings.allowedFileTypes === 'string') {
+          allowedFileTypesArray = settings.allowedFileTypes.split(',').map(ext => ext.trim())
+          allowedFileTypesString = settings.allowedFileTypes
+        } else if (Array.isArray(settings.allowedFileTypes)) {
+          allowedFileTypesArray = settings.allowedFileTypes
+          allowedFileTypesString = settings.allowedFileTypes.join(', ')
+        }
+      }
+      
+      // 更新systemSettings
+      systemSettings.value = {
+        singleFileSizeLimit: settings.singleFileSizeLimit || 10,
+        totalFileSizeLimit: settings.totalFileSizeLimit || 50,
+        allowedFileTypes: allowedFileTypesArray,
+        allowedFileTypesString: allowedFileTypesString
+      }
     }
   } catch (error) {
     console.error('获取系统设置失败:', error)
+    // 确保systemSettings始终有默认值
+    systemSettings.value = {
+      singleFileSizeLimit: 10,
+      totalFileSizeLimit: 50,
+      allowedFileTypes: ['.pdf', '.jpg', '.jpeg', '.png'],
+      allowedFileTypesString: '.pdf, .jpg, .jpeg, .png'
+    }
   }
 }
 
@@ -1055,7 +1094,7 @@ const getFileIcon = (fileName) => {
     return ['fas', 'file-question']
   }
   const ext = fileName.split('.').pop().toLowerCase()
-  if (['jpg', 'jpeg', 'png', 'gif', 'bmp'].includes(ext)) {
+  if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext)) {
     return ['fas', 'file-image']
   } else if (ext === 'pdf') {
     return ['fas', 'file-pdf']
@@ -1073,7 +1112,7 @@ const formatFileSize = (bytes) => {
 }
 
 const isImageFile = (fileName) => {
-  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp']
+  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']
   const ext = fileName.split('.').pop().toLowerCase()
   return imageExtensions.includes(ext)
 }
@@ -1093,22 +1132,26 @@ const handleFileSelect = (event) => {
     totalSizeWithNewFiles += file.size
   }
 
-  if (totalSizeWithNewFiles > systemSettings.value.totalFileSizeLimit * 1024 * 1024) {
-    toastStore.error(`总文件大小超过${systemSettings.value.totalFileSizeLimit}MB限制`)
+  const totalLimit = systemSettings.value?.totalFileSizeLimit || 50
+  const singleLimit = systemSettings.value?.singleFileSizeLimit || 10
+  const allowedTypes = systemSettings.value?.allowedFileTypes || ['.pdf', '.jpg', '.jpeg', '.png']
+  
+  if (totalSizeWithNewFiles > totalLimit * 1024 * 1024) {
+    toastStore.error(`总文件大小超过${totalLimit}MB限制`)
     event.target.value = ''
     return
   }
 
   // 检查单个文件大小和类型
   files.forEach(file => {
-    if (file.size > systemSettings.value.singleFileSizeLimit * 1024 * 1024) {
-      toastStore.error(`文件 ${file.name} 大小超过${systemSettings.value.singleFileSizeLimit}MB限制`)
+    if (file.size > singleLimit * 1024 * 1024) {
+      toastStore.error(`文件 ${file.name} 大小超过${singleLimit}MB限制`)
       return
     }
 
     const fileExt = `.${file.name.split('.').pop().toLowerCase()}`
-    if (!systemSettings.value.allowedFileTypes.includes(fileExt)) {
-      toastStore.error(`文件 ${file.name} 类型不支持，仅支持${systemSettings.value.allowedFileTypes.join(', ')}格式`)
+    if (!allowedTypes.includes(fileExt)) {
+      toastStore.error(`文件 ${file.name} 类型不支持，仅支持${allowedTypes.join(', ')}格式`)
       return
     }
 
@@ -1130,21 +1173,25 @@ const handleDrop = (event) => {
     totalSizeWithNewFiles += file.size
   }
 
-  if (totalSizeWithNewFiles > systemSettings.value.totalFileSizeLimit * 1024 * 1024) {
-    toastStore.error(`总文件大小超过${systemSettings.value.totalFileSizeLimit}MB限制`)
+  const totalLimit = systemSettings.value?.totalFileSizeLimit || 50
+  const singleLimit = systemSettings.value?.singleFileSizeLimit || 10
+  const allowedTypes = systemSettings.value?.allowedFileTypes || ['.pdf', '.jpg', '.jpeg', '.png']
+  
+  if (totalSizeWithNewFiles > totalLimit * 1024 * 1024) {
+    toastStore.error(`总文件大小超过${totalLimit}MB限制`)
     return
   }
 
   // 检查单个文件大小和类型
   files.forEach(file => {
-    if (file.size > systemSettings.value.singleFileSizeLimit * 1024 * 1024) {
-      toastStore.error(`文件 ${file.name} 大小超过${systemSettings.value.singleFileSizeLimit}MB限制`)
+    if (file.size > singleLimit * 1024 * 1024) {
+      toastStore.error(`文件 ${file.name} 大小超过${singleLimit}MB限制`)
       return
     }
 
     const fileExt = `.${file.name.split('.').pop().toLowerCase()}`
-    if (!systemSettings.value.allowedFileTypes.includes(fileExt)) {
-      toastStore.error(`文件 ${file.name} 类型不支持，仅支持${systemSettings.value.allowedFileTypes.join(', ')}格式`)
+    if (!allowedTypes.includes(fileExt)) {
+      toastStore.error(`文件 ${file.name} 类型不支持，仅支持${allowedTypes.join(', ')}格式`)
       return
     }
 
@@ -1390,9 +1437,9 @@ const submitForm = async () => {
   const studentName = authStore.user?.name || authStore.userName || '未知学生'
   const studentId = authStore.user?.studentId || '未知学号'
 
-  console.log('=== 提交申请时的学生信息 ===')
-  console.log('studentName:', studentName)
-  console.log('studentId:', studentId)
+  // console.log('=== 提交申请时的学生信息 ===')
+  // console.log('studentName:', studentName)
+  // console.log('studentId:', studentId)
 
   // 确保studentName字段存在（兼容后端期望）
   formData.studentName = formData.name || authStore.userName
@@ -1410,7 +1457,7 @@ const submitForm = async () => {
     appliedAt: new Date().toISOString()
   }
 
-  console.log('=== 最终发送的申请数据 ===')
+  // console.log('=== 最终发送的申请数据 ===')
 
   try {
     let success

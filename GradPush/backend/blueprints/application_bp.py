@@ -412,7 +412,9 @@ def create_application():
                 if file and file.filename:
                     # 检查文件类型
                     file_ext = os.path.splitext(file.filename)[1].lower()
-                    if file_ext not in allowed_file_types:
+                    # 将允许的文件类型字符串转换为列表
+                    allowed_types_list = [ext.strip().lower() for ext in allowed_file_types.split(',')]
+                    if file_ext not in allowed_types_list:
                         return (
                             jsonify(
                                 {
@@ -677,7 +679,9 @@ def update_application(id):
                 if file and file.filename:
                     # 检查文件类型
                     file_ext = os.path.splitext(file.filename)[1].lower()
-                    if file_ext not in allowed_file_types:
+                    # 将允许的文件类型字符串转换为列表
+                    allowed_types_list = [ext.strip().lower() for ext in allowed_file_types.split(',')]
+                    if file_ext not in allowed_types_list:
                         return (
                             jsonify(
                                 {

@@ -591,10 +591,13 @@ def upload_avatar():
     if file.filename == "":
         return jsonify({"message": "请选择一个文件"}), 400
 
-    # 添加文件大小限制（例如：2MB）
-    max_size = 2 * 1024 * 1024  # 2MB
+    # 从系统设置中获取头像文件大小限制
+    from models import SystemSettings
+    settings = SystemSettings.query.first()
+    avatar_file_size_limit = settings.avatar_file_size_limit if settings else 2  # 默认2MB
+    max_size = avatar_file_size_limit * 1024 * 1024
     if request.content_length > max_size:
-        return jsonify({"message": f"文件大小不能超过{max_size//(1024*1024)}MB"}), 400
+        return jsonify({"message": f"文件大小不能超过{avatar_file_size_limit}MB"}), 400
 
     # 增强文件类型验证
     # 检查文件扩展名

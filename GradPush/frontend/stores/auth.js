@@ -147,7 +147,7 @@ export const useAuthStore = defineStore('auth', () => {
             }
           } else {
             // 后端会话无效，清除前端状态
-            console.log('后端会话已过期或无效，清除前端状态')
+            // console.log('后端会话已过期或无效，清除前端状态')
             localStorage.removeItem('user')
             user.value = null
             role.value = null

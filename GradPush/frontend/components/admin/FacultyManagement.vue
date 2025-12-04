@@ -189,6 +189,7 @@
           <thead>
             <tr>
               <th>专业名称</th>
+              <th>所属学院</th>
               <th>所属系</th>
               <th>描述</th>
               <th style="text-align: center;">操作</th>
@@ -197,6 +198,7 @@
           <tbody>
             <tr v-for="major in filteredMajors" :key="major.id">
               <td>{{ major.name }}</td>
+              <td>{{ getFacultyName(major.faculty_id) }}</td>
               <td>{{ getDepartmentName(major.department_id) }}</td>
               <td>{{ major.description || '无描述' }}</td>
               <td>
@@ -854,8 +856,6 @@ export default {
 @import '../common/shared-styles.css';
 
 /* 加载状态样式 */
-/* 加载样式已移至shared-styles.css */
-  
   /* 确保加载遮罩正确显示 */
   .card {
     position: relative;

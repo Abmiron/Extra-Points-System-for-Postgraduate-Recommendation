@@ -372,6 +372,7 @@ class SystemSettings(db.Model):
     # 文件存储设置
     single_file_size_limit = db.Column(db.Integer, default=10)  # 单文件大小限制（MB）
     total_file_size_limit = db.Column(db.Integer, default=50)  # 总文件大小限制（MB）
+    avatar_file_size_limit = db.Column(db.Integer, default=2)  # 头像文件大小限制（MB）
     allowed_file_types = db.Column(db.String(200), default=".pdf, .jpg, .jpeg, .png")
 
     # 综合成绩设置
@@ -390,3 +391,28 @@ class SystemSettings(db.Model):
 
     def __repr__(self):
         return f"<SystemSettings id={self.id}>"
+
+
+# 推免相关文件模型
+class GraduateFile(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(255), nullable=False)  # 文件名
+    filepath = db.Column(db.String(255), nullable=False)  # 文件路径
+    file_size = db.Column(db.Integer, nullable=False)  # 文件大小（字节）
+    file_type = db.Column(db.String(100), nullable=False)  # 文件类型
+    upload_time = db.Column(db.DateTime, default=get_current_time)  # 上传时间
+    uploader = db.Column(db.String(100), nullable=True)  # 上传者
+    description = db.Column(db.Text, nullable=True)  # 文件描述
+    category = db.Column(db.String(100), default="graduate")  # 文件类别，默认是graduate（推免相关）
+    faculty_id = db.Column(db.Integer, db.ForeignKey("faculty.id"), nullable=True)  # 所属学院
+    
+    # 关系
+    faculty = db.relationship("Faculty", backref=db.backref("graduate_files", lazy=True))
+
+    created_at = db.Column(db.DateTime, default=get_current_time)
+    updated_at = db.Column(
+        db.DateTime, default=get_current_time, onupdate=get_current_time
+    )
+
+    def __repr__(self):
+        return f"<GraduateFile {self.filename}>"

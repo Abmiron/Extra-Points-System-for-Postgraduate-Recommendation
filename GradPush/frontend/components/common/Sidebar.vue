@@ -76,6 +76,7 @@ const menuConfig = {
     { key: 'score-management', icon: ['fas', 'user-graduate'], title: '成绩管理' },
     { key: 'rule-management', icon: ['fas', 'ruler'], title: '规则管理' },
     { key: 'statistics-report', icon: ['fas', 'chart-pie'], title: '统计报表' },
+    { key: 'graduate-file-management', icon: ['fas', 'file-lines'], title: '推免文件管理' },
     { key: 'system-settings', icon: ['fas', 'cog'], title: '系统设置' },
     { key: 'profile', icon: ['fas', 'user'], title: '个人信息' }
   ]

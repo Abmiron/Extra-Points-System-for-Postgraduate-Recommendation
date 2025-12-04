@@ -5,10 +5,10 @@
       <span class="university-name">{{ title }}</span>
     </div>
     <div class="header-right">
-      <div class="notification" @click="showNotifications">
-        <font-awesome-icon :icon="['fas', 'bell']" />
-        <span class="notification-badge" v-if="notificationCount > 0">
-          {{ notificationCount }}
+      <div class="notification" @click="showFiles" title="查看推免相关文件">
+        <font-awesome-icon :icon="['fas', 'file-alt']" />
+        <span class="notification-badge" v-if="fileCount > 0">
+          {{ fileCount }}
         </span>
       </div>
       <div class="user-menu">
@@ -16,7 +16,7 @@
           <img :src="userAvatar" alt="用户头像" class="user-avatar">
           <span>{{ userName }}</span>
         </div>
-        <button class="logout-btn" @click="handleLogout">
+        <button class="logout-btn" @click="handleLogout" title="退出登录">
           <font-awesome-icon :icon="['fas', 'sign-out-alt']" />
         </button>
       </div>
@@ -25,10 +25,11 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { useToastStore } from '../../stores/toast'
+import { useFilesStore } from '../../stores/files'
 const toastStore = useToastStore()
 
 const props = defineProps({
@@ -44,19 +45,163 @@ const emit = defineEmits(['go-to-profile'])
 
 const router = useRouter()
 const authStore = useAuthStore()
+const filesStore = useFilesStore()
 
-const notificationCount = computed(() => {
-  const roleCounts = {
-    student: 3,
-    teacher: 5,
-    admin: 8
-  }
-  return roleCounts[authStore.role] || 0
+// 计算属性，从filesStore获取文件数量
+const fileCount = computed(() => filesStore.fileCount)
+
+// 组件挂载时加载文件列表
+onMounted(async () => {
+  const currentUser = authStore.user;
+  const facultyId = currentUser ? currentUser.facultyId : null;
+  await filesStore.loadFiles(facultyId)
 })
 
-const showNotifications = () => {
-  toastStore.info(`您有${notificationCount.value}条未读通知`)
+// 显示文件列表
+const showFiles = async () => {
+  // 如果文件列表为空，尝试重新加载
+  if (filesStore.files.length === 0) {
+    const currentUser = authStore.user;
+    const facultyId = currentUser ? currentUser.facultyId : null;
+    await filesStore.loadFiles(facultyId)
+  }
+  
+  if (filesStore.files.length === 0) {
+    toastStore.info('暂无推免相关文件')
+    return
+  }
+  
+  // 创建文件列表HTML
+  let fileListHTML = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; padding-bottom: 12px; border-bottom: 2px solid #e9ecef;">' +
+    '<h4 style="margin: 0; color: #333; font-size: 18px; font-weight: 600;">推免相关文件</h4>' +
+    '<button id="modal-close-btn" style="background: none; border: none; color: #333; cursor: pointer; font-size: 20px; padding: 4px; border-radius: 4px; transition: all 0.2s ease;">' +
+    '<i class="fas fa-times"></i>' +
+    '</button>' +
+    '</div>'
+  
+  // 使用表格样式显示文件列表
+  fileListHTML += '<div style="overflow-x: auto;">' +
+    '<table style="width: 100%; border-collapse: collapse; font-size: 14px;">' +
+      '<tbody>'
+  
+  filesStore.files.forEach(file => {
+    // 确保file和必要的字段存在
+    if (!file || !file.filename) return;
+    
+    fileListHTML += `<tr style="border-bottom: 1px solid #e9ecef; transition: background-color 0.2s ease;">`
+    fileListHTML += `<td style="padding: 8px;">`
+    fileListHTML += `<div style="display: flex; align-items: center; gap: 8px;">`
+    fileListHTML += `<span style="font-size: 18px; color: #003d86;">${getFileIcon(file.filename)}</span>`
+    fileListHTML += `<span style="color: #333;">${file.filename}</span>`
+    fileListHTML += `</div>`
+    fileListHTML += `</td>`
+    fileListHTML += `<td style="padding: 12px; color: #6c757d; white-space: nowrap;">${formatFileSize(file.file_size || 0)}</td>`
+    fileListHTML += `<td style="padding: 12px; text-align: center;">`
+    fileListHTML += `<div class="action-buttons">`
+    fileListHTML += `<a href="http://localhost:5001${file.file_url || ''}" class="btn-outline btn small-btn" style="text-decoration: none;" title="下载">`
+    fileListHTML += `<i class="fas fa-download"></i>`
+    fileListHTML += `</a>`
+    fileListHTML += `</div>`
+    fileListHTML += `</td>`
+    fileListHTML += `</tr>`
+  })
+  
+  fileListHTML += '</tbody>' +
+    '</table>' +
+  '</div>'
+  
+  // 定义模态框显示文件列表
+  const customAlert = document.createElement('div')
+  customAlert.style.cssText = `
+    position: fixed;
+    top: 7%;
+    left: 66%;
+    background-color: white;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    z-index: 10000;
+    max-width: 600px;
+    width: 90%;
+    max-height: 50vh;
+    overflow-y: auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  `
+  
+  customAlert.innerHTML = fileListHTML
+  
+  // 添加遮罩层
+  const overlay = document.createElement('div')
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0);
+    z-index: 9999;
+  `
+  
+  // 关闭函数
+  const closeModal = () => {
+    document.body.removeChild(customAlert)
+    document.body.removeChild(overlay)
+  }
+  
+  // 点击关闭图标关闭
+  const closeBtn = customAlert.querySelector('#modal-close-btn')
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeModal)
+    closeBtn.addEventListener('mouseover', () => {
+      closeBtn.style.color = '#333'
+      closeBtn.style.backgroundColor = '#f0f0f0'
+    })
+    closeBtn.addEventListener('mouseout', () => {
+      closeBtn.style.color = '#6c757d'
+      closeBtn.style.backgroundColor = 'transparent'
+    })
+  }
+  
+  // 点击遮罩层关闭
+  overlay.onclick = closeModal
+  
+  document.body.appendChild(overlay)
+  document.body.appendChild(customAlert)
 }
+
+// 获取文件图标（使用Unicode字符确保在动态HTML中正确显示）
+const getFileIcon = (fileName) => {
+  if (!fileName) return '📄';
+  const ext = fileName.split('.').pop().toLowerCase()
+  switch (ext) {
+    case 'pdf':
+      return '📄'
+    case 'doc':
+    case 'docx':
+      return '📝'
+    case 'xls':
+    case 'xlsx':
+      return '📊'
+    case 'ppt':
+    case 'pptx':
+      return '📋'
+    default:
+      return '📄'
+  }
+}
+
+// 格式化文件大小
+const formatFileSize = (size) => {
+  if (size < 1024) {
+    return `${size} B`
+  } else if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(2)} KB`
+  } else {
+    return `${(size / (1024 * 1024)).toFixed(2)} MB`
+  }
+}
+
+
 
 const goToProfile = () => {
   emit('go-to-profile')

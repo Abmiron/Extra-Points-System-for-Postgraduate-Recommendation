@@ -82,6 +82,14 @@
           </div>
           <div class="help-text">一次申请能上传的所有文件的总大小</div>
         </div>
+        <div class="form-group">
+          <label class="form-label">头像文件大小限制</label>
+          <div class="input-with-unit">
+            <input type="number" class="form-control small-input" v-model="settings.avatarFileSizeLimit">
+            <span class="unit">MB</span>
+          </div>
+          <div class="help-text">用户上传头像的最大大小</div>
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">允许的文件类型</label>
@@ -93,38 +101,7 @@
       </div>
     </div>
 
-    <!-- 系统公告管理 -->
-    <div class="card">
-      <div class="card-title">系统公告管理</div>
-      <div class="form-group">
-        <label class="form-label">公告标题</label>
-        <input type="text" class="form-control" v-model="announcement.title" placeholder="请输入公告标题">
-      </div>
-      <div class="form-group">
-        <label class="form-label">公告内容</label>
-        <textarea class="form-control" v-model="announcement.content" rows="4" placeholder="请输入公告内容"></textarea>
-      </div>
-      <div class="form-group">
-        <label class="form-label">发布对象</label>
-        <div class="radio-group">
-          <label class="radio-label">
-            <input type="radio" v-model="announcement.audience" value="all">
-            <span>全体用户</span>
-          </label>
-          <label class="radio-label">
-            <input type="radio" v-model="announcement.audience" value="students">
-            <span>仅学生</span>
-          </label>
-          <label class="radio-label">
-            <input type="radio" v-model="announcement.audience" value="teachers">
-            <span>仅教师</span>
-          </label>
-        </div>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn-outline" @click="publishAnnouncement">发布公告</button>
-      </div>
-    </div>
+
 
     <!-- 系统维护 -->
     <div class="card">
@@ -203,6 +180,7 @@ const settings = reactive({
   applicationEnd: '',
   singleFileSizeLimit: '',
   totalFileSizeLimit: '',
+  avatarFileSizeLimit: '',
   allowedFileTypes: '',
   lastBackup: '',
   academicScoreWeight: '',
@@ -213,11 +191,7 @@ const settings = reactive({
 // 加载状态变量
 const loading = ref(false)
 
-const announcement = reactive({
-  title: '',
-  content: '',
-  audience: 'all'
-})
+
 
 // 方法
 // 处理时间格式，确保发送到API的是正确格式，保持用户输入的原始时区
@@ -286,6 +260,7 @@ const saveStorageSettings = async () => {
     await api.updateSystemSettings({
       singleFileSizeLimit: settings.singleFileSizeLimit,
       totalFileSizeLimit: settings.totalFileSizeLimit,
+      avatarFileSizeLimit: settings.avatarFileSizeLimit,
       allowedFileTypes: settings.allowedFileTypes
     })
     toastStore.success('设置已保存')
@@ -318,9 +293,7 @@ const saveScoreWeightSettings = async () => {
   }
 }
 
-const publishAnnouncement = () => {
-  toastStore.info('公告发布功能正在开发中...')
-}
+
 
 const backupDatabase = async () => {
   loading.value = true
@@ -427,6 +400,7 @@ async function loadSystemSettings() {
     settings.applicationEnd = formatDateTimeForInput(data.applicationEnd)
     settings.singleFileSizeLimit = data.singleFileSizeLimit || ''
     settings.totalFileSizeLimit = data.totalFileSizeLimit || ''
+    settings.avatarFileSizeLimit = data.avatarFileSizeLimit || ''
     settings.allowedFileTypes = data.allowedFileTypes || ''
     settings.lastBackup = data.lastBackup || ''
     settings.academicScoreWeight = data.academicScoreWeight || ''
@@ -444,6 +418,9 @@ async function loadSystemSettings() {
 </script>
 
 <style scoped>
+/* 引入共享样式 */
+@import '../common/shared-styles.css';
+
 /* 组件特有样式 */
 .form-row {
   display: flex;
@@ -538,6 +515,24 @@ input[type="datetime-local"] {
   font-size: 12px;
   color: #6c757d;
   margin-top: 5px;
+}
+
+.file-upload-container {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.file-input {
+  flex: 1;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 20px;
+  color: #6c757d;
+  background-color: #f9f9f9;
+  border-radius: 4px;
 }
 
 .system-status {

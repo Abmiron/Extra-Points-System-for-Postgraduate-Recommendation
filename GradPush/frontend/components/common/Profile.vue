@@ -22,7 +22,7 @@
               </div>
             </div>
             <div class="avatar-tooltip">
-              上传图片限制：JPG、PNG格式，大小不超过2MB
+              上传图片限制：JPG、PNG格式，大小不超过{{ avatarSizeLimit }}MB
             </div>
             <button class="btn btn-outline reset-avatar-btn" @click="resetAvatar" :disabled="uploadingAvatar">
               <font-awesome-icon :icon="['fas', 'undo']" /> 恢复默认头像
@@ -120,6 +120,8 @@ const saving = ref(false)
 const showChangePassword = ref(false)
 const uploadingAvatar = ref(false)
 const avatarInput = ref(null)
+const systemSettings = ref({})
+const avatarSizeLimit = computed(() => systemSettings.value.avatarFileSizeLimit || 2)
 
 const originalProfile = ref({})
 const profile = reactive({})
@@ -248,9 +250,10 @@ const handleAvatarChange = async (event) => {
   const file = event.target.files[0]
   if (!file) return
 
-  // 检查文件大小（限制为2MB）
-  if (file.size > 2 * 1024 * 1024) {
-    toastStore.error('头像文件大小不能超过2MB')
+  // 检查文件大小
+  const maxSize = avatarSizeLimit.value * 1024 * 1024
+  if (file.size > maxSize) {
+    toastStore.error(`头像文件大小不能超过${avatarSizeLimit.value}MB`)
     return
   }
 
@@ -389,7 +392,17 @@ const closePasswordModal = () => {
 }
 
 // 生命周期
-onMounted(() => {
+onMounted(async () => {
+  // 加载系统设置，获取头像大小限制
+  try {
+    const response = await api.getSystemSettings()
+    systemSettings.value = response.settings
+  } catch (error) {
+    console.error('加载系统设置失败:', error)
+    // 使用默认值
+    systemSettings.value = { avatarFileSizeLimit: 2 }
+  }
+  
   // 从auth store获取当前用户信息
   if (authStore.user) {
     const user = authStore.user
@@ -507,7 +520,7 @@ onMounted(() => {
   top: 160px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgba(0, 0, 0, 0.6);
   color: white;
   padding: 8px 12px;
   border-radius: 4px;
