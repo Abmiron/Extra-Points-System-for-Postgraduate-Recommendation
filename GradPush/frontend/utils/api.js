@@ -126,7 +126,20 @@ export default {
   createRule: (data) => apiRequest('/rules', 'POST', data),
   updateRule: (id, data) => apiRequest(`/rules/${id}`, 'PUT', data),
   deleteRule: (id) => apiRequest(`/rules/${id}`, 'DELETE'),
-  toggleRuleStatus: (id) => apiRequest(`/rules/${id}/toggle-status`, 'PATCH'),
+  toggleRuleStatus: (id) => apiRequest(`/rules/${id}/status`, 'PATCH'),
+  
+  // 规则条件相关API
+
+  
+  // 规则计算相关API
+  getRuleCalculation: (ruleId) => apiRequest(`/rules/${ruleId}/calculation`),
+  createRuleCalculation: (ruleId, data) => apiRequest(`/rules/${ruleId}/calculation`, 'POST', data),
+  updateRuleCalculation: (calculationId, data) => apiRequest(`/calculations/${calculationId}`, 'PUT', data),
+  deleteRuleCalculation: (calculationId) => apiRequest(`/calculations/${calculationId}`, 'DELETE'),
+  
+  // 规则匹配和计算API
+  matchRules: (data) => apiRequest('/rules/match', 'POST', data),
+  calculateRuleScore: (ruleId, data) => apiRequest(`/rules/${ruleId}/calculate`, 'POST', data),
   
   // 系统设置相关API
   getSystemSettings: () => apiRequest('/admin/system-settings', 'GET'),

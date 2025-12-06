@@ -140,7 +140,7 @@ const generateAcademicYearOptions = () => {
 
 const academicYearOptions = ref(generateAcademicYearOptions())
 
-const systemStatus = ref('online') // online, maintenance
+const systemStatus = ref('online') // 在线, 维护
 
 const settings = reactive({
   academicYear: '',

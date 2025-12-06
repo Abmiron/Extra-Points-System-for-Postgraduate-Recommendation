@@ -13,9 +13,11 @@
 """
 
 from flask import Blueprint, request, jsonify
-from models import Rule
+from models import Rule, RuleCalculation
 from extensions import db
 import traceback
+import json
+from utils.rule_engine import RuleEngine
 import sys
 
 # 设置默认编码为UTF-8
@@ -44,9 +46,6 @@ def get_rules():
     if status:
         query = query.filter_by(status=status)
 
-    if level:
-        query = query.filter_by(level=level)
-
     if name:
         query = query.filter(Rule.name.like(f"%{name}%"))
 
@@ -59,21 +58,15 @@ def get_rules():
             "name": rule.name,
             "type": rule.type,
             "sub_type": rule.sub_type,
-            "level": rule.level,
-            "grade": rule.grade,
-            "category": rule.category,
-            "participation_type": rule.participation_type,
-            "team_role": rule.team_role,
-            "author_rank_type": rule.author_rank_type,
-            "author_rank": rule.author_rank,
-            "author_rank_ratio": rule.author_rank_ratio,
             "research_type": rule.research_type,
             "score": rule.score,
             "max_score": rule.max_score,
             "max_count": rule.max_count,
-            "is_special": rule.is_special,
             "status": rule.status,
             "description": rule.description,
+            "faculty_id": rule.faculty_id,
+            "faculty_name": rule.faculty.name if rule.faculty else None,
+            "calculation_formula": rule.calculation_formula,
             "createdAt": rule.created_at.isoformat() if rule.created_at else None,
             "updatedAt": rule.updated_at.isoformat() if rule.updated_at else None,
         }
@@ -85,33 +78,50 @@ def get_rules():
 # 获取单个规则
 @rule_bp.route("/rules/<int:rule_id>", methods=["GET"])
 def get_rule(rule_id):
-    rule = Rule.query.get_or_404(rule_id)
+    try:
+        rule = Rule.query.get(rule_id)
+        if not rule:
+            return jsonify({"code": 404, "message": "Rule not found"}), 404
 
-    rule_data = {
-        "id": rule.id,
-        "name": rule.name,
-        "type": rule.type,
-        "sub_type": rule.sub_type,
-        "level": rule.level,
-        "grade": rule.grade,
-        "category": rule.category,
-        "participation_type": rule.participation_type,
-        "team_role": rule.team_role,
-        "author_rank_type": rule.author_rank_type,
-        "author_rank": rule.author_rank,
-        "author_rank_ratio": rule.author_rank_ratio,
-        "research_type": rule.research_type,
-        "score": rule.score,
-        "max_score": rule.max_score,
-        "max_count": rule.max_count,
-        "is_special": rule.is_special,
-        "status": rule.status,
-        "description": rule.description,
-        "createdAt": rule.created_at.isoformat() if rule.created_at else None,
-        "updatedAt": rule.updated_at.isoformat() if rule.updated_at else None,
-    }
+        # 规则条件功能已移除
+        condition_list = []
 
-    return jsonify(rule_data), 200
+        # 获取该规则的计算
+        calculation = RuleCalculation.query.filter_by(rule_id=rule_id).first()
+        calculation_data = None
+        if calculation:
+            calculation_data = {
+                "id": calculation.id,
+                "rule_id": calculation.rule_id,
+                "calculation_type": calculation.calculation_type,
+                "formula": calculation.formula,
+                "parameters": calculation.parameters,
+                "max_score": calculation.max_score,
+            }
+
+        rule_data = {
+            "id": rule.id,
+            "name": rule.name,
+            "type": rule.type,
+            "sub_type": rule.sub_type,
+            "research_type": rule.research_type,
+            "score": rule.score,
+            "max_score": rule.max_score,
+            "max_count": rule.max_count,
+            "status": rule.status,
+            "description": rule.description,
+            "faculty_id": rule.faculty_id,
+            "faculty_name": rule.faculty.name if rule.faculty else None,
+            "calculation_formula": rule.calculation_formula,
+            "conditions": condition_list,
+            "calculation": calculation_data,
+            "createdAt": rule.created_at.isoformat() if rule.created_at else None,
+            "updatedAt": rule.updated_at.isoformat() if rule.updated_at else None,
+        }
+
+        return jsonify({"code": 200, "message": "Success", "data": rule_data}), 200
+    except Exception as e:
+        return jsonify({"code": 500, "message": str(e)}), 500
 
 
 # 创建规则
@@ -128,32 +138,48 @@ def create_rule():
                 print(f"Missing required field: {field}")
                 return jsonify({"error": f"Missing required field: {field}"}), 400
 
+        # 处理JSON字段，确保它们是有效的JSON对象
+
+        calculation_formula = data.get("calculation_formula")
+        if isinstance(calculation_formula, str):
+            try:
+                calculation_formula = json.loads(calculation_formula)
+            except json.JSONDecodeError:
+                calculation_formula = None
+
         # 创建新规则
         new_rule = Rule(
             name=data["name"],
             type=data["type"],
             sub_type=data.get("sub_type"),
-            level=data.get("level"),
-            grade=data.get("grade"),
-            category=data.get("category"),
-            participation_type=data.get("participation_type", "individual"),
-            team_role=data.get("team_role"),
-            author_rank_type=data.get("author_rank_type", "unranked"),
-            author_rank=data.get("author_rank"),
-            author_rank_ratio=data.get("author_rank_ratio"),
             research_type=data.get("research_type"),
             score=data["score"],
             max_score=data.get("max_score"),
             max_count=data.get("max_count"),
-            is_special=data.get("is_special", False),
             status=data.get("status", "active"),
             description=data.get("description"),
+            faculty_id=data.get("faculty_id"),
+            calculation_formula=calculation_formula,
         )
 
         db.session.add(new_rule)
         print("Added new rule to session")
         db.session.commit()
         print("Committed new rule to database")
+
+        # 处理规则计算
+        calculation_data = data.get("calculation")
+        if calculation_data:
+            new_calculation = RuleCalculation(
+                rule_id=new_rule.id,
+                calculation_type=calculation_data.get("calculation_type"),
+                formula=calculation_data.get("formula"),
+                parameters=calculation_data.get("parameters"),
+                max_score=calculation_data.get("max_score"),
+            )
+            db.session.add(new_calculation)
+
+        db.session.commit()
 
         return (
             jsonify(
@@ -162,18 +188,10 @@ def create_rule():
                     "name": new_rule.name,
                     "type": new_rule.type,
                     "sub_type": new_rule.sub_type,
-                    "level": new_rule.level,
-                    "grade": new_rule.grade,
-                    "category": new_rule.category,
-                    "participation_type": new_rule.participation_type,
-                    "team_role": new_rule.team_role,
-                    "author_rank_type": new_rule.author_rank_type,
-                    "author_rank": new_rule.author_rank,
-                    "author_rank_ratio": new_rule.author_rank_ratio,
+                    "research_type": new_rule.research_type,
                     "score": new_rule.score,
                     "max_score": new_rule.max_score,
                     "max_count": new_rule.max_count,
-                    "is_special": new_rule.is_special,
                     "status": new_rule.status,
                     "description": new_rule.description,
                     "createdAt": (
@@ -210,22 +228,6 @@ def update_rule(rule_id):
             rule.type = data["type"]
         if "sub_type" in data:
             rule.sub_type = data["sub_type"]
-        if "level" in data:
-            rule.level = data["level"]
-        if "grade" in data:
-            rule.grade = data["grade"]
-        if "category" in data:
-            rule.category = data["category"]
-        if "participation_type" in data:
-            rule.participation_type = data["participation_type"]
-        if "team_role" in data:
-            rule.team_role = data["team_role"]
-        if "author_rank_type" in data:
-            rule.author_rank_type = data["author_rank_type"]
-        if "author_rank" in data:
-            rule.author_rank = data["author_rank"]
-        if "author_rank_ratio" in data:
-            rule.author_rank_ratio = data["author_rank_ratio"]
         if "research_type" in data:
             rule.research_type = data["research_type"]
         if "score" in data:
@@ -234,12 +236,40 @@ def update_rule(rule_id):
             rule.max_score = data["max_score"]
         if "max_count" in data:
             rule.max_count = data["max_count"]
-        if "is_special" in data:
-            rule.is_special = data["is_special"]
+
         if "status" in data:
             rule.status = data["status"]
         if "description" in data:
             rule.description = data["description"]
+        if "faculty_id" in data:
+            rule.faculty_id = data["faculty_id"]
+
+        if "calculation_formula" in data:
+            calculation_formula = data["calculation_formula"]
+            if isinstance(calculation_formula, str):
+                try:
+                    calculation_formula = json.loads(calculation_formula)
+                except json.JSONDecodeError:
+                    calculation_formula = None
+            rule.calculation_formula = calculation_formula
+
+        db.session.commit()
+
+        # 更新规则计算
+        calculation_data = data.get("calculation")
+        if calculation_data is not None:
+            # 删除旧的计算
+            RuleCalculation.query.filter_by(rule_id=rule_id).delete()
+            # 添加新的计算
+            if calculation_data:
+                new_calculation = RuleCalculation(
+                    rule_id=rule_id,
+                    calculation_type=calculation_data.get("calculation_type"),
+                    formula=calculation_data.get("formula"),
+                    parameters=calculation_data.get("parameters"),
+                    max_score=calculation_data.get("max_score"),
+                )
+                db.session.add(new_calculation)
 
         db.session.commit()
 
@@ -250,26 +280,21 @@ def update_rule(rule_id):
                     "name": rule.name,
                     "type": rule.type,
                     "sub_type": rule.sub_type,
-                    "level": rule.level,
-                    "grade": rule.grade,
-                    "category": rule.category,
-                    "participation_type": rule.participation_type,
-                    "team_role": rule.team_role,
-                    "author_rank_type": rule.author_rank_type,
-                    "author_rank": rule.author_rank,
-                    "author_rank_ratio": rule.author_rank_ratio,
+                    "research_type": rule.research_type,
                     "score": rule.score,
                     "max_score": rule.max_score,
                     "max_count": rule.max_count,
-                    "is_special": rule.is_special,
                     "status": rule.status,
                     "description": rule.description,
+                    "faculty_id": rule.faculty_id,
+                    "calculation_formula": rule.calculation_formula,
                     "createdAt": (
                         rule.created_at.isoformat() if rule.created_at else None
                     ),
                     "updatedAt": (
                         rule.updated_at.isoformat() if rule.updated_at else None
                     ),
+                    "message": "Rule updated successfully",
                 }
             ),
             200,
@@ -277,7 +302,7 @@ def update_rule(rule_id):
 
     except Exception as e:
         traceback.print_exc()
-        return jsonify({"error": "Failed to update rule"}), 500
+        return jsonify({"error": str(e)}), 400
 
 
 # 删除规则
@@ -296,16 +321,213 @@ def delete_rule(rule_id):
         return jsonify({"error": "Failed to delete rule"}), 500
 
 
-# 切换规则状态
-@rule_bp.route("/rules/<int:rule_id>/toggle-status", methods=["PATCH"])
+# RuleCalculation API endpoints
+@rule_bp.route("/rules/<int:rule_id>/calculation", methods=["GET"])
+def get_rule_calculation(rule_id):
+    try:
+        # 检查规则是否存在
+        rule = Rule.query.get_or_404(rule_id)
+
+        # 获取规则的计算信息
+        calculation = RuleCalculation.query.filter_by(rule_id=rule_id).first()
+        calculation_data = None
+        if calculation:
+            calculation_data = {
+                "id": calculation.id,
+                "rule_id": calculation.rule_id,
+                "calculation_type": calculation.calculation_type,
+                "formula": calculation.formula,
+                "parameters": calculation.parameters,
+                "max_score": calculation.max_score,
+            }
+
+        return (
+            jsonify({"code": 200, "message": "Success", "data": calculation_data}),
+            200,
+        )
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"code": 500, "message": str(e)}), 500
+
+
+@rule_bp.route("/rules/<int:rule_id>/calculation", methods=["POST"])
+def create_calculation(rule_id):
+    try:
+        # 检查规则是否存在
+        rule = Rule.query.get_or_404(rule_id)
+
+        data = request.get_json()
+
+        # 检查是否已存在计算，一个规则只能有一个计算
+        existing_calculation = RuleCalculation.query.filter_by(rule_id=rule_id).first()
+        if existing_calculation:
+            return (
+                jsonify(
+                    {
+                        "code": 400,
+                        "message": "A calculation already exists for this rule",
+                    }
+                ),
+                400,
+            )
+
+        new_calculation = RuleCalculation(
+            rule_id=rule_id,
+            calculation_type=data.get("calculation_type"),
+            formula=data.get("formula"),
+            parameters=data.get("parameters"),
+            max_score=data.get("max_score"),
+        )
+
+        db.session.add(new_calculation)
+        db.session.commit()
+
+        return (
+            jsonify(
+                {
+                    "code": 201,
+                    "message": "Calculation created successfully",
+                    "data": {
+                        "id": new_calculation.id,
+                        "rule_id": new_calculation.rule_id,
+                        "calculation_type": new_calculation.calculation_type,
+                        "formula": new_calculation.formula,
+                        "parameters": new_calculation.parameters,
+                        "max_score": new_calculation.max_score,
+                    },
+                }
+            ),
+            201,
+        )
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"code": 500, "message": str(e)}), 500
+
+
+@rule_bp.route("/calculations/<int:calculation_id>", methods=["PUT"])
+def update_calculation(calculation_id):
+    try:
+        calculation = RuleCalculation.query.get_or_404(calculation_id)
+        data = request.get_json()
+
+        # 更新计算信息
+        calculation.calculation_type = data.get(
+            "calculation_type", calculation.calculation_type
+        )
+        calculation.formula = data.get("formula", calculation.formula)
+        calculation.parameters = data.get("parameters", calculation.parameters)
+        calculation.max_score = data.get("max_score", calculation.max_score)
+
+        db.session.commit()
+
+        return (
+            jsonify(
+                {
+                    "code": 200,
+                    "message": "Calculation updated successfully",
+                    "data": {
+                        "id": calculation.id,
+                        "rule_id": calculation.rule_id,
+                        "calculation_type": calculation.calculation_type,
+                        "formula": calculation.formula,
+                        "parameters": calculation.parameters,
+                        "max_score": calculation.max_score,
+                    },
+                }
+            ),
+            200,
+        )
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"code": 500, "message": str(e)}), 500
+
+
+@rule_bp.route("/calculations/<int:calculation_id>", methods=["DELETE"])
+def delete_calculation(calculation_id):
+    try:
+        calculation = RuleCalculation.query.get_or_404(calculation_id)
+        db.session.delete(calculation)
+        db.session.commit()
+
+        return (
+            jsonify({"code": 200, "message": "Calculation deleted successfully"}),
+            200,
+        )
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"code": 500, "message": str(e)}), 500
+
+
+@rule_bp.route("/rules/match", methods=["POST"])
+def match_rules():
+    try:
+        data = request.get_json()
+
+        # 获取学生数据和学院ID
+        student_data = data.get("student_data")
+        faculty_id = data.get("faculty_id")
+
+        if not student_data:
+            return jsonify({"code": 400, "message": "Student data is required"}), 400
+
+        # 初始化规则引擎
+        rule_engine = RuleEngine()
+
+        # 获取该学院的所有有效规则
+        rules = Rule.query.filter_by(faculty_id=faculty_id, status="active").all()
+
+        # 匹配规则并计算分数
+        result = rule_engine.match_and_calculate(rules, student_data)
+
+        return jsonify({"code": 200, "message": "Success", "data": result}), 200
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"code": 500, "message": str(e)}), 500
+
+
+@rule_bp.route("/rules/<int:rule_id>/calculate", methods=["POST"])
+def calculate_rule_score(rule_id):
+    try:
+        data = request.get_json()
+        student_data = data.get("student_data")
+
+        if not student_data:
+            return jsonify({"code": 400, "message": "Student data is required"}), 400
+
+        # 获取规则
+        rule = Rule.query.get_or_404(rule_id)
+
+        # 初始化规则引擎
+        rule_engine = RuleEngine()
+
+        # 计算单个规则的分数
+        score = rule_engine.calculate_score(rule, student_data)
+
+        return (
+            jsonify(
+                {
+                    "code": 200,
+                    "message": "Success",
+                    "data": {
+                        "rule_id": rule_id,
+                        "rule_name": rule.name,
+                        "score": score,
+                        "max_score": rule.max_score,
+                    },
+                }
+            ),
+            200,
+        )
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"code": 500, "message": str(e)}), 500
+
+
+@rule_bp.route("/rules/<int:rule_id>/status", methods=["PATCH"])
 def toggle_rule_status(rule_id):
     try:
         rule = Rule.query.get_or_404(rule_id)
-
-        # 切换状态
-        new_status = "active" if rule.status == "disabled" else "disabled"
-        rule.status = new_status
-
+        rule.status = "active" if rule.status == "disabled" else "disabled"
         db.session.commit()
 
         return (
@@ -313,12 +535,11 @@ def toggle_rule_status(rule_id):
                 {
                     "id": rule.id,
                     "status": rule.status,
-                    "message": f"Rule {new_status}d successfully",
+                    "message": f"Rule status updated to {rule.status}",
                 }
             ),
             200,
         )
-
     except Exception as e:
         traceback.print_exc()
-        return jsonify({"error": "Failed to toggle rule status"}), 500
+        return jsonify({"error": str(e)}), 400

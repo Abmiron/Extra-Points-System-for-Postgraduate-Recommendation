@@ -125,7 +125,7 @@
                 <!-- I-J: 学业综合成绩（占总分80%） -->
                 <td v-if="student.isFirstRow">{{ student.gpa ? student.gpa.toFixed(3) : 0 }}</td>
                 <td v-else></td>
-                <td v-if="student.isFirstRow">{{ student.academicScore ? student.academicScore.toFixed(2) : 0 }}</td>
+                <td v-if="student.isFirstRow">{{ student.academicScore ? student.academicScore.toFixed(4) : 0 }}</td>
                 <td v-else></td>
                 <!-- K-S: 学术专长成绩（占总分12%） -->
                 <td v-if="student.academicItem.projectName">
@@ -149,7 +149,7 @@
                 </td>
                 <td v-else></td>
                 <td v-if="student.academicItem.projectName">
-                  {{ student.academicItem.selfEvalScore ? student.academicItem.selfEvalScore.toFixed(2) : 0 }}
+                  {{ student.academicItem.selfEvalScore ? student.academicItem.selfEvalScore.toFixed(4) : 0 }}
                 </td>
                 <td v-else></td>
                 <td v-if="student.academicItem.projectName">
@@ -157,12 +157,12 @@
                 </td>
                 <td v-else></td>
                 <td v-if="student.academicItem.projectName">
-                  {{ student.academicItem.collegeApprovedScore ? student.academicItem.collegeApprovedScore.toFixed(2) :
+                  {{ student.academicItem.collegeApprovedScore ? student.academicItem.collegeApprovedScore.toFixed(4) :
                   0 }}
                 </td>
                 <td v-else></td>
                 <td v-if="student.isFirstRow">
-                  {{ student.specialtyScore ? student.specialtyScore.toFixed(2) : 0 }}
+                  {{ student.specialtyScore ? student.specialtyScore.toFixed(4) : 0 }}
                 </td>
                 <td v-else></td>
                 <!-- T-AB: 综合表现加分（占总分8%） -->
@@ -187,7 +187,7 @@
                 </td>
                 <td v-else></td>
                 <td v-if="student.comprehensiveItem.projectName">
-                  {{ student.comprehensiveItem.selfEvalScore ? student.comprehensiveItem.selfEvalScore.toFixed(2) : 0 }}
+                  {{ student.comprehensiveItem.selfEvalScore ? student.comprehensiveItem.selfEvalScore.toFixed(4) : 0 }}
                 </td>
                 <td v-else></td>
                 <td v-if="student.comprehensiveItem.projectName">
@@ -196,18 +196,18 @@
                 <td v-else></td>
                 <td v-if="student.comprehensiveItem.projectName">
                   {{ student.comprehensiveItem.collegeApprovedScore ?
-                    student.comprehensiveItem.collegeApprovedScore.toFixed(2) : 0 }}
+student.comprehensiveItem.collegeApprovedScore.toFixed(4) : 0 }}
                 </td>
                 <td v-else></td>
                 <td v-if="student.isFirstRow">
-                  {{ student.comprehensiveScore ? student.comprehensiveScore.toFixed(2) : 0 }}
+                  {{ student.comprehensiveScore ? student.comprehensiveScore.toFixed(4) : 0 }}
                 </td>
                 <td v-else></td>
                 <!-- AC-AF: 总分与排名 -->
                 <td v-if="student.isFirstRow">{{ student.totalComprehensiveScore ?
-                  student.totalComprehensiveScore.toFixed(2) : 0 }}</td>
+student.totalComprehensiveScore.toFixed(4) : 0 }}</td>
                 <td v-else></td>
-                <td v-if="student.isFirstRow">{{ student.finalScore ? student.finalScore.toFixed(2) : 0 }}</td>
+                <td v-if="student.isFirstRow">{{ student.finalScore ? student.finalScore.toFixed(4) : 0 }}</td>
                 <td v-else></td>
                 <td v-if="student.isFirstRow">{{ student.majorRanking }}</td>
                 <td v-else></td>
@@ -631,7 +631,7 @@ const generateReport = () => {
         row.push(studentData.cet4Score);
         row.push(studentData.cet6Score);
         row.push(studentData.gpa ? studentData.gpa.toFixed(3) : 0);
-        row.push(studentData.academicScore ? studentData.academicScore.toFixed(2) : 0);
+        row.push(studentData.academicScore ? studentData.academicScore.toFixed(4) : 0);
       } else {
         // 非第一行基本信息留空
         for (let j = 0; j < 11; j++) {
@@ -646,10 +646,10 @@ const generateReport = () => {
       row.push(academicItem.awardLevel || '');
       row.push(academicItem.individualCollective || '');
       row.push(academicItem.authorOrder || '');
-      row.push(academicItem.selfEvalScore ? academicItem.selfEvalScore.toFixed(2) : 0);
+      row.push(academicItem.selfEvalScore ? academicItem.selfEvalScore.toFixed(4) : 0);
       row.push(academicItem.scoreBasis || '');
-      row.push(academicItem.collegeApprovedScore ? academicItem.collegeApprovedScore.toFixed(2) : 0);
-      row.push(i === 0 ? (studentData.specialtyScore ? studentData.specialtyScore.toFixed(2) : 0) : '');
+      row.push(academicItem.collegeApprovedScore ? academicItem.collegeApprovedScore.toFixed(4) : 0);
+      row.push(i === 0 ? (studentData.specialtyScore ? studentData.specialtyScore.toFixed(4) : 0) : '');
 
       // 综合表现信息
       const comprehensiveItem = comprehensiveItems[i] || {};
@@ -658,15 +658,15 @@ const generateReport = () => {
       row.push(comprehensiveItem.awardLevel || '');
       row.push(comprehensiveItem.individualCollective || '');
       row.push(comprehensiveItem.authorOrder || '');
-      row.push(comprehensiveItem.selfEvalScore ? comprehensiveItem.selfEvalScore.toFixed(2) : 0);
+      row.push(comprehensiveItem.selfEvalScore ? comprehensiveItem.selfEvalScore.toFixed(4) : 0);
       row.push(comprehensiveItem.scoreBasis || '');
-      row.push(comprehensiveItem.collegeApprovedScore ? comprehensiveItem.collegeApprovedScore.toFixed(2) : 0);
-      row.push(i === 0 ? (studentData.comprehensiveScore ? studentData.comprehensiveScore.toFixed(2) : 0) : '');
+      row.push(comprehensiveItem.collegeApprovedScore ? comprehensiveItem.collegeApprovedScore.toFixed(4) : 0);
+      row.push(i === 0 ? (studentData.comprehensiveScore ? studentData.comprehensiveScore.toFixed(4) : 0) : '');
 
       // 总分与排名（仅第一行显示）
       if (i === 0) {
-        row.push(studentData.totalComprehensiveScore ? studentData.totalComprehensiveScore.toFixed(2) : 0);
-        row.push(studentData.finalScore ? studentData.finalScore.toFixed(2) : 0);
+        row.push(studentData.totalComprehensiveScore ? studentData.totalComprehensiveScore.toFixed(4) : 0);
+        row.push(studentData.finalScore ? studentData.finalScore.toFixed(4) : 0);
         row.push(studentData.majorRanking);
         row.push(studentData.majorTotalStudents);
       } else {

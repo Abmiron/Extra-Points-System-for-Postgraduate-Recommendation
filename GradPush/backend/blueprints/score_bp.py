@@ -334,9 +334,6 @@ def get_students_ranking():
                 academic_item = {
                     "project_name": app.project_name,
                     "award_time": app.award_date.isoformat() if app.award_date else None,
-                    "award_level": app.award_level,
-                    "individual_collective": app.award_type,
-                    "author_order": app.author_order,
                     "self_eval_score": app.self_score,
                     "score_basis": app.description,
                     "college_approved_score": app.final_score,
@@ -349,9 +346,6 @@ def get_students_ranking():
                 comprehensive_item = {
                     "project_name": app.project_name,
                     "award_time": app.award_date.isoformat() if app.award_date else None,
-                    "award_level": app.award_level,
-                    "individual_collective": app.award_type,
-                    "author_order": app.author_order,
                     "self_eval_score": app.self_score,
                     "score_basis": app.description,
                     "college_approved_score": app.final_score,

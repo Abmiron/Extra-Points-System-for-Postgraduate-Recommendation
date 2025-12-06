@@ -40,8 +40,7 @@
             <tr>
               <th>项目名称</th>
               <th>获奖时间</th>
-              <th>级别</th>
-              <th>类型</th>
+              <th>自评分数</th>
               <th>核定分数</th>
               <th>状态</th>
             </tr>
@@ -50,8 +49,7 @@
             <tr v-for="item in academicApplications" :key="item.id">
               <td>{{ item.projectName }}</td>
               <td>{{ formatDate(item.awardDate) }}</td>
-              <td>{{ getLevelText(item.awardLevel) }}</td>
-              <td>{{ item.awardType === 'individual' ? '个人' : '团队' }}</td>
+              <td>{{ item.selfScore }}</td>
               <td>{{ item.status === 'rejected' ? 0 : (item.finalScore ?? item.selfScore) }}</td>
               <td>
                 <span :class="`status-badge status-${item.status}`">
@@ -60,7 +58,7 @@
               </td>
             </tr>
             <tr v-if="academicApplications.length === 0">
-              <td colspan="6" class="no-data">暂无学术专长申请记录</td>
+              <td colspan="5" class="no-data">暂无学术专长申请记录</td>
             </tr>
           </tbody>
         </table>
@@ -76,8 +74,7 @@
             <tr>
               <th>项目名称</th>
               <th>获奖时间</th>
-              <th>级别</th>
-              <th>类型</th>
+              <th>自评分数</th>
               <th>核定分数</th>
               <th>状态</th>
             </tr>
@@ -86,8 +83,7 @@
             <tr v-for="item in comprehensiveApplications" :key="item.id">
               <td>{{ item.projectName }}</td>
               <td>{{ formatDate(item.awardDate) }}</td>
-              <td>{{ getLevelText(item.awardLevel) }}</td>
-              <td>{{ item.awardType === 'individual' ? '个人' : '团队' }}</td>
+              <td>{{ item.selfScore }}</td>
               <td>{{ item.status === 'rejected' ? 0 : (item.finalScore ?? item.selfScore) }}</td>
               <td>
                 <span :class="`status-badge status-${item.status}`">
@@ -96,7 +92,7 @@
               </td>
             </tr>
             <tr v-if="comprehensiveApplications.length === 0">
-              <td colspan="6" class="no-data">暂无综合表现申请记录</td>
+              <td colspan="5" class="no-data">暂无综合表现申请记录</td>
             </tr>
           </tbody>
         </table>

@@ -139,6 +139,16 @@
               </div>
 
               <div class="compact-group">
+                <label>获得时间</label>
+                <span>{{ formatDate(application.awardDate || application.award_date) || '-' }}</span>
+              </div>
+
+              <div class="compact-group">
+                <label>自评分数</label>
+                <span>{{ application.selfScore || 0 }}</span>
+              </div>
+
+              <div class="compact-group">
                 <label>申请时间</label>
                 <span>{{ formatDate(application.appliedAt || application.createdAt) }}</span>
               </div>
@@ -151,19 +161,17 @@
                 <label>审核人</label>
                 <span>{{ application.reviewedBy || '-' }}</span>
               </div>
-              <div class="compact-group">
-                <label>申请状态</label>
-                <span class="status-badge" :class="`status-${application.status}`">{{ getStatusText(application.status)
-                  }}</span>
-              </div>
-              <div class="compact-group">
-                <label>自评分数</label>
-                <span>{{ application.selfScore || 0 }}</span>
-              </div>
+              
               <div v-if="isReviewMode || application.status !== 'pending'" class="compact-group">
                 <label>最终分数</label>
                 <span>{{ application.status === 'pending' ? '-' : (application.status === 'rejected' ? 0 :
                   application.finalScore || 0) }}</span>
+              </div>
+
+              <div class="compact-group">
+                <label>申请状态</label>
+                <span class="status-badge" :class="`status-${application.status}`">{{ getStatusText(application.status)
+                  }}</span>
               </div>
 
             </div>
@@ -177,8 +185,6 @@
             </div>
           </div>
 
-
-
           <!-- 审核规则信息 -->
           <div class="card compact-card" v-if="application.rule">
             <div class="card-title">审核规则</div>
@@ -188,13 +194,29 @@
                 <span>{{ application.rule.name }}</span>
               </div>
               <div class="compact-group">
-                <label>规则分数</label>
+                <label>规则基础分数</label>
                 <span>{{ application.rule.score || 0 }}</span>
               </div>
             </div>
             <div class="compact-group full-width">
               <label>规则说明</label>
               <p>{{ application.rule.description || '无' }}</p>
+            </div>
+            <!-- 动态系数信息 -->
+            <div class="compact-row" v-if="Object.keys(dynamicCoefficients).length > 0">
+              <div class="compact-group">
+                <label>学生选择系数</label>
+                <div class="coefficients-list">
+                  <div v-for="(detail, key) in coefficientDetails" :key="key" class="coefficient-item">
+                    <span class="coefficient-key">{{ detail.label }} : </span>
+                    <span class="coefficient-value">{{ detail.displayValue }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="compact-group">
+                <label>预估得分</label>
+                <span>{{ estimatedScore }}</span>
+              </div>
             </div>
           </div>
 
@@ -206,9 +228,9 @@
               <div class="score-input-container">
                 <input type="number" v-model.number="reviewData.finalScore" min="0" max="100" step="0.5"
                   class="form-control small-input" />
-                <span class="score-hint">规则分数（预计分数）: {{ application.rule?.score || 0 }}</span>
+                <span class="score-hint">预计分数:{{ estimatedScore }}</span>
                 <span v-if="isScoreMismatch" class="score-mismatch-warning">
-                  最终分数与规则分数不一致，请确认
+                  最终分数与规则预估分数不一致，请仔细确认
                 </span>
               </div>
             </div>
@@ -333,6 +355,238 @@ const imageFiles = computed(() => {
   const validFiles = (props.application.files || []).filter(file => file && typeof file === 'object');
   return validFiles.filter(file => isImage(file));
 })
+
+// 获取动态系数
+const dynamicCoefficients = computed(() => {
+  let coefficients = {};
+  // 从后端返回的数据中获取动态系数，处理不同的字段名和可能的JSON字符串
+  // 首先检查驼峰式命名的dynamicCoefficients（后端API返回的格式）
+  if (props.application.dynamicCoefficients) {
+    if (typeof props.application.dynamicCoefficients === 'string') {
+      try {
+        coefficients = JSON.parse(props.application.dynamicCoefficients);
+      } catch (error) {
+        coefficients = {};
+      }
+    } else {
+      coefficients = props.application.dynamicCoefficients;
+    }
+  } 
+  // 然后检查下划线命名的dynamic_coefficients（兼容旧格式）
+  else if (props.application.dynamic_coefficients) {
+    if (typeof props.application.dynamic_coefficients === 'string') {
+      try {
+        coefficients = JSON.parse(props.application.dynamic_coefficients);
+      } catch (error) {
+        coefficients = {};
+      }
+    } else {
+      coefficients = props.application.dynamic_coefficients;
+    }
+  }
+  // 确保dynamicCoefficients是对象
+  if (typeof coefficients !== 'object' || coefficients === null) {
+    coefficients = {};
+  }
+  return coefficients;
+});
+
+// 解析规则的计算配置，生成系数的友好标签映射
+const coefficientLabels = computed(() => {
+  if (!props.application.rule?.calculation) return {};
+  
+  const calculationType = props.application.rule.calculation.calculation_type;
+  let parameters = props.application.rule.calculation.parameters || {};
+  
+  // 解析参数（可能是JSON字符串）
+  if (typeof parameters === 'string') {
+    try {
+      parameters = JSON.parse(parameters);
+    } catch (error) {
+      console.error('解析规则参数失败:', error);
+      return {};
+    }
+  }
+  
+  const labels = {};
+  
+  // 根据计算类型生成不同的标签映射
+  if (calculationType === 'multiplicative' || parameters.type === 'multiplicative') {
+    // 乘积式计算：为每个系数生成标签
+    const coefficients = parameters.coefficients || [];
+    coefficients.forEach(coefficient => {
+      labels[coefficient.key] = coefficient.name;
+    });
+  } else if (calculationType === 'cumulative' || parameters.type === 'cumulative') {
+    // 累积式计算：累积字段 + 乘数
+    if (parameters.cumulative_field) {
+      labels[parameters.cumulative_field] = parameters.cumulative_field;
+    }
+    if (parameters.cumulative_multiplier !== undefined) {
+      labels['cumulative_multiplier'] = '累积乘数';
+    }
+  }
+  
+  return labels;
+});
+
+// 获取系数的详细信息，包括级别名称
+const coefficientDetails = computed(() => {
+  if (!props.application.rule?.calculation) return {};
+  
+  const calculationType = props.application.rule.calculation.calculation_type;
+  let parameters = props.application.rule.calculation.parameters || {};
+  
+  // 解析参数（可能是JSON字符串）
+  if (typeof parameters === 'string') {
+    try {
+      parameters = JSON.parse(parameters);
+    } catch (error) {
+      console.error('解析规则参数失败:', error);
+      return {};
+    }
+  }
+  
+  const details = {};
+  
+  // 根据计算类型生成不同的系数详细信息
+  if (calculationType === 'multiplicative' || parameters.type === 'multiplicative') {
+    // 乘积式计算：为每个系数生成详细信息
+    const coefficients = parameters.coefficients || [];
+    coefficients.forEach(coefficient => {
+      const value = dynamicCoefficients.value[coefficient.key];
+      let levelName = value; // 默认显示数值
+      
+      // 如果有items，查找对应的级别名称
+      if (coefficient.items && Array.isArray(coefficient.items)) {
+        // 处理字符串和数字类型的匹配
+        const item = coefficient.items.find(item => {
+          // 尝试将两者转换为相同类型进行比较
+          return parseFloat(item.multiplier) === parseFloat(value);
+        });
+        if (item) {
+          levelName = `${item.name} (${item.multiplier})`;
+        }
+      }
+      
+      details[coefficient.key] = {
+        label: coefficient.name,
+        value: value,
+        displayValue: levelName
+      };
+    });
+  } else if (calculationType === 'cumulative' || parameters.type === 'cumulative') {
+    // 累积式计算：累积字段 + 乘数
+    if (parameters.cumulative_field) {
+      details[parameters.cumulative_field] = {
+        label: parameters.cumulative_field,
+        value: dynamicCoefficients.value[parameters.cumulative_field],
+        displayValue: dynamicCoefficients.value[parameters.cumulative_field]
+      };
+    }
+    if (parameters.cumulative_multiplier !== undefined) {
+      details['cumulative_multiplier'] = {
+        label: '累积乘数',
+        value: dynamicCoefficients.value['cumulative_multiplier'],
+        displayValue: dynamicCoefficients.value['cumulative_multiplier']
+      };
+    }
+  }
+  
+  return details;
+});
+
+// 计算预估分数
+const estimatedScore = computed(() => {
+  if (!props.application.rule) {
+    return 0;
+  }
+  return calculateScoreFrontend(props.application.rule);
+});
+
+// 前端分数计算函数（与后端RuleEngine保持一致）
+const calculateScoreFrontend = (rule) => {
+  if (!rule || !rule.calculation) {
+    // 如果没有计算配置，使用基础分数
+    return rule.score || 0;
+  }
+
+  let totalScore = 0;
+
+  // 根据计算类型执行不同的计算逻辑
+  switch (rule.calculation.calculation_type) {
+    case 'multiplicative':
+      // 乘积式计算
+      totalScore = calculateMultiplicativeScore(rule);
+      break;
+    case 'cumulative':
+      // 累积式计算
+      totalScore = calculateCumulativeScore(rule);
+      break;
+    default:
+      // 默认使用基础分数
+      totalScore = rule.score || 0;
+  }
+
+  return totalScore;
+};
+
+// 计算乘积式分数
+const calculateMultiplicativeScore = (rule) => {
+  let parameters = rule.calculation.parameters || {};
+
+  // 解析参数（可能是JSON字符串）
+  if (typeof parameters === 'string') {
+    try {
+      parameters = JSON.parse(parameters);
+    } catch (error) {
+      console.error('解析乘积式参数失败:', error);
+      return rule.score || 0;
+    }
+  }
+
+  // 获取基础分值（使用规则或参数中定义的基础分值，不需要学生输入）
+  const baseScore = parseFloat(parameters.base_score) || parseFloat(rule.score) || 0;
+  const coefficients = parameters.coefficients || [];
+
+  let totalMultiplier = 1.0;
+
+  // 计算所有系数的乘积
+  coefficients.forEach(coefficient => {
+    // 获取系数的值
+    const fieldValue = parseFloat(dynamicCoefficients.value[coefficient.key]);
+    if (!isNaN(fieldValue)) {
+      totalMultiplier *= fieldValue;
+    }
+  });
+
+  return parseFloat((baseScore * totalMultiplier).toFixed(4));
+};
+
+// 计算累积式分数
+const calculateCumulativeScore = (rule) => {
+  let parameters = rule.calculation.parameters || {};
+
+  // 解析参数（可能是JSON字符串）
+  if (typeof parameters === 'string') {
+    try {
+      parameters = JSON.parse(parameters);
+    } catch (error) {
+      console.error('解析累积式参数失败:', error);
+      return rule.score || 0;
+    }
+  }
+
+  const baseScore = parseFloat(rule.score) || parseFloat(parameters.base_score) || 0;
+  const cumulativeField = parameters.cumulative_field;
+  const cumulativeMultiplier = parseFloat(dynamicCoefficients.value['cumulative_multiplier']) || parseFloat(parameters.cumulative_multiplier) || 0.1;
+
+  // 获取累积字段的值
+  const cumulativeValue = parseFloat(dynamicCoefficients.value[cumulativeField]) || 0;
+
+  // 计算累积分数
+  return parseFloat((baseScore * cumulativeValue * cumulativeMultiplier).toFixed(4));
+};
 
 const pdfFiles = computed(() => {
   // 确保 files 是数组，且过滤掉 null/undefined 等无效元素

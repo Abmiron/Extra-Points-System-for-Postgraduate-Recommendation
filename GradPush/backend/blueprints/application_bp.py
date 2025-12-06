@@ -128,12 +128,26 @@ def get_applications():
     # 获取所有规则信息
     rule_ids = {app.rule_id for app in applications if app.rule_id}
     rules = Rule.query.filter(Rule.id.in_(rule_ids)).all()
+    
+    # 获取所有规则的计算配置
+    from models import RuleCalculation
+    rule_calculations = RuleCalculation.query.filter(RuleCalculation.rule_id.in_(rule_ids)).all()
+    calculation_dict = {calc.rule_id: calc for calc in rule_calculations}
+    
     rule_dict = {
         r.id: {
             "id": r.id,
             "name": r.name,
             "score": r.score,
             "description": r.description,
+            "calculation": {
+                "id": calculation_dict[r.id].id,
+                "rule_id": calculation_dict[r.id].rule_id,
+                "calculation_type": calculation_dict[r.id].calculation_type,
+                "formula": calculation_dict[r.id].formula,
+                "parameters": calculation_dict[r.id].parameters,
+                "max_score": calculation_dict[r.id].max_score,
+            } if r.id in calculation_dict else None
         }
         for r in rules
     }
@@ -190,31 +204,17 @@ def get_applications():
             "reviewedBy": app.reviewed_by,
             "projectName": app.project_name,
             "awardDate": app.award_date.isoformat() if app.award_date else None,
-            "awardLevel": app.award_level,
-            "awardType": app.award_type,
             "description": app.description,
             "files": processed_files,
             "finalScore": app.final_score,
             "reviewComment": app.review_comment,
             "reviewedAt": app.reviewed_at.isoformat() if app.reviewed_at else None,
             "reviewedBy": app.reviewed_by,
-            # 学术专长相关字段
-            "academicType": app.academic_type,
-            "researchType": app.research_type,
-            "innovationLevel": app.innovation_level,
-            "innovationRole": app.innovation_role,
-            "awardGrade": app.award_grade,
-            "awardCategory": app.award_category,
-            "authorRankType": app.author_rank_type,
-            "authorOrder": app.author_order,
-            # 综合表现相关字段
-            "performanceType": app.performance_type,
-            "performanceLevel": app.performance_level,
-            "performanceParticipation": app.performance_participation,
-            "teamRole": app.team_role,
             # 规则相关字段
             "ruleId": app.rule_id,
             "rule": rule_dict.get(app.rule_id) if app.rule_id else None,
+            # 动态系数字段
+            "dynamicCoefficients": app.dynamic_coefficients,
         }
         app_list.append(app_data)
 
@@ -270,11 +270,25 @@ def get_application(id):
     if app.rule_id:
         rule = Rule.query.get(app.rule_id)
         if rule:
+            # 获取规则的计算配置
+            from models import RuleCalculation
+            calculation = RuleCalculation.query.filter_by(rule_id=app.rule_id).first()
+            calculation_data = None
+            if calculation:
+                calculation_data = {
+                    "id": calculation.id,
+                    "rule_id": calculation.rule_id,
+                    "calculation_type": calculation.calculation_type,
+                    "formula": calculation.formula,
+                    "parameters": calculation.parameters,
+                    "max_score": calculation.max_score,
+                }
             rule_info = {
                 "id": rule.id,
                 "name": rule.name,
                 "score": rule.score,
                 "description": rule.description,
+                "calculation": calculation_data
             }
 
     app_data = {
@@ -291,28 +305,14 @@ def get_application(id):
         "status": app.status,
         "projectName": app.project_name,
         "awardDate": app.award_date.isoformat() if app.award_date else None,
-        "awardLevel": app.award_level,
-        "awardType": app.award_type,
-        "description": app.description,
+            "description": app.description,
         "files": processed_files,
+        "dynamicCoefficients": app.dynamic_coefficients,
         "finalScore": app.final_score,
         "reviewComment": app.review_comment,
         "reviewedAt": app.reviewed_at.isoformat() if app.reviewed_at else None,
         "reviewedBy": app.reviewed_by,
-        # 学术专长相关字段
-        "academicType": app.academic_type,
-        "researchType": app.research_type,
-        "innovationLevel": app.innovation_level,
-        "innovationRole": app.innovation_role,
-        "awardGrade": app.award_grade,
-        "awardCategory": app.award_category,
-        "authorRankType": app.author_rank_type,
-        "authorOrder": app.author_order,
-        # 综合表现相关字段
-        "performanceType": app.performance_type,
-        "performanceLevel": app.performance_level,
-        "performanceParticipation": app.performance_participation,
-        "teamRole": app.team_role,
+        # 规则相关字段
         # 规则相关字段
         "ruleId": app.rule_id,
         "rule": rule_info,
@@ -343,20 +343,7 @@ def create_application():
             "selfScore": "self_score",
             "projectName": "project_name",
             "awardDate": "award_date",
-            "awardLevel": "award_level",
-            "awardType": "award_type",
-            "academicType": "academic_type",
-            "researchType": "research_type",
-            "innovationLevel": "innovation_level",
-            "innovationRole": "innovation_role",
-            "awardGrade": "award_grade",
-            "awardCategory": "award_category",
-            "authorRankType": "author_rank_type",
-            "authorOrder": "author_order",
-            "performanceType": "performance_type",
-            "performanceLevel": "performance_level",
-            "performanceParticipation": "performance_participation",
-            "teamRole": "team_role",
+
             "ruleId": "rule_id",
             "finalScore": "final_score",
             "reviewComment": "review_comment",
@@ -365,6 +352,7 @@ def create_application():
             "appliedAt": "applied_at",
             "createdAt": "created_at",
             "updatedAt": "updated_at",
+            "dynamicCoefficients": "dynamic_coefficients",
         }
 
         # 转换数据字段
@@ -373,7 +361,7 @@ def create_application():
             # 使用映射的字段名，如果没有映射则使用原字段名
             new_key = field_mapping.get(key, key)
             # 处理数值类型字段：将空字符串转换为None
-            numeric_fields = ["author_order", "self_score", "final_score", "rule_id"]
+            numeric_fields = ["self_score", "final_score", "rule_id"]
             if new_key in numeric_fields and value == "":
                 transformed_data[new_key] = None
             else:
@@ -504,25 +492,11 @@ def create_application():
             status=data.get("status", "pending"),
             project_name=data.get("project_name"),
             award_date=award_date_value,
-            award_level=data.get("award_level"),
-            award_type=data.get("award_type"),
             description=data.get("description"),
             files=files,
+            dynamic_coefficients=data.get("dynamic_coefficients"),
             rule_id=data.get("rule_id"),
-            # 学术专长相关字段
-            academic_type=data.get("academic_type"),
-            research_type=data.get("research_type"),
-            innovation_level=data.get("innovation_level"),
-            innovation_role=data.get("innovation_role"),
-            award_grade=data.get("award_grade"),
-            award_category=data.get("award_category"),
-            author_rank_type=data.get("author_rank_type"),
-            author_order=data.get("author_order"),
-            # 综合表现相关字段
-            performance_type=data.get("performance_type"),
-            performance_level=data.get("performance_level"),
-            performance_participation=data.get("performance_participation"),
-            team_role=data.get("team_role"),
+
         )
 
         db.session.add(new_application)
@@ -551,10 +525,9 @@ def create_application():
                 if new_application.award_date
                 else None
             ),
-            "awardLevel": new_application.award_level,
-            "awardType": new_application.award_type,
             "description": new_application.description,
             "files": new_application.files,
+            "dynamicCoefficients": new_application.dynamic_coefficients,
             "ruleId": new_application.rule_id,
             "message": "申请创建成功",
         }
@@ -610,20 +583,7 @@ def update_application(id):
             "selfScore": "self_score",
             "projectName": "project_name",
             "awardDate": "award_date",
-            "awardLevel": "award_level",
-            "awardType": "award_type",
-            "academicType": "academic_type",
-            "researchType": "research_type",
-            "innovationLevel": "innovation_level",
-            "innovationRole": "innovation_role",
-            "awardGrade": "award_grade",
-            "awardCategory": "award_category",
-            "authorRankType": "author_rank_type",
-            "authorOrder": "author_order",
-            "performanceType": "performance_type",
-            "performanceLevel": "performance_level",
-            "performanceParticipation": "performance_participation",
-            "teamRole": "team_role",
+
             "ruleId": "rule_id",
             "finalScore": "final_score",
             "reviewComment": "review_comment",
@@ -640,7 +600,7 @@ def update_application(id):
             # 使用映射的字段名，如果没有映射则使用原字段名
             new_key = field_mapping.get(key, key)
             # 处理数值类型字段：将空字符串转换为None
-            numeric_fields = ["author_order", "self_score", "final_score", "rule_id"]
+            numeric_fields = ["self_score", "final_score", "rule_id"]
             if new_key in numeric_fields and value == "":
                 transformed_data[new_key] = None
             else:
@@ -773,8 +733,6 @@ def update_application(id):
             if "award_date" in data and isinstance(data["award_date"], str)
             else application.award_date
         )
-        application.award_level = data.get("award_level", application.award_level)
-        application.award_type = data.get("award_type", application.award_type)
         application.description = data.get("description", application.description)
         application.student_id = data.get("student_id", application.student_id)
         application.student_name = data.get("student_name", application.student_name)
@@ -785,6 +743,7 @@ def update_application(id):
             "application_type", application.application_type
         )
         application.rule_id = data.get("rule_id", application.rule_id)
+        application.dynamic_coefficients = data.get("dynamic_coefficients", application.dynamic_coefficients)
 
         # 只有当有新文件上传时才更新文件列表
         if files:
@@ -810,35 +769,7 @@ def update_application(id):
 
             application.files = updated_files
 
-        # 更新学术专长相关字段
-        application.academic_type = data.get("academic_type", application.academic_type)
-        application.research_type = data.get("research_type", application.research_type)
-        application.innovation_level = data.get(
-            "innovation_level", application.innovation_level
-        )
-        application.innovation_role = data.get(
-            "innovation_role", application.innovation_role
-        )
-        application.award_grade = data.get("award_grade", application.award_grade)
-        application.award_category = data.get(
-            "award_category", application.award_category
-        )
-        application.author_rank_type = data.get(
-            "author_rank_type", application.author_rank_type
-        )
-        application.author_order = data.get("author_order", application.author_order)
 
-        # 更新综合表现相关字段
-        application.performance_type = data.get(
-            "performance_type", application.performance_type
-        )
-        application.performance_level = data.get(
-            "performance_level", application.performance_level
-        )
-        application.performance_participation = data.get(
-            "performance_participation", application.performance_participation
-        )
-        application.team_role = data.get("team_role", application.team_role)
 
         db.session.commit()
 
@@ -888,55 +819,17 @@ def review_application(id):
 
         # 2. 如果学生没有选择规则，先检查是否有匹配的特殊规则
         if not matched_rule:
-            special_rule_query = Rule.query.filter_by(
+            # 查询所有符合条件的规则
+            rule_query = Rule.query.filter_by(
                 type="academic",
-                sub_type=application.academic_type,
-                is_special=True,
+                sub_type=application.application_type,
                 status="active",
             )
 
-            if application.academic_type == "research":
-                special_rule_query = special_rule_query.filter_by(
-                    research_type=application.research_type
-                )
-            elif application.academic_type == "competition":
-                special_rule_query = special_rule_query.filter_by(
-                    level=application.award_level,
-                    grade=application.award_grade,
-                    category=application.award_category,
-                )
-            elif application.academic_type == "innovation":
-                special_rule_query = special_rule_query.filter_by(
-                    level=application.innovation_level
-                )
+            # 根据application_type确定规则
+            # 这里可以根据实际需求调整规则匹配逻辑
 
-            matched_rule = special_rule_query.first()
-
-        # 3. 如果没有特殊规则，查找普通规则
-        if not matched_rule:
-            regular_rule_query = Rule.query.filter_by(
-                type="academic",
-                sub_type=application.academic_type,
-                is_special=False,
-                status="active",
-            )
-
-            if application.academic_type == "research":
-                regular_rule_query = regular_rule_query.filter_by(
-                    research_type=application.research_type
-                )
-            elif application.academic_type == "competition":
-                regular_rule_query = regular_rule_query.filter_by(
-                    level=application.award_level,
-                    grade=application.award_grade,
-                    category=application.award_category,
-                )
-            elif application.academic_type == "innovation":
-                regular_rule_query = regular_rule_query.filter_by(
-                    level=application.innovation_level
-                )
-
-            matched_rule = regular_rule_query.first()
+            matched_rule = rule_query.first()
 
         if matched_rule:
             # 3. 检查最大项目数量限制
@@ -946,7 +839,7 @@ def review_application(id):
                 approved_count = Application.query.filter(
                     Application.student_id == application.student_id,
                     Application.application_type == "academic",
-                    Application.academic_type == application.academic_type,
+                    Application.application_type == application.application_type,
                     Application.status == "approved",
                     Application.id != application.id,  # 排除当前正在审核的项目
                 ).count()
@@ -961,23 +854,10 @@ def review_application(id):
                 # 计算基础分数
                 final_score = matched_rule.score
 
-                # 应用作者排序比例（如果适用）
-                if (
-                    application.author_rank_type == "ranked"
-                    and application.author_order
-                ):
-                    # 根据作者排序位置应用不同比例
-                    if application.author_order == 1:
-                        # 第一作者，使用规则中的比例
-                        if matched_rule.author_rank_ratio:
-                            final_score *= matched_rule.author_rank_ratio
-                    else:
-                        # 非第一作者，分数递减
-                        # 这里可以根据实际需求调整递减规则
-                        final_score *= 1 - (application.author_order - 1) * 0.1
-
-                        # 最低不低于原分数的30%
-                        final_score = max(final_score, matched_rule.score * 0.3)
+                # 应用动态系数（如果有）
+                if application.dynamic_coefficients:
+                    # 这里可以根据实际需求调整动态系数的应用逻辑
+                    final_score *= application.dynamic_coefficients
 
                 # 应用最大分数限制（如果有）
                 if matched_rule.max_score:
@@ -1071,9 +951,27 @@ def get_pending_applications():
     # 批量获取规则信息
     rule_ids = {app.rule_id for app in applications if app.rule_id}
     rules = Rule.query.filter(Rule.id.in_(rule_ids)).all() if rule_ids else []
+    
+    # 获取所有规则的计算配置
+    from models import RuleCalculation
+    rule_calculations = RuleCalculation.query.filter(RuleCalculation.rule_id.in_(rule_ids)).all() if rule_ids else []
+    calculation_dict = {calc.rule_id: calc for calc in rule_calculations}
+    
     rule_dict = {
-        rule.id: {"id": rule.id, "name": rule.name, "score": rule.score}
-        for rule in rules
+        rule.id: {
+            "id": rule.id, 
+            "name": rule.name, 
+            "score": rule.score,
+            "description": rule.description,
+            "calculation": {
+                "id": calculation_dict[rule.id].id,
+                "rule_id": calculation_dict[rule.id].rule_id,
+                "calculation_type": calculation_dict[rule.id].calculation_type,
+                "formula": calculation_dict[rule.id].formula,
+                "parameters": calculation_dict[rule.id].parameters,
+                "max_score": calculation_dict[rule.id].max_score,
+            } if rule.id in calculation_dict else None
+        } for rule in rules
     }
 
     for app in applications:
@@ -1110,27 +1008,14 @@ def get_pending_applications():
             "status": app.status,
             "projectName": app.project_name,
             "awardDate": app.award_date.isoformat() if app.award_date else None,
-            "awardLevel": app.award_level,
-            "awardType": app.award_type,
             "description": app.description,
             "files": processed_files,
             # 规则信息
             "ruleId": app.rule_id,
             "rule": rule_dict.get(app.rule_id) if app.rule_id else None,
-            # 学术专长相关字段
-            "academicType": app.academic_type,
-            "researchType": app.research_type,
-            "innovationLevel": app.innovation_level,
-            "innovationRole": app.innovation_role,
-            "awardGrade": app.award_grade,
-            "awardCategory": app.award_category,
-            "authorRankType": app.author_rank_type,
-            "authorOrder": app.author_order,
-            # 综合表现相关字段
-            "performanceType": app.performance_type,
-            "performanceLevel": app.performance_level,
-            "performanceParticipation": app.performance_participation,
-            "teamRole": app.team_role,
+            # 动态系数字段
+            "dynamicCoefficients": app.dynamic_coefficients,
+
         }
         app_list.append(app_data)
 

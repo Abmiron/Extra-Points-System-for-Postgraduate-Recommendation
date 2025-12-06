@@ -62,447 +62,76 @@
                 <div class="description-content">
                   {{availableRules.find(rule => rule.id === formData.ruleId)?.description || '暂无规则说明'}}
                 </div>
+
               </div>
             </div>
 
           </div>
         </div>
 
-        <!-- 申请类型 -->
-        <div class="form-section">
+        <!-- 规则系数填写区域 -->
+        <div class="form-section" v-if="formData.ruleId">
           <div class="section-title">
-            <font-awesome-icon :icon="['fas', 'tag']" />
-            <span>申请类型</span>
+            <font-awesome-icon :icon="['fas', 'calculator']" />
+            <span>规则系数填写</span>
           </div>
-          <div class="radio-cards compact">
-            <div class="radio-card horizontal" :class="{ active: formData.applicationType === 'academic' }"
-              @click.stop="toggleRadioCard('applicationType', 'academic')">
-              <div class="radio-icon">
-                <font-awesome-icon :icon="['fas', 'book']" />
+          <div class="form-grid">
+            <!-- 动态生成的表单字段 -->
+            <div v-for="field in dynamicFormFields" :key="field.name" class="form-group">
+              <label class="form-label">{{ field.label }}</label>
+
+              <!-- 数字输入类型 -->
+              <div v-if="field.type === 'number'" class="input-with-icon">
+                <font-awesome-icon :icon="['fas', 'hashtag']" />
+                <input type="number" class="form-control" v-model="formData.dynamicCoefficients[field.name]"
+                  :min="field.min" :step="field.step || '1'" :placeholder="'请输入' + field.label">
               </div>
-              <span>学术专长</span>
-            </div>
-            <div class="radio-card horizontal" :class="{ active: formData.applicationType === 'comprehensive' }"
-              @click.stop="toggleRadioCard('applicationType', 'comprehensive')">
-              <div class="radio-icon">
-                <font-awesome-icon :icon="['fas', 'trophy']" />
+
+              <!-- 文本输入类型 -->
+              <div v-else-if="field.type === 'text'" class="input-with-icon">
+                <font-awesome-icon :icon="['fas', 'font']" />
+                <input type="text" class="form-control" v-model="formData.dynamicCoefficients[field.name]"
+                  :placeholder="'请输入' + field.label">
               </div>
-              <span>综合表现</span>
+
+              <!-- 单选按钮类型 -->
+              <div v-else-if="field.type === 'radio'" class="radio-cards">
+                <div v-for="option in field.options" :key="option.value" class="radio-card horizontal"
+                  :class="{ active: formData.dynamicCoefficients[field.name] === option.value }"
+                  @click.stop="formData.dynamicCoefficients[field.name] = option.value; calculateEstimatedScore()">
+                  <div class="radio-icon">
+                    <font-awesome-icon
+                      :icon="['fas', option.value === 'top' || option.value === '1' ? 'star' : 'circle']" />
+                  </div>
+                  <span>{{ option.label }} ({{ option.value }}x)</span>
+                </div>
+              </div>
+
+              <!-- 下拉选择类型 -->
+              <div v-else-if="field.type === 'select'" class="input-with-icon">
+                <font-awesome-icon :icon="['fas', 'list']" />
+                <select class="form-control" v-model="formData.dynamicCoefficients[field.name]"
+                  @change="calculateEstimatedScore()">
+                  <option value="" disabled>请选择{{ field.label }}</option>
+                  <option v-for="option in field.options" :key="option.value" :value="option.value">
+                    {{ option.label }} (x{{ option.value }})
+                  </option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- 学术专长特有信息 -->
-        <div class="form-section" v-if="formData.applicationType === 'academic'">
+        <!-- 没有选择规则时的提示 -->
+        <div class="form-section" v-else>
           <div class="section-title">
-            <font-awesome-icon :icon="['fas', 'award']" />
-            <span>学术奖项信息</span>
+            <font-awesome-icon :icon="['fas', 'info-circle']" />
+            <span>请选择规则</span>
           </div>
-
-          <!-- 新增：学术类型选择（放在现有内容最前面） -->
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label">学术类型 <span class="required">*</span></label>
-              <div class="radio-cards">
-                <div class="radio-card horizontal" :class="{ active: formData.academicType === 'research' }"
-                  @click.stop="toggleRadioCard('academicType', 'research')">
-                  <div class="radio-icon">
-                    <font-awesome-icon :icon="['fas', 'flask']" />
-                  </div>
-                  <span>科研成果</span>
-                </div>
-                <div class="radio-card horizontal" :class="{ active: formData.academicType === 'competition' }"
-                  @click.stop="toggleRadioCard('academicType', 'competition')">
-                  <div class="radio-icon">
-                    <font-awesome-icon :icon="['fas', 'trophy']" />
-                  </div>
-                  <span>学业竞赛</span>
-                </div>
-                <div class="radio-card horizontal" :class="{ active: formData.academicType === 'innovation' }"
-                  @click.stop="toggleRadioCard('academicType', 'innovation')">
-                  <div class="radio-icon">
-                    <font-awesome-icon :icon="['fas', 'lightbulb']" />
-                  </div>
-                  <span>创新创业训练</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 原有学业竞赛字段需要用v-if包裹 -->
-          <div v-if="formData.academicType === 'competition'">
-            <!-- 这里放原有的奖项级别、等级等学业竞赛字段 -->
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label">奖项级别 <span class="required">*</span></label>
-                <div class="radio-cards">
-                  <div class="radio-card horizontal" :class="{ active: formData.awardLevel === 'national' }"
-                    @click.stop="toggleRadioCard('awardLevel', 'national'); if (formData.awardLevel === 'national') handleLevelChange()">
-                    <div class="radio-icon">
-                      <font-awesome-icon :icon="['fas', 'globe']" />
-                    </div>
-                    <span>国家级</span>
-                  </div>
-                  <div class="radio-card horizontal" :class="{ active: formData.awardLevel === 'provincial' }"
-                    @click.stop="toggleRadioCard('awardLevel', 'provincial'); if (formData.awardLevel === 'provincial') handleLevelChange()">
-                    <div class="radio-icon">
-                      <font-awesome-icon :icon="['fas', 'map-marker-alt']" />
-                    </div>
-                    <span>省级</span>
-                  </div>
-                </div>
-              </div>
-              <!-- 其他学业竞赛字段... -->
-              <div class="form-group">
-                <label class="form-label">奖项等级 <span class="required">*</span></label>
-                <div class="radio-cards">
-                  <!-- 国家级奖项等级 -->
-                  <template v-if="formData.awardLevel === 'national'">
-                    <div class="radio-card horizontal" :class="{ active: formData.awardGrade === 'firstOrHigher' }"
-                      @click.stop="toggleRadioCard('awardGrade', 'firstOrHigher')">
-                      <div class="radio-icon">
-                        <font-awesome-icon :icon="['fas', 'medal']" />
-                      </div>
-                      <span>一等奖及以上</span>
-                    </div>
-                    <div class="radio-card horizontal" :class="{ active: formData.awardGrade === 'second' }"
-                      @click.stop="toggleRadioCard('awardGrade', 'second')">
-                      <div class="radio-icon">
-                        <font-awesome-icon :icon="['fas', 'medal']" />
-                      </div>
-                      <span>二等奖</span>
-                    </div>
-                    <div class="radio-card horizontal" :class="{ active: formData.awardGrade === 'third' }"
-                      @click.stop="toggleRadioCard('awardGrade', 'third')">
-                      <div class="radio-icon">
-                        <font-awesome-icon :icon="['fas', 'medal']" />
-                      </div>
-                      <span>三等奖</span>
-                    </div>
-                  </template>
-                  <!-- 省级奖项等级 -->
-                  <template v-if="formData.awardLevel === 'provincial'">
-                    <div class="radio-card horizontal" :class="{ active: formData.awardGrade === 'firstOrHigher' }"
-                      @click.stop="toggleRadioCard('awardGrade', 'firstOrHigher')">
-                      <div class="radio-icon">
-                        <font-awesome-icon :icon="['fas', 'medal']" />
-                      </div>
-                      <span>一等奖及以上</span>
-                    </div>
-                    <div class="radio-card horizontal" :class="{ active: formData.awardGrade === 'second' }"
-                      @click.stop="toggleRadioCard('awardGrade', 'second')">
-                      <div class="radio-icon">
-                        <font-awesome-icon :icon="['fas', 'medal']" />
-                      </div>
-                      <span>二等奖</span>
-                    </div>
-                  </template>
-                  <!-- 未选择奖项级别时的提示 -->
-                  <div class="radio-card horizontal" v-if="!formData.awardLevel" :class="{ disabled: true }">
-                    <span>请先选择奖项级别</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">奖项类别 <span class="required">*</span></label>
-                <div class="radio-cards">
-                  <div class="radio-card horizontal" :class="{ active: formData.awardCategory === 'A+类' }"
-                    @click.stop="toggleRadioCard('awardCategory', 'A+类')">
-                    <div class="radio-icon">
-                      <font-awesome-icon :icon="['fas', 'star']" />
-                    </div>
-                    <span>A+类</span>
-                  </div>
-                  <div class="radio-card horizontal" :class="{ active: formData.awardCategory === 'A类' }"
-                    @click.stop="toggleRadioCard('awardCategory', 'A类')">
-                    <div class="radio-icon">
-                      <font-awesome-icon :icon="['fas', 'star']" />
-                    </div>
-                    <span>A类</span>
-                  </div>
-                  <div class="radio-card horizontal" :class="{ active: formData.awardCategory === 'A-类' }"
-                    @click.stop="toggleRadioCard('awardCategory', 'A-类')">
-                    <div class="radio-icon">
-                      <font-awesome-icon :icon="['fas', 'star']" />
-                    </div>
-                    <span>A-类</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">参与类型</label>
-                <div class="radio-cards compact">
-                  <div class="radio-card horizontal small" :class="{ active: formData.awardType === 'individual' }"
-                    @click.stop="toggleRadioCard('awardType', 'individual')">
-                    <div class="radio-icon">
-                      <font-awesome-icon :icon="['fas', 'user']" />
-                    </div>
-                    <span>个人</span>
-                  </div>
-                  <div class="radio-card horizontal small" :class="{ active: formData.awardType === 'team' }"
-                    @click.stop="toggleRadioCard('awardType', 'team')">
-                    <div class="radio-icon">
-                      <font-awesome-icon :icon="['fas', 'users']" />
-                    </div>
-                    <span>集体</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="form-grid" v-if="formData.awardType === 'team'">
-                <div class="form-group">
-                  <label class="form-label">作者排序类型</label>
-                  <div class="radio-cards compact">
-                    <div class="radio-card horizontal small" :class="{ active: formData.authorRankType === 'ranked' }"
-                      @click.stop="toggleRadioCard('authorRankType', 'ranked')">
-                      <div class="radio-icon">
-                        <font-awesome-icon :icon="['fas', 'list-ol']" />
-                      </div>
-                      <span>区分排名</span>
-                    </div>
-                    <div class="radio-card horizontal small" :class="{ active: formData.authorRankType === 'unranked' }"
-                      @click.stop="toggleRadioCard('authorRankType', 'unranked')">
-                      <div class="radio-icon">
-                        <font-awesome-icon :icon="['fas', 'users']" />
-                      </div>
-                      <span>不区分排名</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <!-- 修改：仅当选择"有排名"时显示作者排序输入框 -->
-              <div class="form-grid" v-if="formData.awardType === 'team' && formData.authorRankType === 'ranked'">
-                <div class="form-group">
-                  <label class="form-label">作者排序</label>
-                  <div class="input-with-icon">
-                    <font-awesome-icon :icon="['fas', 'hashtag']" />
-                    <input type="number" class="form-control" v-model="formData.authorOrder" min="1"
-                      placeholder="请输入作者排序">
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 新增：科研成果特有字段 -->
-          <div v-if="formData.academicType === 'research'">
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label">成果类型 <span class="required">*</span></label>
-                <div class="radio-cards">
-                  <div class="radio-card horizontal" :class="{ active: formData.researchType === 'thesis' }"
-                    @click.stop="toggleRadioCard('researchType', 'thesis')">
-                    <div class="radio-icon">
-                      <font-awesome-icon :icon="['fas', 'file-alt']" />
-                    </div>
-                    <span>学术论文</span>
-                  </div>
-                  <div class="radio-card horizontal" :class="{ active: formData.researchType === 'patent' }"
-                    @click.stop="toggleRadioCard('researchType', 'patent')">
-                    <div class="radio-icon">
-                      <font-awesome-icon :icon="['fas', 'file-invoice']" />
-                    </div>
-                    <span>发明专利</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 其他科研成果字段... -->
-            </div>
-          </div>
-
-
-          <!-- 新增：创新创业训练特有字段 -->
-          <div v-if="formData.academicType === 'innovation'">
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label">项目级别 <span class="required">*</span></label>
-                <div class="radio-cards">
-                  <div class="radio-card horizontal" :class="{ active: formData.innovationLevel === 'national' }"
-                    @click.stop="toggleRadioCard('innovationLevel', 'national')">
-                    <div class="radio-icon">
-                      <font-awesome-icon :icon="['fas', 'globe']" />
-                    </div>
-                    <span>国家级</span>
-                  </div>
-                  <div class="radio-card horizontal" :class="{ active: formData.innovationLevel === 'provincial' }"
-                    @click.stop="toggleRadioCard('innovationLevel', 'provincial')">
-                    <div class="radio-icon">
-                      <font-awesome-icon :icon="['fas', 'map-marker-alt']" />
-                    </div>
-                    <span>省级</span>
-                  </div>
-                  <div class="radio-card horizontal" :class="{ active: formData.innovationLevel === 'school' }"
-                    @click.stop="toggleRadioCard('innovationLevel', 'school')">
-                    <div class="radio-icon">
-                      <font-awesome-icon :icon="['fas', 'university']" />
-                    </div>
-                    <span>校级</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 团队角色选择 -->
-              <div class="form-group">
-                <label class="form-label">角色 <span class="required">*</span></label>
-                <div class="radio-cards compact">
-                  <div class="radio-card horizontal small" :class="{ active: formData.innovationRole === 'leader' }"
-                    @click.stop="toggleRadioCard('innovationRole', 'leader')">
-                    <div class="radio-icon">
-                      <font-awesome-icon :icon="['fas', 'flag']" />
-                    </div>
-                    <span>组长</span>
-                  </div>
-                  <div class="radio-card horizontal small" :class="{ active: formData.innovationRole === 'member' }"
-                    @click.stop="toggleRadioCard('innovationRole', 'member')">
-                    <div class="radio-icon">
-                      <font-awesome-icon :icon="['fas', 'user-friends']" />
-                    </div>
-                    <span>组员</span>
-                  </div>
-                </div>
-              </div>
-              <!-- 其他创新创业字段... -->
-            </div>
-          </div>
-
-        </div>
-
-
-        <!-- 综合表现特有信息 -->
-        <div class="form-section" v-if="formData.applicationType === 'comprehensive'">
-          <div class="section-title">
-            <font-awesome-icon :icon="['fas', 'hands-helping']" />
-            <span>综合表现信息</span>
-          </div>
-          <div class="form-grid">
-            <div class="form-group full-width">
-              <label class="form-label">表现类型 <span class="required">*</span></label>
-              <div class="radio-cards">
-                <div class="radio-card horizontal"
-                  :class="{ active: formData.performanceType === 'international_internship' }"
-                  @click.stop="toggleRadioCard('performanceType', 'international_internship')">
-                  <div class="radio-icon">
-                    <font-awesome-icon :icon="['fas', 'globe']" />
-                  </div>
-                  <span>国际组织实习</span>
-                </div>
-                <div class="radio-card horizontal" :class="{ active: formData.performanceType === 'military_service' }"
-                  @click.stop="toggleRadioCard('performanceType', 'military_service')">
-                  <div class="radio-icon">
-                    <font-awesome-icon :icon="['fas', 'shield-alt']" />
-                  </div>
-                  <span>参军入伍服兵役</span>
-                </div>
-                <div class="radio-card horizontal" :class="{ active: formData.performanceType === 'volunteer' }"
-                  @click.stop="toggleRadioCard('performanceType', 'volunteer')">
-                  <div class="radio-icon">
-                    <font-awesome-icon :icon="['fas', 'hands-helping']" />
-                  </div>
-                  <span>志愿服务</span>
-                </div>
-                <div class="radio-card horizontal" :class="{ active: formData.performanceType === 'social_work' }"
-                  @click.stop="toggleRadioCard('performanceType', 'social_work')">
-                  <div class="radio-icon">
-                    <font-awesome-icon :icon="['fas', 'user-tie']" />
-                  </div>
-                  <span>社会工作</span>
-                </div>
-                <div class="radio-card horizontal" :class="{ active: formData.performanceType === 'sports' }"
-                  @click.stop="toggleRadioCard('performanceType', 'sports')">
-                  <div class="radio-icon">
-                    <font-awesome-icon :icon="['fas', 'football-ball']" />
-                  </div>
-                  <span>体育比赛</span>
-                </div>
-                <div class="radio-card horizontal" :class="{ active: formData.performanceType === 'honor_title' }"
-                  @click.stop="toggleRadioCard('performanceType', 'honor_title')">
-                  <div class="radio-icon">
-                    <font-awesome-icon :icon="['fas', 'medal']" />
-                  </div>
-                  <span>荣誉称号</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label">奖项级别 <span class="required">*</span></label>
-              <div class="radio-cards">
-                <div class="radio-card horizontal" :class="{ active: formData.performanceLevel === 'provincial' }"
-                  @click.stop="toggleRadioCard('performanceLevel', 'provincial')">
-                  <div class="radio-icon">
-                    <font-awesome-icon :icon="['fas', 'map-marker-alt']" />
-                  </div>
-                  <span>省级</span>
-                </div>
-                <div class="radio-card horizontal" :class="{ active: formData.performanceLevel === 'school' }"
-                  @click.stop="toggleRadioCard('performanceLevel', 'school')">
-                  <div class="radio-icon">
-                    <font-awesome-icon :icon="['fas', 'university']" />
-                  </div>
-                  <span>校级</span>
-                </div>
-                <div class="radio-card horizontal" :class="{ active: formData.performanceLevel === 'college' }"
-                  @click.stop="toggleRadioCard('performanceLevel', 'college')">
-                  <div class="radio-icon">
-                    <font-awesome-icon :icon="['fas', 'building']" />
-                  </div>
-                  <span>院级</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label">参与类型 <span class="required">*</span></label>
-              <div class="radio-cards compact">
-                <div class="radio-card horizontal small"
-                  :class="{ active: formData.performanceParticipation === 'individual' }"
-                  @click.stop="toggleRadioCard('performanceParticipation', 'individual')">
-                  <div class="radio-icon">
-                    <font-awesome-icon :icon="['fas', 'user']" />
-                  </div>
-                  <span>个人</span>
-                </div>
-                <div class="radio-card horizontal small"
-                  :class="{ active: formData.performanceParticipation === 'team' }"
-                  @click.stop="toggleRadioCard('performanceParticipation', 'team')">
-                  <div class="radio-icon">
-                    <font-awesome-icon :icon="['fas', 'users']" />
-                  </div>
-                  <span>集体</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group" v-if="formData.performanceParticipation === 'team'">
-              <label class="form-label">角色 <span class="required">*</span></label>
-              <div class="radio-cards compact">
-                <div class="radio-card horizontal small" :class="{ active: formData.teamRole === 'leader' }"
-                  @click.stop="toggleRadioCard('teamRole', 'leader')">
-                  <div class="radio-icon">
-                    <font-awesome-icon :icon="['fas', 'flag']" />
-                  </div>
-                  <span>队长</span>
-                </div>
-                <div class="radio-card horizontal small" :class="{ active: formData.teamRole === 'member' }"
-                  @click.stop="toggleRadioCard('teamRole', 'member')">
-                  <div class="radio-icon">
-                    <font-awesome-icon :icon="['fas', 'user-friends']" />
-                  </div>
-                  <span>队员</span>
-                </div>
-              </div>
-            </div>
+          <div class="info-message">
+            <p>请先选择适用的规则，系统将根据规则显示需要填写的系数字段。</p>
           </div>
         </div>
-
-
 
         <!-- 加分详情（通用） -->
         <div class="form-section">
@@ -549,12 +178,12 @@
             <div class="upload-text">
               <p>点击或拖拽文件到此处上传</p>
               <p class="help-text">支持 {{ fileUploadSettings.allowedFileTypesString }} 格式，单个文件不超过{{
-                  fileUploadSettings.singleFileSizeLimit }}MB，总文件大小不超过{{ fileUploadSettings.totalFileSizeLimit }}MB</p>
+                fileUploadSettings.singleFileSizeLimit }}MB，总文件大小不超过{{ fileUploadSettings.totalFileSizeLimit }}MB</p>
 
             </div>
           </div>
-          <input type="file" ref="fileInput" style="display: none;" :accept="fileUploadSettings.allowedFileTypes.join(',')"
-            @change="handleFileSelect" multiple>
+          <input type="file" ref="fileInput" style="display: none;"
+            :accept="fileUploadSettings.allowedFileTypes.join(',')" @change="handleFileSelect" multiple>
 
           <div class="file-list" v-if="formData.files.length > 0">
             <div class="file-list-header">
@@ -629,9 +258,6 @@ import { useAuthStore } from '../../stores/auth'
 import { useApplicationsStore } from '../../stores/applications'
 import { useToastStore } from '../../stores/toast'
 
-// 定义事件，用于通知父组件切换页面
-const emit = defineEmits(['switch-page'])
-
 // 接收编辑申请ID
 const props = defineProps(['editApplicationId'])
 
@@ -649,51 +275,40 @@ const formData = reactive({
   name: authStore.userName,
   departmentId: authStore.user?.departmentId || '',
   majorId: authStore.user?.majorId || '',
+  facultyId: authStore.user?.facultyId || authStore.user?.faculty_id || '',
 
-  // 原有表单数据
-  applicationType: 'academic',
+  // 基本信息
   projectName: '',
   awardDate: '',
-  // 新增：学术类型（科研/竞赛/创新）
-  academicType: '',
-  // 科研成果特有字段
-  researchType: '',       // 成果类型
-  // 创新特有字段
-  innovationLevel: '',    // 项目级别
-  innovationRole: '', // 存储组长(leader)/组员(member)
-  // 学术专长特有字段
-  awardLevel: '',
-  awardGrade: '', // 新增：奖项等级
-  awardCategory: '', // 新增：奖项类别（A+/A/A-）
-  awardType: 'individual',
-  authorRankType: 'ranked', // 新增：排序类型（默认有排名）
-  authorOrder: '',
-  // 综合表现特有字段
-  performanceType: '',
-  performanceLevel: '', // 奖项级别
-  performanceParticipation: 'individual', // 参与类型（个人/集体）
-  teamRole: '', // 团队角色（队长/队员）
-  // 规则选择字段
   ruleId: '', // 选择的规则ID
+  // 动态系数字段，根据规则配置自动生成
+  dynamicCoefficients: {},
   // 通用字段
   selfScore: '',
   description: '',
-  files: []
+  files: [],
+  // 申请类型，将从规则中获取
+  applicationType: ''
 })
 
-
-// 级别变更时重置等级
-const handleLevelChange = () => {
-  formData.awardGrade = ''
-}
-
-// 处理radio-card的点击事件，支持取消选择
-const toggleRadioCard = (fieldName, value) => {
-  if (formData[fieldName] === value) {
-    formData[fieldName] = ''
-  } else {
-    formData[fieldName] = value
-  }
+// 重置表单的通用函数
+const resetForm = () => {
+  Object.assign(formData, {
+    id: null,
+    studentId: authStore.user?.studentId || '',
+    name: authStore.userName,
+    departmentId: authStore.user?.departmentId || '',
+    majorId: authStore.user?.majorId || '',
+    projectName: '',
+    awardDate: '',
+    ruleId: '',
+    selfScore: '',
+    description: '',
+    files: [],
+    dynamicCoefficients: {},
+    applicationType: '',
+    facultyId: authStore.user?.facultyId || authStore.user?.faculty_id || ''
+  })
 }
 
 // 规则选择和预估分数计算相关
@@ -723,105 +338,64 @@ const loadEditData = async (applicationId) => {
   // 如果没有ID或ID为空，重置为新表单
   if (!applicationId) {
     // 清空表单
-    Object.assign(formData, {
-      id: null,
-      studentId: authStore.user?.studentId || '',
-      name: authStore.userName,
-      departmentId: authStore.user?.departmentId || '',
-      majorId: authStore.user?.majorId || '',
-      applicationType: 'academic',
-      projectName: '',
-      awardDate: '',
-      academicType: '',
-      researchType: '',
-      innovationLevel: '',
-      innovationRole: '',
-      awardLevel: '',
-      awardGrade: '',
-      awardCategory: '',
-      awardType: 'individual',
-      authorRankType: 'ranked',
-      authorOrder: '',
-      performanceType: '',
-      performanceLevel: '',
-      performanceParticipation: 'individual',
-      teamRole: '',
-      ruleId: '',
-      selfScore: '',
-      description: '',
-      files: []
-    })
+    resetForm()
     return
   }
-
   try {
     const application = await applicationsStore.fetchApplicationById(applicationId)
-
-    // 将后端返回的下划线命名转换为前端的驼峰命名
-    const fieldMapping = {
-      'student_id': 'studentId',
-      'student_name': 'name',
-      'department_id': 'departmentId',
-      'major_id': 'majorId',
-      'application_type': 'applicationType',
-      'self_score': 'selfScore',
-      'project_name': 'projectName',
-      'award_date': 'awardDate',
-      'award_level': 'awardLevel',
-      'award_type': 'awardType',
-      'academic_type': 'academicType',
-      'research_type': 'researchType',
-      'innovation_level': 'innovationLevel',
-      'innovation_role': 'innovationRole',
-      'award_grade': 'awardGrade',
-      'award_category': 'awardCategory',
-      'author_rank_type': 'authorRankType',
-      'author_order': 'authorOrder',
-      'performance_type': 'performanceType',
-      'performance_level': 'performanceLevel',
-      'performance_participation': 'performanceParticipation',
-      'team_role': 'teamRole',
-      'rule_id': 'ruleId'
-    }
-
     // 清空表单
-    Object.assign(formData, {
-      id: null,
-      studentId: authStore.user?.studentId || '',
-      name: authStore.userName,
-      departmentId: authStore.user?.departmentId || '',
-      majorId: authStore.user?.majorId || '',
-      applicationType: 'academic',
-      projectName: '',
-      awardDate: '',
-      academicType: '',
-      researchType: '',
-      innovationLevel: '',
-      innovationRole: '',
-      awardLevel: '',
-      awardGrade: '',
-      awardCategory: '',
-      awardType: 'individual',
-      authorRankType: 'ranked',
-      authorOrder: '',
-      performanceType: '',
-      performanceLevel: '',
-      performanceParticipation: 'individual',
-      teamRole: '',
-      ruleId: '',
-      selfScore: '',
-      description: '',
-      files: []
-    })
-
-    // 填充表单数据
-    for (const [key, value] of Object.entries(application)) {
-      const newKey = fieldMapping[key] || key
-      if (newKey in formData) {
-        formData[newKey] = value
+    resetForm()
+    // 先获取转换后的前端数据
+    const frontendData = toFrontendFields(application)
+    // 先设置ruleId，确保selectedRule能够正确计算
+    if (frontendData.ruleId) {
+      formData.ruleId = frontendData.ruleId
+    }
+    // 这将确保系数选择字段能够正确显示
+    await fetchMatchingRules()
+    // 填充表单基本数据（排除动态系数字段和ruleId，单独处理）
+    for (const [key, value] of Object.entries(frontendData)) {
+      if (key in formData && key !== 'dynamicCoefficients' && key !== 'ruleId') {
+        formData[key] = value
       }
     }
-
+    // 填充动态系数字段
+    let dynamicCoefficients = {}
+    // 从后端返回的数据中获取动态系数，处理不同的字段名和可能的JSON字符串
+    if (application.dynamic_coefficients) {
+      if (typeof application.dynamic_coefficients === 'string') {
+        try {
+          dynamicCoefficients = JSON.parse(application.dynamic_coefficients)
+        } catch (error) {
+          dynamicCoefficients = {}
+        }
+      } else {
+        dynamicCoefficients = application.dynamic_coefficients
+      }
+    } else if (application.dynamicCoefficients) {
+      if (typeof application.dynamicCoefficients === 'string') {
+        try {
+          dynamicCoefficients = JSON.parse(application.dynamicCoefficients)
+        } catch (error) {
+          dynamicCoefficients = {}
+        }
+      } else {
+        dynamicCoefficients = application.dynamicCoefficients
+      }
+    }
+    // 确保dynamicCoefficients是对象
+    if (typeof dynamicCoefficients !== 'object' || dynamicCoefficients === null) {
+      dynamicCoefficients = {}
+    }
+    // 将所有值转换为字符串类型，以匹配select选项的值类型
+    const stringifiedCoefficients = {}
+    for (const [key, value] of Object.entries(dynamicCoefficients)) {
+      stringifiedCoefficients[key] = value !== null && value !== undefined ? String(value) : ''
+    }
+    // 清空现有的dynamicCoefficients
+    Object.keys(formData.dynamicCoefficients).forEach(key => delete formData.dynamicCoefficients[key])
+    // 使用Object.assign来更新dynamicCoefficients对象的属性，确保Vue的响应式系统能够正确跟踪变化
+    Object.assign(formData.dynamicCoefficients, stringifiedCoefficients)
     // 处理文件（如果有）
     if (application.files && Array.isArray(application.files)) {
       // 将后端返回的文件数据转换为前端可用的格式
@@ -840,38 +414,10 @@ const loadEditData = async (applicationId) => {
     } else {
       formData.files = []
     }
-
   } catch (error) {
     console.error('加载编辑数据失败:', error)
     // 当加载失败（如404），重置为新表单
-    Object.assign(formData, {
-      id: null,
-      studentId: authStore.user?.studentId || '',
-      name: authStore.userName,
-      departmentId: authStore.user?.departmentId || '',
-      majorId: authStore.user?.majorId || '',
-      applicationType: 'academic',
-      projectName: '',
-      awardDate: '',
-      academicType: '',
-      researchType: '',
-      innovationLevel: '',
-      innovationRole: '',
-      awardLevel: '',
-      awardGrade: '',
-      awardCategory: '',
-      awardType: 'individual',
-      authorRankType: 'ranked',
-      authorOrder: '',
-      performanceType: '',
-      performanceLevel: '',
-      performanceParticipation: 'individual',
-      teamRole: '',
-      ruleId: '',
-      selfScore: '',
-      description: '',
-      files: []
-    })
+    resetForm()
   }
 }
 
@@ -884,17 +430,8 @@ watch(() => props.editApplicationId, (newId) => {
 
 // 监听表单关键字段变化，自动匹配规则
 watch([
-  () => formData.applicationType,
-  () => formData.academicType,
-  () => formData.awardLevel,
-  () => formData.awardGrade,
-  () => formData.awardCategory,
-  () => formData.awardType,
-  () => formData.teamRole,
-  () => formData.performanceType,
-  () => formData.performanceLevel,
-  () => formData.performanceParticipation,
-  () => formData.projectName
+  () => formData.projectName,
+  () => formData.ruleId
 ], () => {
   fetchMatchingRules()
 }, { deep: true })
@@ -902,21 +439,24 @@ watch([
 // 获取匹配的规则
 const fetchMatchingRules = async () => {
   try {
-    // 始终获取所有规则，不进行类型过滤
-    const response = await api.getRules()
+    // 获取学生所在学院ID
+    const studentFacultyId = authStore.user?.faculty_id || authStore.user?.facultyId
+    // 使用正确的API方法获取规则
+    const rulesResponse = await api.getRules({ faculty_id: studentFacultyId })
     // 过滤掉禁用的规则，只显示状态为'active'的规则
-    availableRules.value = response.rules.filter(rule => rule.status === 'active')
-
-    // 如果当前选择的规则不在列表中，清除选择
-    if (formData.ruleId && !availableRules.value.some(rule => rule.id === formData.ruleId)) {
-      formData.ruleId = ''
+    availableRules.value = rulesResponse.rules.filter(rule => rule.status === 'active')
+    // 为每个规则获取完整的计算配置信息
+    for (let i = 0; i < availableRules.value.length; i++) {
+      const rule = availableRules.value[i]
+      try {
+        const calculationResponse = await api.getRuleCalculation(rule.id)
+        if (calculationResponse.data) {
+          availableRules.value[i].calculation = calculationResponse.data
+        }
+      } catch (error) {
+        console.error(`获取规则${rule.id}的计算配置失败:`, error)
+      }
     }
-
-    // 如果只有一个规则，自动选择
-    if (availableRules.value.length === 1 && !formData.ruleId) {
-      formData.ruleId = availableRules.value[0].id
-    }
-
     // 重新计算预估分数
     calculateEstimatedScore()
   } catch (error) {
@@ -924,115 +464,216 @@ const fetchMatchingRules = async () => {
   }
 }
 
+// 获取当前选中的规则
+const selectedRule = computed(() => {
+  if (!formData.ruleId) return null
+  return availableRules.value.find(rule => rule.id === formData.ruleId)
+})
+
+// 动态生成的表单字段配置
+const dynamicFormFields = computed(() => {
+  if (!selectedRule.value?.calculation) return []
+  const calculationType = selectedRule.value.calculation.calculation_type
+  let parameters = selectedRule.value.calculation.parameters || {}
+  // 解析参数（可能是JSON字符串）
+  if (typeof parameters === 'string') {
+    try {
+      parameters = JSON.parse(parameters)
+    } catch (error) {
+      console.error('解析规则参数失败:', error)
+      return []
+    }
+  }
+  const fields = []
+  // 根据计算类型生成不同的表单字段
+  if (calculationType === 'multiplicative' || parameters.type === 'multiplicative') {
+    // 为每个系数生成选择框
+    const coefficients = parameters.coefficients || []
+    coefficients.forEach(coefficient => {
+      // 检查是否有items字段，如果有则生成下拉选择框
+      if (coefficient.items && Array.isArray(coefficient.items)) {
+        fields.push({
+          name: coefficient.key,
+          label: coefficient.name,
+          type: 'select',
+          options: coefficient.items.map(item => ({
+            value: item.multiplier,
+            label: item.name
+          })),
+          required: true
+        })
+      } else {
+        // 否则生成数字输入框
+        fields.push({
+          name: coefficient.key,
+          label: coefficient.name,
+          type: 'number',
+          min: 0,
+          step: '0.1',
+          required: true
+        })
+      }
+    })
+  } else if (calculationType === 'cumulative' || parameters.type === 'cumulative') {
+    // 累积式计算：累积字段 + 乘数
+    if (parameters.cumulative_field) {
+      fields.push({
+        name: parameters.cumulative_field,
+        label: parameters.cumulative_field,
+        type: 'number',
+        min: 0,
+        step: '1',
+        required: true
+      })
+    }
+    if (parameters.cumulative_multiplier !== undefined) {
+      fields.push({
+        name: 'cumulative_multiplier',
+        label: '累积乘数',
+        type: 'number',
+        min: 0,
+        step: '0.1',
+        required: true
+      })
+    }
+  }
+  return fields
+})
+
 // 计算预估分数
-const calculateEstimatedScore = () => {
+const calculateEstimatedScore = async () => {
   if (!formData.ruleId) {
     estimatedScore.value = 0
     return
   }
-
   const selectedRule = availableRules.value.find(rule => rule.id === formData.ruleId)
   if (!selectedRule) {
     estimatedScore.value = 0
     return
   }
-
-  let score = selectedRule.score
-
-  // 根据作者排序调整分数
-  if (formData.awardType === 'team' && formData.authorRankType === 'ranked' && formData.authorOrder) {
-    const order = parseInt(formData.authorOrder)
-    if (order === 1) {
-      // 第一作者使用规则中定义的比例
-      score = score * (selectedRule.author_rank_ratio || 1)
-    } else {
-      // 非第一作者分数递减，最低不低于30%
-      const reductionFactor = Math.max(0.3, 1 - (order - 1) * 0.1)
-      score = score * reductionFactor
+  // 从规则中获取applicationType并设置到表单数据中
+  if (selectedRule.type) {
+    formData.applicationType = selectedRule.type
+  }
+  try {
+    // 准备学生数据
+    const studentData = {
+      faculty_id: authStore.user?.faculty_id || authStore.user?.facultyId,
+      // 动态系数字段
+      ...formData.dynamicCoefficients
     }
-  }
+    // 调用后端API计算分数
+    const scoreResponse = await api.calculateRuleScore(selectedRule.id, { student_data: studentData })
+    estimatedScore.value = parseFloat(scoreResponse.data.score.toFixed(4))
+  } catch (error) {
+    console.error('计算预估分数失败:', error)
+    console.error('错误详情:', error.response?.data || error.message)
+    // 如果API调用失败，回退到前端计算
+    let score = calculateScoreFrontend(selectedRule)
+    console.log('前端计算的分数:', score)
 
-  // 应用最大分数限制
-  if (selectedRule.max_score && score > selectedRule.max_score) {
-    score = selectedRule.max_score
-  }
+    // 应用最大分数限制
+    if (selectedRule.max_score && score > selectedRule.max_score) {
+      score = selectedRule.max_score
+      console.log('应用最大分数限制后:', score)
+    }
 
-  estimatedScore.value = parseFloat(score.toFixed(1))
+    estimatedScore.value = parseFloat(score.toFixed(4))
+  }
 }
 
-// 监听规则选择变化，自动填充表单信息
-watch(() => formData.ruleId, async (newRuleId) => {
-  if (!newRuleId) return
+// 前端分数计算函数（与后端RuleEngine保持一致）
+const calculateScoreFrontend = (rule) => {
+  if (!rule || !rule.calculation) {
+    // 如果没有计算配置，使用基础分数
+    return rule.score || 0
+  }
 
-  // 先尝试从availableRules中查找规则
-  let selectedRule = availableRules.value.find(rule => rule.id === newRuleId)
+  let totalScore = 0
 
-  // 如果在availableRules中找不到，尝试单独获取该规则的详细信息
-  if (!selectedRule) {
+  // 根据计算类型执行不同的计算逻辑
+  switch (rule.calculation.calculation_type) {
+    case 'multiplicative':
+      // 乘积式计算
+      totalScore = calculateMultiplicativeScore(rule)
+      break
+    case 'cumulative':
+      // 累积式计算
+      totalScore = calculateCumulativeScore(rule)
+      break
+    default:
+      // 默认使用基础分数
+      totalScore = rule.score || 0
+  }
+
+  return totalScore
+}
+
+// 计算乘积式分数
+const calculateMultiplicativeScore = (rule) => {
+  let parameters = rule.calculation.parameters || {}
+
+  // 解析参数（可能是JSON字符串）
+  if (typeof parameters === 'string') {
     try {
-      selectedRule = await api.getRule(newRuleId)
+      parameters = JSON.parse(parameters)
     } catch (error) {
-      console.error('获取规则详情失败:', error)
-      return
+      console.error('解析乘积式参数失败:', error)
+      return rule.score || 0
     }
   }
 
-  if (!selectedRule) return
+  // 获取基础分值（使用规则或参数中定义的基础分值，不需要学生输入）
+  const baseScore = parseFloat(parameters.base_score) || parseFloat(rule.score) || 0
+  const coefficients = parameters.coefficients || []
 
-  // 根据选择的规则自动填充表单信息
-  formData.applicationType = selectedRule.type
+  let totalMultiplier = 1.0
 
-  if (selectedRule.type === 'academic') {
-    formData.academicType = selectedRule.sub_type
-
-    // 根据不同学术子类型设置相应字段
-    if (selectedRule.sub_type === 'research' || selectedRule.sub_type === 'competition') {
-      formData.awardLevel = selectedRule.level
-      formData.awardGrade = selectedRule.grade
-      formData.awardCategory = selectedRule.category
-    } else if (selectedRule.sub_type === 'innovation') {
-      formData.innovationLevel = selectedRule.level
+  // 计算所有系数的乘积
+  coefficients.forEach(coefficient => {
+    // 获取系数的值
+    const fieldValue = parseFloat(getFieldValue(coefficient.key))
+    if (!isNaN(fieldValue)) {
+      totalMultiplier *= fieldValue
     }
+  })
 
-    // 根据规则设置参与类型（团队或个人）
-    formData.awardType = selectedRule.participation_type
+  return parseFloat((baseScore * totalMultiplier).toFixed(4))
+}
 
-    // 设置团队角色
-    if (selectedRule.participation_type === 'team') {
-      if (selectedRule.sub_type === 'innovation') {
-        formData.innovationRole = selectedRule.team_role
-      } else {
-        formData.teamRole = selectedRule.team_role
-      }
-    }
+// 计算累积式分数
+const calculateCumulativeScore = (rule) => {
+  let parameters = rule.calculation.parameters || {}
 
-    // 设置科研成果类型
-    if (selectedRule.sub_type === 'research') {
-      // 将'research_type'映射为UI中使用的'papers'值
-      if (selectedRule.research_type === 'paper') {
-        formData.researchType = 'thesis' // 学术论文对应到'thesis'选项
-      } else {
-        formData.researchType = selectedRule.research_type
-      }
-    }
-
-    // 设置作者排序相关
-    formData.authorRankType = selectedRule.author_rank_type
-    if (selectedRule.author_rank) {
-      formData.authorOrder = selectedRule.author_rank
-    }
-  } else if (selectedRule.type === 'comprehensive') {
-    formData.performanceType = selectedRule.sub_type
-    formData.performanceLevel = selectedRule.level
-    formData.performanceParticipation = selectedRule.participation_type
-    if (selectedRule.participation_type === 'team') {
-      formData.teamRole = selectedRule.team_role
+  // 解析参数（可能是JSON字符串）
+  if (typeof parameters === 'string') {
+    try {
+      parameters = JSON.parse(parameters)
+    } catch (error) {
+      console.error('解析累积式参数失败:', error)
+      return rule.score || 0
     }
   }
 
-  // 重新计算预估分数
-  calculateEstimatedScore()
-}, { immediate: true })
+  const baseScore = parseFloat(rule.score) || parseFloat(parameters.base_score) || 0
+  const cumulativeField = parameters.cumulative_field
+  const cumulativeMultiplier = parseFloat(getFieldValue('cumulative_multiplier')) || parseFloat(parameters.cumulative_multiplier) || 0.1
+
+  // 获取累积字段的值
+  const cumulativeValue = parseFloat(getFieldValue(cumulativeField)) || 0
+
+  // 计算累积分数
+  return parseFloat((baseScore * cumulativeValue * cumulativeMultiplier).toFixed(4))
+}
+
+// 获取表单字段值
+const getFieldValue = (fieldName) => {
+  // 从动态系数中获取字段值
+  if (formData.dynamicCoefficients[fieldName] !== undefined && formData.dynamicCoefficients[fieldName] !== null) {
+    return formData.dynamicCoefficients[fieldName]
+  }
+  return undefined
+}
 
 // 刷新规则列表
 const refreshRules = () => {
@@ -1049,15 +690,15 @@ onMounted(() => {
 const loadSystemSettings = async () => {
   try {
     const response = await api.getPublicSystemInfo()
-    
+
     // 检查response是否存在
     if (response && response.data) {
       const settings = response.data
-      
+
       // 将allowedFileTypes转换为数组，并保存原始字符串
       let allowedFileTypesArray = ['.pdf', '.jpg', '.jpeg', '.png']
       let allowedFileTypesString = '.pdf, .jpg, .jpeg, .png'
-      
+
       if (settings.allowedFileTypes !== undefined && settings.allowedFileTypes !== null) {
         if (typeof settings.allowedFileTypes === 'string') {
           allowedFileTypesArray = settings.allowedFileTypes.split(',').map(ext => ext.trim())
@@ -1067,7 +708,7 @@ const loadSystemSettings = async () => {
           allowedFileTypesString = settings.allowedFileTypes.join(', ')
         }
       }
-      
+
       // 更新systemSettings
       systemSettings.value = {
         singleFileSizeLimit: settings.singleFileSizeLimit || 10,
@@ -1121,9 +762,8 @@ const triggerFileInput = () => {
   fileInput.value.click()
 }
 
-const handleFileSelect = (event) => {
-  const files = Array.from(event.target.files)
-
+// 验证并添加文件的通用函数
+const validateAndAddFiles = (files) => {
   // 检查总文件大小
   const currentTotalSize = formData.files.reduce((total, file) => total + file.size, 0)
   let totalSizeWithNewFiles = currentTotalSize
@@ -1135,69 +775,42 @@ const handleFileSelect = (event) => {
   const totalLimit = systemSettings.value?.totalFileSizeLimit || 50
   const singleLimit = systemSettings.value?.singleFileSizeLimit || 10
   const allowedTypes = systemSettings.value?.allowedFileTypes || ['.pdf', '.jpg', '.jpeg', '.png']
-  
+
   if (totalSizeWithNewFiles > totalLimit * 1024 * 1024) {
     toastStore.error(`总文件大小超过${totalLimit}MB限制`)
-    event.target.value = ''
-    return
+    return false
   }
 
   // 检查单个文件大小和类型
-  files.forEach(file => {
+  for (const file of files) {
     if (file.size > singleLimit * 1024 * 1024) {
       toastStore.error(`文件 ${file.name} 大小超过${singleLimit}MB限制`)
-      return
+      continue
     }
 
     const fileExt = `.${file.name.split('.').pop().toLowerCase()}`
     if (!allowedTypes.includes(fileExt)) {
       toastStore.error(`文件 ${file.name} 类型不支持，仅支持${allowedTypes.join(', ')}格式`)
-      return
+      continue
     }
 
     // 使用展开运算符创建新数组，确保响应式更新
     formData.files = [...formData.files, file]
-  })
+  }
+
+  return true
+}
+
+const handleFileSelect = (event) => {
+  const files = Array.from(event.target.files)
+  validateAndAddFiles(files)
   event.target.value = ''
 }
 
 const handleDrop = (event) => {
   event.preventDefault()
   const files = Array.from(event.dataTransfer.files)
-
-  // 检查总文件大小
-  const currentTotalSize = formData.files.reduce((total, file) => total + file.size, 0)
-  let totalSizeWithNewFiles = currentTotalSize
-
-  for (const file of files) {
-    totalSizeWithNewFiles += file.size
-  }
-
-  const totalLimit = systemSettings.value?.totalFileSizeLimit || 50
-  const singleLimit = systemSettings.value?.singleFileSizeLimit || 10
-  const allowedTypes = systemSettings.value?.allowedFileTypes || ['.pdf', '.jpg', '.jpeg', '.png']
-  
-  if (totalSizeWithNewFiles > totalLimit * 1024 * 1024) {
-    toastStore.error(`总文件大小超过${totalLimit}MB限制`)
-    return
-  }
-
-  // 检查单个文件大小和类型
-  files.forEach(file => {
-    if (file.size > singleLimit * 1024 * 1024) {
-      toastStore.error(`文件 ${file.name} 大小超过${singleLimit}MB限制`)
-      return
-    }
-
-    const fileExt = `.${file.name.split('.').pop().toLowerCase()}`
-    if (!allowedTypes.includes(fileExt)) {
-      toastStore.error(`文件 ${file.name} 类型不支持，仅支持${allowedTypes.join(', ')}格式`)
-      return
-    }
-
-    // 使用展开运算符创建新数组，确保响应式更新
-    formData.files = [...formData.files, file]
-  })
+  validateAndAddFiles(files)
 }
 
 const removeFile = (index) => {
@@ -1257,66 +870,89 @@ const closePreview = () => {
   previewFileData.value = null
 }
 
-const downloadFile = (fileData) => {
-  const file = fileData.file
-
-  // 检查是否是浏览器File对象（用于新上传的文件）
-  if (file instanceof File) {
-    const url = URL.createObjectURL(file)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = fileData.name
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  } else {
-    // 从后端获取的文件对象，构建正确的下载URL
-    let downloadUrl = null
-
-    if (file.path) {
-      // 检查path是否已经是完整URL
-      if (file.path.startsWith('http://') || file.path.startsWith('https://')) {
-        downloadUrl = file.path
-      } else {
-        // 添加服务器地址前缀
-        downloadUrl = `http://localhost:5001${file.path}`
-      }
-    } else if (file.id) {
-      // 如果没有path字段，使用文件ID构建URL
-      downloadUrl = `http://localhost:5001/uploads/files/${file.id}`
+// 获取applicationType的通用函数
+const getApplicationType = () => {
+  let applicationType = formData.applicationType
+  if (!applicationType && formData.ruleId) {
+    const selectedRule = availableRules.value.find(rule => rule.id === formData.ruleId)
+    if (selectedRule && selectedRule.type) {
+      applicationType = selectedRule.type
+      // 将获取到的applicationType保存回formData，确保提交时包含该字段
+      formData.applicationType = applicationType
     }
+  }
+  return applicationType
+}
 
-    // 创建一个隐藏的<a>标签来触发下载
-    if (downloadUrl) {
-      const a = document.createElement('a')
-      a.href = downloadUrl
-      a.download = fileData.name
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
+// 获取学生信息的通用函数
+const getStudentInfo = () => {
+  return {
+    studentName: authStore.user?.name || authStore.userName || '未知学生',
+    studentId: authStore.user?.studentId || '未知学号',
+    facultyId: authStore.user?.facultyId || authStore.user?.faculty_id || '',
+    departmentId: authStore.user?.departmentId || authStore.user?.department_id || '',
+    majorId: authStore.user?.majorId || authStore.user?.major_id || ''
+  }
+}
+
+// 定义后端到前端的字段映射
+const backToFrontMappings = {
+  student_id: 'studentId',
+  faculty_id: 'facultyId',
+  department_id: 'departmentId',
+  major_id: 'majorId',
+  project_name: 'projectName',
+  award_date: 'awardDate',
+  rule_id: 'ruleId',
+  self_score: 'selfScore',
+  final_score: 'finalScore',
+  applied_at: 'appliedAt',
+  created_at: 'createdAt',
+  updated_at: 'updatedAt',
+  application_type: 'applicationType'
+}
+
+// 将后端字段名转换为前端字段名
+const toFrontendFields = (data) => {
+  const result = { ...data }
+  Object.keys(backToFrontMappings).forEach(backKey => {
+    const frontKey = backToFrontMappings[backKey]
+    if (result.hasOwnProperty(backKey)) {
+      result[frontKey] = result[backKey]
+      delete result[backKey]
     }
+  })
+  return result
+}
+
+// 准备申请数据的通用函数
+const prepareApplicationData = (status) => {
+  const { studentName, studentId, facultyId, departmentId, majorId } = getStudentInfo()
+  const applicationType = getApplicationType()
+
+  return {
+    ...formData,
+    // 确保使用正确的字段名，与显示组件保持一致
+    studentName,
+    studentId,
+    facultyId,
+    departmentId,
+    majorId,
+    status,
+    appliedAt: new Date().toISOString(),
+    applicationType
   }
 }
 
 // 修改保存草稿和提交表单的验证逻辑
 const saveDraft = async () => {
   try {
-    // 从authStore获取实际的学生信息
-    const studentName = authStore.user?.name || authStore.userName || '未知学生'
-    const studentId = authStore.user?.studentId || '未知学号'
+    // 获取学生信息和applicationType
+    const { studentName, studentId, facultyId, departmentId, majorId } = getStudentInfo()
+    const applicationType = getApplicationType()
 
     // 准备草稿数据
-    const draftData = {
-      ...formData,
-      // 确保使用正确的字段名，与显示组件保持一致
-      studentName,
-      studentId,
-      departmentId: authStore.user?.departmentId || '',
-      majorId: authStore.user?.majorId || '',
-      status: 'draft',
-      appliedAt: new Date().toISOString()
-    }
+    const draftData = prepareApplicationData('draft')
 
     let success
     if (formData.id) {
@@ -1356,69 +992,33 @@ const submitForm = async () => {
     return
   }
 
-  // 学术专长特有验证增强
-  if (formData.applicationType === 'academic') {
-    // 新增：验证学术类型已选择
-    if (!formData.academicType) {
-      toastStore.error('请选择学术类型（科研成果/学业竞赛/创新创业训练）')
-      return
-    }
-
-    // 学业竞赛特有验证
-    if (formData.academicType === 'competition') {
-      if (!formData.awardLevel) {
-        toastStore.error('请选择奖项级别')
-        return
-      }
-      if (!formData.awardGrade) { // 新增：验证奖项等级
-        toastStore.error('请选择奖项等级')
-        return
-      }
-      if (!formData.awardCategory) {
-        toastStore.error('请选择奖项类别')
-        return
-      }
-      // 新增：团队奖项的排序验证
-      if (formData.awardType === 'team') {
-        // 当选择"有排名"时必须填写作者排序
-        if (formData.authorRankType === 'ranked' && !formData.authorOrder) {
-          toastStore.error('请输入作者排序')
-          return
-        }
-      }
-    }
-
-    // 新增：科研成果验证
-    if (formData.academicType === 'research') {
-      if (!formData.researchType) {
-        toastStore.error('请选择成果类型')
-        return
-      }
-    }
-
-    // 新增：创新创业验证
-    if (formData.academicType === 'innovation') {
-      if (!formData.innovationLevel) {
-        toastStore.error('请选择项目级别')
-        return
-      }
-
-      if (!formData.innovationRole) {
-        toastStore.error('请选择您的角色（组长/组员）')
-        return
-      }
-    }
+  if (!formData.ruleId) {
+    toastStore.error('请选择适用规则')
+    return
   }
 
-  // 综合表现特有验证
-  if (formData.applicationType === 'comprehensive') {
-    if (!formData.performanceType) {
-      toastStore.error('请选择表现类型')
+  // 根据当前规则需要的动态字段进行验证
+  for (const field of dynamicFormFields.value) {
+    if (field.required && !formData.dynamicCoefficients[field.name]) {
+      toastStore.error(`请输入${field.label}`)
       return
     }
-    if (!formData.performanceLevel) {
-      toastStore.error('请选择奖项级别')
-      return
+
+    // 数字字段验证
+    if (field.type === 'number' && formData.dynamicCoefficients[field.name]) {
+      const value = parseFloat(formData.dynamicCoefficients[field.name])
+      if (isNaN(value)) {
+        toastStore.error(`${field.label}必须是数字`)
+        return
+      }
+      if (field.min !== undefined && value < field.min) {
+        toastStore.error(`${field.label}不能小于${field.min}`)
+        return
+      }
+      if (field.max !== undefined && value > field.max) {
+        toastStore.error(`${field.label}不能大于${field.max}`)
+        return
+      }
     }
   }
 
@@ -1433,31 +1033,15 @@ const submitForm = async () => {
     return
   }
 
-  // 从authStore获取实际的学生信息
-  const studentName = authStore.user?.name || authStore.userName || '未知学生'
-  const studentId = authStore.user?.studentId || '未知学号'
-
-  // console.log('=== 提交申请时的学生信息 ===')
-  // console.log('studentName:', studentName)
-  // console.log('studentId:', studentId)
+  // 获取学生信息和applicationType
+  const { studentName, studentId, facultyId, departmentId, majorId } = getStudentInfo()
+  const applicationType = getApplicationType()
 
   // 确保studentName字段存在（兼容后端期望）
   formData.studentName = formData.name || authStore.userName
 
   // 准备申请数据
-  const applicationData = {
-    ...formData,
-    // 确保使用正确的字段名，与显示组件保持一致
-    studentName,
-    studentId,
-    facultyId: authStore.user?.facultyId || '',
-    departmentId: authStore.user?.departmentId || '',
-    majorId: authStore.user?.majorId || '',
-    status: 'pending',
-    appliedAt: new Date().toISOString()
-  }
-
-  // console.log('=== 最终发送的申请数据 ===')
+  const applicationData = prepareApplicationData('pending')
 
   try {
     let success
@@ -1472,35 +1056,8 @@ const submitForm = async () => {
     if (success) {
       toastStore.success('申请已提交，等待审核中...')
 
-      // 重置表单，但保持默认的加分申请类型
-      Object.assign(formData, {
-        id: null,
-        studentId: authStore.user?.studentId || '',
-        name: authStore.userName,
-        departmentId: authStore.user?.departmentId || '',
-        majorId: authStore.user?.majorId || '',
-        applicationType: 'academic', // 默认选择学术专长
-        projectName: '',
-        awardDate: '',
-        academicType: 'competition', // 默认选择学业竞赛
-        researchType: '',
-        innovationLevel: '',
-        innovationRole: '',
-        awardLevel: '',
-        awardGrade: '',
-        awardCategory: '',
-        awardType: 'individual',
-        authorRankType: 'ranked',
-        authorOrder: '',
-        performanceType: '',
-        performanceLevel: '',
-        performanceParticipation: 'individual',
-        teamRole: '',
-        ruleId: '',
-        selfScore: '',
-        description: '',
-        files: []
-      })
+      // 重置表单
+      resetForm()
 
       // 重置规则列表和预估分数
       availableRules.value = []

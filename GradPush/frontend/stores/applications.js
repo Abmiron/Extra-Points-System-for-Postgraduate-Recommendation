@@ -5,7 +5,7 @@ import api from '../utils/api.js'
 export const useApplicationsStore = defineStore('applications', () => {
   // 辅助函数：字段名转换
   const transformFieldNames = (data) => {
-    // 字段名转换：将前端的驼峰式命名转换为后端的下划线命名
+    // 字段名映射：前端驼峰式命名 -> 后端下划线命名
     const fieldMapping = {
       'studentId': 'student_id',
       'studentName': 'student_name',
@@ -17,34 +17,57 @@ export const useApplicationsStore = defineStore('applications', () => {
       'selfScore': 'self_score',
       'projectName': 'project_name',
       'awardDate': 'award_date',
-      'awardLevel': 'award_level',
-      'awardType': 'award_type',
-      'academicType': 'academic_type',
-      'researchType': 'research_type',
-      'innovationLevel': 'innovation_level',
-      'innovationRole': 'innovation_role',
-      'awardGrade': 'award_grade',
-      'awardCategory': 'award_category',
-      'authorRankType': 'author_rank_type',
-      'authorOrder': 'author_order',
-      'performanceType': 'performance_type',
-      'performanceLevel': 'performance_level',
-      'performanceParticipation': 'performance_participation',
-      'teamRole': 'team_role',
       'finalScore': 'final_score',
       'reviewComment': 'review_comment',
       'reviewedAt': 'reviewed_at',
       'reviewedBy': 'reviewed_by',
       'appliedAt': 'applied_at',
       'createdAt': 'created_at',
-      'updatedAt': 'updated_at'
+      'updatedAt': 'updated_at',
+      'dynamicCoefficients': 'dynamic_coefficients'
+    };
+    
+    // 创建反向映射：后端下划线命名 -> 前端驼峰式命名
+    const reverseFieldMapping = {};
+    for (const [frontendKey, backendKey] of Object.entries(fieldMapping)) {
+      reverseFieldMapping[backendKey] = frontendKey;
+    }
+    
+    // 如果不是对象或为null，直接返回
+    if (typeof data !== 'object' || data === null) {
+      return data;
     }
     
     // 转换数据字段
     const transformedData = {};
     for (const [key, value] of Object.entries(data)) {
-      const newKey = fieldMapping[key] || key;
-      transformedData[newKey] = value;
+      let newKey;
+      
+      // 检查是否需要进行字段名转换
+      if (fieldMapping[key]) {
+        // 前端到后端：使用fieldMapping转换
+        newKey = fieldMapping[key];
+      } else if (reverseFieldMapping[key]) {
+        // 后端到前端：使用reverseFieldMapping转换
+        newKey = reverseFieldMapping[key];
+      } else {
+        // 不需要转换的字段
+        newKey = key;
+      }
+      
+      // 处理嵌套对象
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        // 特殊处理dynamicCoefficients/dynamic_coefficients对象，不转换内部字段
+        if (key === 'dynamicCoefficients' || key === 'dynamic_coefficients') {
+          transformedData[newKey] = { ...value };
+        } else {
+          // 递归转换其他嵌套对象
+          transformedData[newKey] = transformFieldNames(value);
+        }
+      } else {
+        // 非对象类型直接赋值
+        transformedData[newKey] = value;
+      }
     }
     
     return transformedData;
@@ -70,7 +93,7 @@ export const useApplicationsStore = defineStore('applications', () => {
   const fetchApplications = async (filters = {}) => {
     loading.value = true
     error.value = null
-    
+
     try {
       const queryParams = new URLSearchParams()
       if (filters.studentId) queryParams.append('studentId', filters.studentId)
@@ -92,7 +115,7 @@ export const useApplicationsStore = defineStore('applications', () => {
       if (filters.reviewedBy) queryParams.append('reviewedBy', filters.reviewedBy)
       if (filters.reviewedStartDate) queryParams.append('reviewedStartDate', filters.reviewedStartDate)
       if (filters.reviewedEndDate) queryParams.append('reviewedEndDate', filters.reviewedEndDate)
-      
+
       const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ''
       const data = await api.apiRequest(`/applications${queryString}`)
       applications.value = data
@@ -106,12 +129,12 @@ export const useApplicationsStore = defineStore('applications', () => {
       loading.value = false
     }
   }
-  
+
   // 从API获取单个申请详情
   const fetchApplicationById = async (applicationId) => {
     loading.value = true
     error.value = null
-    
+
     try {
       const data = await api.apiRequest(`/applications/${applicationId}`)
       return data
@@ -123,12 +146,12 @@ export const useApplicationsStore = defineStore('applications', () => {
       loading.value = false
     }
   }
-  
+
   // 从API获取待审核申请
   const fetchPendingApplications = async (filters = {}) => {
     loading.value = true
     error.value = null
-    
+
     try {
       const queryParams = new URLSearchParams()
       if (filters.faculty) {
@@ -146,7 +169,7 @@ export const useApplicationsStore = defineStore('applications', () => {
       if (filters.rule) queryParams.append('ruleId', filters.rule)
       if (filters.studentId) queryParams.append('studentId', filters.studentId)
       if (filters.studentName) queryParams.append('studentName', filters.studentName)
-      
+
       const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ''
       const data = await api.apiRequest(`/applications/pending${queryString}`)
       // 将获取到的待审核申请保存到store中
@@ -165,11 +188,11 @@ export const useApplicationsStore = defineStore('applications', () => {
   const addApplication = async (application) => {
     loading.value = true
     error.value = null
-    
+
     try {
       // 创建FormData对象来处理文件上传
       const formData = new FormData()
-      
+
       // 将非文件字段添加到FormData
       const applicationData = { ...application }
       // 处理files字段，只保留后端需要的信息
@@ -184,13 +207,13 @@ export const useApplicationsStore = defineStore('applications', () => {
       }
       // 保存原始files数组用于单独处理File实例
       const files = application.files || []
-      
+
       // 使用辅助函数转换字段名
       const transformedData = transformFieldNames(applicationData)
-      
+
       // 将转换后的application数据作为JSON字符串添加到FormData
       formData.append('application', JSON.stringify(transformedData))
-      
+
       // 添加文件到FormData - 只添加新上传的浏览器File对象
       // 从后端加载的文件（非File实例）不会被添加，后端会保留这些文件
       files.forEach((file) => {
@@ -198,10 +221,10 @@ export const useApplicationsStore = defineStore('applications', () => {
           formData.append('files', file)
         }
       })
-      
+
       // 发送请求
       const data = await api.apiRequest('/applications', 'POST', formData)
-      
+
       // 获取完整的申请数据
       const newApplication = await fetchApplicationById(data.id)
       applications.value.unshift(newApplication)
@@ -219,21 +242,21 @@ export const useApplicationsStore = defineStore('applications', () => {
   const updateApplicationStatus = async (applicationId, status, reviewComment, finalScore, reviewedBy) => {
     loading.value = true
     error.value = null
-    
+
     try {
       // 处理不同组件传递的不同字段名（reviewComment vs approveComment/rejectComment）
       const comment = reviewComment.comment || reviewComment.approveComment || reviewComment.rejectComment || reviewComment
-      
+
       const updatedData = {
         status,
         reviewComment: comment,
         finalScore,
         reviewedBy
       }
-      
+
       // 使用审核接口而不是通用更新接口，以触发自动评分逻辑
       await api.apiRequest(`/applications/${applicationId}/review`, 'POST', updatedData)
-      
+
       // 更新本地状态
       const application = applications.value.find(app => app.id === applicationId)
       if (application) {
@@ -245,7 +268,7 @@ export const useApplicationsStore = defineStore('applications', () => {
           reviewedBy
         })
       }
-      
+
       return true
     } catch (err) {
       console.error('更新申请状态失败:', err)
@@ -270,16 +293,16 @@ export const useApplicationsStore = defineStore('applications', () => {
   const deleteApplication = async (applicationId) => {
     loading.value = true
     error.value = null
-    
+
     try {
       await api.apiRequest(`/applications/${applicationId}`, 'DELETE')
-      
+
       // 更新本地状态
       const index = applications.value.findIndex(app => app.id === applicationId)
       if (index !== -1) {
         applications.value.splice(index, 1)
       }
-      
+
       return true
     } catch (err) {
       console.error('删除申请失败:', err)
@@ -289,16 +312,16 @@ export const useApplicationsStore = defineStore('applications', () => {
       loading.value = false
     }
   }
-  
+
   // 更新申请信息
   const updateApplication = async (applicationId, applicationData) => {
     loading.value = true
     error.value = null
-    
+
     try {
       // 创建FormData对象来处理文件上传
       const formData = new FormData()
-      
+
       // 将非文件字段添加到FormData
       const data = { ...applicationData }
       // 处理files字段，只保留后端需要的信息
@@ -313,13 +336,13 @@ export const useApplicationsStore = defineStore('applications', () => {
       }
       // 保存原始files数组用于单独处理File实例
       const files = applicationData.files || []
-      
+
       // 使用辅助函数转换字段名
       const transformedData = transformFieldNames(data)
-      
+
       // 将转换后的application数据作为JSON字符串添加到FormData
       formData.append('application', JSON.stringify(transformedData))
-      
+
       // 添加文件到FormData - 只添加新上传的浏览器File对象
       // 从后端加载的文件（非File实例）不会被添加，后端会保留这些文件
       files.forEach((file, index) => {
@@ -327,16 +350,16 @@ export const useApplicationsStore = defineStore('applications', () => {
           formData.append(`files[${index}]`, file)
         }
       })
-      
+
       // 发送请求
       await api.apiRequest(`/applications/${applicationId}`, 'PUT', formData)
-      
+
       // 更新本地状态
       const application = applications.value.find(app => app.id === applicationId)
       if (application) {
         Object.assign(application, applicationData)
       }
-      
+
       return true
     } catch (err) {
       console.error('更新申请失败:', err)
@@ -354,7 +377,7 @@ export const useApplicationsStore = defineStore('applications', () => {
     if (localApp) {
       return localApp
     }
-    
+
     // 如果本地没有，从API获取
     return await fetchApplicationById(applicationId)
   }
@@ -370,11 +393,11 @@ export const useApplicationsStore = defineStore('applications', () => {
           return false;
         }
       }
-      
+
       // 按部门筛选 - 改进的ID匹配逻辑
       if (filters.department && filters.department !== 'all' && filters.department !== undefined) {
         const filterDept = String(filters.department);
-        
+
         // 尝试匹配多种可能的字段格式
         const matchFields = [
           application.departmentId,     // 标准ID字段
@@ -382,7 +405,7 @@ export const useApplicationsStore = defineStore('applications', () => {
           application.deptId,           // 可能的备用字段名
           application.dept              // 可能的备用字段名
         ];
-        
+
         // 检查是否有任何字段匹配
         let matched = false;
         for (const field of matchFields) {
@@ -391,16 +414,16 @@ export const useApplicationsStore = defineStore('applications', () => {
             break;
           }
         }
-        
+
         if (!matched) {
           return false;
         }
       }
-      
+
       // 按专业筛选 - 改进的ID匹配逻辑
       if (filters.major && filters.major !== 'all' && filters.major !== undefined) {
         const filterMajor = String(filters.major);
-        
+
         // 尝试匹配多种可能的字段格式
         const matchFields = [
           application.majorId,          // 标准ID字段
@@ -408,7 +431,7 @@ export const useApplicationsStore = defineStore('applications', () => {
           application.majId,            // 可能的备用字段名
           application.maj               // 可能的备用字段名
         ];
-        
+
         // 检查是否有任何字段匹配
         let matched = false;
         for (const field of matchFields) {
@@ -417,22 +440,22 @@ export const useApplicationsStore = defineStore('applications', () => {
             break;
           }
         }
-        
+
         if (!matched) {
           return false;
         }
       }
-      
+
       // 按类型筛选
       if (filters.type && filters.type !== 'all' && application.applicationType !== filters.type) {
         return false
       }
-      
+
       // 按规则筛选
       if (filters.rule && filters.rule !== 'all' && application.ruleId !== filters.rule) {
         return false
       }
-      
+
       // 按学生学号筛选（模糊匹配）
       if (filters.studentId) {
         const searchTerm = filters.studentId.toLowerCase()
@@ -441,7 +464,7 @@ export const useApplicationsStore = defineStore('applications', () => {
           return false
         }
       }
-      
+
       // 按学生姓名筛选（模糊匹配）
       if (filters.studentName) {
         const searchTerm = filters.studentName.toLowerCase()
@@ -450,7 +473,7 @@ export const useApplicationsStore = defineStore('applications', () => {
           return false
         }
       }
-      
+
       // 按时间段筛选
       if (filters.startDate) {
         const applicationDate = new Date(application.appliedAt)
@@ -459,7 +482,7 @@ export const useApplicationsStore = defineStore('applications', () => {
           return false
         }
       }
-      
+
       if (filters.endDate) {
         const applicationDate = new Date(application.appliedAt)
         const endDate = new Date(filters.endDate)
@@ -468,7 +491,7 @@ export const useApplicationsStore = defineStore('applications', () => {
           return false
         }
       }
-      
+
       // 按审核人筛选（模糊匹配）
       if (filters.reviewedBy && filters.reviewedBy !== 'all') {
         const searchTerm = filters.reviewedBy.toLowerCase()
@@ -477,14 +500,14 @@ export const useApplicationsStore = defineStore('applications', () => {
           return false
         }
       }
-      
+
       // 只显示我审核的
       if (filters.myReviewsOnly) {
         if (application.reviewedBy !== filters.myReviewsOnly) {
           return false
         }
       }
-      
+
       return true
     })
   }
@@ -493,7 +516,7 @@ export const useApplicationsStore = defineStore('applications', () => {
   const fetchStatistics = async (studentId) => {
     loading.value = true
     error.value = null
-    
+
     try {
       const data = await api.getStatistics(studentId)
       return data
@@ -510,7 +533,7 @@ export const useApplicationsStore = defineStore('applications', () => {
   const fetchStudentsRanking = async (filters = {}) => {
     loading.value = true
     error.value = null
-    
+
     try {
       const queryParams = new URLSearchParams()
       if (filters.faculty) {
@@ -528,7 +551,7 @@ export const useApplicationsStore = defineStore('applications', () => {
         const majorId = parseInt(filters.major, 10)
         if (!isNaN(majorId)) queryParams.append('majorId', majorId)
       }
-      
+
       const queryString = queryParams.toString() ? `?${queryParams.toString()}` : ''
       const data = await api.apiRequest(`/students/ranking${queryString}`)
       return data
@@ -546,12 +569,12 @@ export const useApplicationsStore = defineStore('applications', () => {
     applications,
     loading,
     error,
-    
+
     // 计算属性
     pendingApplications,
     reviewedApplications,
     totalApplications,
-    
+
     // 方法
     fetchApplications,
     fetchApplicationById,

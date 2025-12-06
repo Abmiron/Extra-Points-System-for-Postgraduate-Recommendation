@@ -166,43 +166,9 @@ class Application(db.Model):
     )  # pending, approved, rejected, draft
     project_name = db.Column(db.String(200), nullable=False)
     award_date = db.Column(db.Date, nullable=True)
-    award_level = db.Column(
-        db.String(50), nullable=True
-    )  # national, provincial, municipal, school
-    award_type = db.Column(db.String(50), nullable=True)  # individual, team
     description = db.Column(db.Text, nullable=True)
     files = db.Column(db.JSON, nullable=True)  # 存储文件信息的JSON数组
-
-    # 学术专长相关字段
-    academic_type = db.Column(
-        db.String(50), nullable=True
-    )  # research, competition, innovation
-    # 科研成果特有字段
-    research_type = db.Column(db.String(50), nullable=True)  # thesis, patent
-    # 创新创业特有字段
-    innovation_level = db.Column(
-        db.String(50), nullable=True
-    )  # national, provincial, school
-    innovation_role = db.Column(db.String(50), nullable=True)  # leader, member
-    # 学业竞赛特有字段
-    award_grade = db.Column(
-        db.String(50), nullable=True
-    )  # firstOrHigher, second, third
-    award_category = db.Column(db.String(50), nullable=True)  # A+类, A类, A-类
-    author_rank_type = db.Column(db.String(50), nullable=True)  # ranked, unranked
-    author_order = db.Column(db.Integer, nullable=True)  # 作者排序
-
-    # 综合表现相关字段
-    performance_type = db.Column(
-        db.String(100), nullable=True
-    )  # international_internship, military_service, volunteer, social_work, sports, honor_title
-    performance_level = db.Column(
-        db.String(50), nullable=True
-    )  # provincial, school, college
-    performance_participation = db.Column(
-        db.String(50), nullable=True
-    )  # individual, team
-    team_role = db.Column(db.String(50), nullable=True)  # leader, member
+    dynamic_coefficients = db.Column(db.JSON, nullable=True)  # 存储动态系数数据的JSON对象
 
     # 审核相关字段
     final_score = db.Column(db.Float, nullable=True)  # 最终核定分数
@@ -229,7 +195,7 @@ class Application(db.Model):
         return f"<Application {self.id}>"
 
 
-# 合并学生模型和学生总评模型
+# 学生总评模型
 class Student(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.String(20), unique=True, nullable=False)  # 学号
@@ -316,26 +282,6 @@ class Rule(db.Model):
     sub_type = db.Column(
         db.String(50), nullable=True
     )  # 子类型: research(科研成果), competition(学业竞赛), innovation(创新创业训练), etc.
-    level = db.Column(
-        db.String(50), nullable=True
-    )  # 级别: 国家级, 省级, 校级, A+, A, A-, etc.
-    grade = db.Column(
-        db.String(50), nullable=True
-    )  # 等级: 一等奖及以上, 二等奖, 三等奖
-    category = db.Column(db.String(50), nullable=True)  # 奖项类别: 个人奖项, 团队奖项
-    participation_type = db.Column(
-        db.String(50), default="individual"
-    )  # 参与类型: individual(个人), team(集体)
-    team_role = db.Column(
-        db.String(50), nullable=True
-    )  # 团队角色: captain(队长), member(队员)
-    author_rank_type = db.Column(
-        db.String(50), default="unranked"
-    )  # 作者排序类型: ranked(区分排名), unranked(不区分排名)
-    author_rank = db.Column(
-        db.Integer, nullable=True
-    )  # 作者排序: 数字，仅当区分排名时填写
-    author_rank_ratio = db.Column(db.Float, nullable=True)  # 作者排序比例: 如80%填写0.8
     research_type = db.Column(
         db.String(50), nullable=True
     )  # 科研成果类型: thesis(学术论文), patent(发明专利)
@@ -346,11 +292,22 @@ class Rule(db.Model):
     max_count = db.Column(
         db.Integer, nullable=True
     )  # 最大项目数量限制（如学业竞赛不超过3项）
-    is_special = db.Column(
-        db.Boolean, default=False
-    )  # 是否为特殊规则（如Nature/Science论文）
     status = db.Column(db.String(20), default="active")  # 状态: active, disabled
     description = db.Column(db.Text, nullable=True)  # 规则描述
+
+    # 学院级规则支持字段
+    faculty_id = db.Column(
+        db.Integer, db.ForeignKey("faculty.id"), nullable=True
+    )  # 学院ID，支持学院级规则
+
+    # 计算规则字段
+    calculation_formula = db.Column(
+        db.JSON, nullable=True
+    )  # 动态分值计算公式，支持多种计算类型
+
+    # 关系定义
+    faculty = db.relationship("Faculty", backref=db.backref("rules", lazy=True))
+
     created_at = db.Column(db.DateTime, default=get_current_time)  # 创建时间
     updated_at = db.Column(
         db.DateTime, default=get_current_time, onupdate=get_current_time
@@ -360,19 +317,56 @@ class Rule(db.Model):
         return f"<Rule {self.name}>"
 
 
+# 规则计算模型
+class RuleCalculation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    rule_id = db.Column(
+        db.Integer, db.ForeignKey("rule.id"), nullable=False
+    )  # 关联的规则ID
+    calculation_type = db.Column(
+        db.String(50), default="fixed"
+    )  # 计算类型: fixed(固定分值), ratio(比例计算), formula(公式计算)
+    formula = db.Column(
+        db.String(200), nullable=True
+    )  # 计算公式字符串，如"base_score * level_factor * grade_factor"
+    parameters = db.Column(
+        db.JSON, nullable=True
+    )  # 计算参数，存储为JSON格式，包含各种系数和配置
+    max_score = db.Column(db.Float, nullable=True)  # 最大分值限制
+    precision = db.Column(db.Integer, default=2)  # 计算结果的小数位数
+    status = db.Column(db.String(20), default="active")  # 状态: active, disabled
+    created_at = db.Column(db.DateTime, default=get_current_time)  # 创建时间
+    updated_at = db.Column(
+        db.DateTime, default=get_current_time, onupdate=get_current_time
+    )  # 更新时间
+
+    # 关系定义
+    rule = db.relationship(
+        "Rule",
+        backref=db.backref("calculations", lazy=True, cascade="all, delete-orphan"),
+    )
+
+    def __repr__(self):
+        return f"<RuleCalculation {self.calculation_type} {self.formula}>"
+
+
 # 学院成绩比例设置模型
 class FacultyScoreSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    faculty_id = db.Column(db.Integer, db.ForeignKey("faculty.id"), nullable=False, unique=True)  # 学院ID，一对一关系
-    
+    faculty_id = db.Column(
+        db.Integer, db.ForeignKey("faculty.id"), nullable=False, unique=True
+    )  # 学院ID，一对一关系
+
     # 综合成绩比例设置
     academic_score_weight = db.Column(db.Float, default=80.0)  # 学业成绩比例（%）
     specialty_max_score = db.Column(db.Float, default=15.0)  # 学术专长分数上限
     performance_max_score = db.Column(db.Float, default=5.0)  # 综合表现分数上限
-    
+
     # 关系
-    faculty = db.relationship("Faculty", backref=db.backref("score_settings", uselist=False))
-    
+    faculty = db.relationship(
+        "Faculty", backref=db.backref("score_settings", uselist=False)
+    )
+
     created_at = db.Column(db.DateTime, default=get_current_time)
     updated_at = db.Column(
         db.DateTime, default=get_current_time, onupdate=get_current_time
@@ -420,11 +414,17 @@ class GraduateFile(db.Model):
     upload_time = db.Column(db.DateTime, default=get_current_time)  # 上传时间
     uploader = db.Column(db.String(100), nullable=True)  # 上传者
     description = db.Column(db.Text, nullable=True)  # 文件描述
-    category = db.Column(db.String(100), default="graduate")  # 文件类别，默认是graduate（推免相关）
-    faculty_id = db.Column(db.Integer, db.ForeignKey("faculty.id"), nullable=True)  # 所属学院
-    
+    category = db.Column(
+        db.String(100), default="graduate"
+    )  # 文件类别，默认是graduate（推免相关）
+    faculty_id = db.Column(
+        db.Integer, db.ForeignKey("faculty.id"), nullable=True
+    )  # 所属学院
+
     # 关系
-    faculty = db.relationship("Faculty", backref=db.backref("graduate_files", lazy=True))
+    faculty = db.relationship(
+        "Faculty", backref=db.backref("graduate_files", lazy=True)
+    )
 
     created_at = db.Column(db.DateTime, default=get_current_time)
     updated_at = db.Column(
