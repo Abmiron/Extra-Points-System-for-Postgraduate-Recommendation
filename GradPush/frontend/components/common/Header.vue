@@ -45,7 +45,7 @@
                 <td style="padding: 8px;font-size: 12px; color: #6c757d; white-space: nowrap;">{{ formatFileSize(file.file_size || 0) }}</td>
                 <td style="padding: 10px; text-align: center;">
                   <div class="action-buttons">
-                    <a :href="'http://localhost:5001' + (file.file_url || '')" class="btn-outline btn small-btn" style="text-decoration: none;" title="下载">
+                    <a :href="file.file_url || ''" class="btn-outline btn small-btn" style="text-decoration: none;" title="下载">
                       <font-awesome-icon :icon="['fas', 'download']" />
                     </a>
                   </div>

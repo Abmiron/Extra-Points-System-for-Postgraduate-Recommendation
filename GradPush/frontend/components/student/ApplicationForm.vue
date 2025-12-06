@@ -917,11 +917,11 @@ const previewFile = (file) => {
           url = file.path
         } else {
           // 添加服务器地址前缀
-          url = `http://localhost:5001${file.path}`
+          url = `${file.path}`
         }
       } else if (file.id) {
         // 如果没有path字段，使用文件ID构建URL
-        url = `http://localhost:5001/uploads/files/${file.id}`
+        url = `/uploads/files/${file.id}`
       }
     }
     previewFileData.value = {

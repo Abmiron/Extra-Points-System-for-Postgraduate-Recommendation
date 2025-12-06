@@ -249,7 +249,7 @@ const loadFiles = async () => {
 // 下载文件
 const downloadFile = (file) => {
   // 使用正确的后端地址构建下载链接
-  window.location.href = `http://localhost:5001${file.file_url}`
+  window.location.href = `${file.file_url}`
 }
 
 // 删除文件

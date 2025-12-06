@@ -1,7 +1,9 @@
 // API请求工具
 import { useAuthStore } from '../stores/auth';
 
-const API_BASE_URL = 'http://localhost:5001/api';
+// 使用相对路径或根据当前环境自动获取API地址
+// 生产环境会自动使用当前域名
+const API_BASE_URL = '/api';
 
 // 封装API请求（支持JSON和文件上传）
 async function apiRequest(endpoint, method = 'GET', data = null, token = null, timeout = 10000) {
@@ -171,8 +173,8 @@ export default {
   
   // 公开的系统信息接口（无需登录权限）
   getPublicSystemInfo: async () => {
-    // 直接请求公开接口，不使用API_BASE_URL中的/api前缀
-    const url = 'http://localhost:5001/public/system-info';
+    // 使用相对路径，避免硬编码URL
+    const url = '/public/system-info';
     
     // 添加超时控制
     const controller = new AbortController();

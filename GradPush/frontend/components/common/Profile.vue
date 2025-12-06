@@ -138,7 +138,7 @@ const getAvatarUrl = computed(() => {
     return profile.avatar
   }
   // 添加服务器地址前缀
-  return `http://localhost:5001${profile.avatar}`
+  return `${profile.avatar}`
 })
 
 const passwordForm = reactive({

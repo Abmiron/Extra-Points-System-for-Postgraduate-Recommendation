@@ -24,7 +24,7 @@ export const useAuthStore = defineStore('auth', () => {
       return user.value.avatar
     }
     // 添加服务器地址前缀
-    return `http://localhost:5001${user.value.avatar}`
+    return `${user.value.avatar}`
   })
 
   // 获取当前用户信息

@@ -53,7 +53,7 @@ export const useFilesStore = defineStore('files', () => {
 
   // 下载文件
   const downloadFile = (file) => {
-    window.location.href = `http://localhost:5001${file.file_url}`
+    window.location.href = `${file.file_url}`
   }
 
   // 删除文件

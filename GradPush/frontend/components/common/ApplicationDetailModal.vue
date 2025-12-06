@@ -699,14 +699,14 @@ const getFileUrl = (file) => {
       fileUrl = file.path
     } else {
       // 添加服务器地址前缀
-      fileUrl = `http://localhost:5001${file.path}`
+      fileUrl = `${file.path}`
     }
   } else if (file.id) {
     // 如果没有path字段，使用文件ID构建URL
-    fileUrl = `http://localhost:5001/uploads/files/${file.id}`
+    fileUrl = `/uploads/files/${file.id}`
   } else if (file.name) {
     // 作为最后的回退，使用文件名构建URL
-    fileUrl = `http://localhost:5001/uploads/files/${file.name}`
+    fileUrl = `/uploads/files/${file.name}`
   }
 
   return fileUrl || ''
@@ -822,15 +822,15 @@ const downloadFile = async (file) => {
 
     // 构建完整的下载URL
     if (file.id) {
-      downloadUrl = `http://localhost:5001/uploads/files/${file.id}`
+      downloadUrl = `/uploads/files/${file.id}`
     } else if (file.path) {
       if (file.path.startsWith('http://') || file.path.startsWith('https://')) {
         downloadUrl = file.path
       } else {
-        downloadUrl = `http://localhost:5001${file.path}`
+        downloadUrl = `${file.path}`
       }
     } else if (file.name) {
-      downloadUrl = `http://localhost:5001/uploads/files/${file.name}`
+      downloadUrl = `/uploads/files/${file.name}`
     }
 
     if (!downloadUrl) {

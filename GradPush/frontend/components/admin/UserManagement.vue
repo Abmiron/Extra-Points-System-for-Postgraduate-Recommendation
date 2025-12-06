@@ -520,7 +520,7 @@ const loadUsersFromAPI = async () => {
       }
     }
 
-    const response = await fetch(`http://localhost:5001/api/admin/users?${params}`)
+    const response = await fetch(`/api/admin/users?${params}`)
 
     if (!response.ok) {
       throw new Error('获取用户数据失败')
@@ -665,7 +665,7 @@ const saveUser = async () => {
     let response
     if (editingUser.value) {
       // 更新用户 - 调用PUT API
-      response = await fetch(`http://localhost:5001/api/admin/users/${editingUser.value.id}?currentUserId=${authStore.user?.id || ''}`, {
+      response = await fetch(`/api/admin/users/${editingUser.value.id}?currentUserId=${authStore.user?.id || ''}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -674,7 +674,7 @@ const saveUser = async () => {
       })
     } else {
       // 添加新用户 - 调用管理员专用接口
-      response = await fetch(`http://localhost:5001/api/admin/create-users?currentUserId=${authStore.user?.id || ''}`, {
+      response = await fetch(`/api/admin/create-users?currentUserId=${authStore.user?.id || ''}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -703,7 +703,7 @@ const toggleUserStatus = async (userId, status) => {
   try {
     isLoading.value = true
 
-    const response = await fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user?.id || ''}`, {
+    const response = await fetch(`/api/admin/users/${userId}?currentUserId=${authStore.user?.id || ''}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
@@ -732,7 +732,7 @@ const resetPassword = async (userId) => {
       isLoading.value = true
       const newPassword = prompt('请输入新密码（留空则使用默认密码123456）:', '') || '123456'
 
-      const response = await fetch(`http://localhost:5001/api/admin/users/${userId}/reset-password?currentUserId=${authStore.user?.id || ''}`, {
+      const response = await fetch(`/api/admin/users/${userId}/reset-password?currentUserId=${authStore.user?.id || ''}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -760,7 +760,7 @@ const deleteUser = async (userId) => {
     try {
       isLoading.value = true
 
-      const response = await fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user?.id || ''}`, {
+      const response = await fetch(`/api/admin/users/${userId}?currentUserId=${authStore.user?.id || ''}`, {
         method: 'DELETE'
       })
 
@@ -786,7 +786,7 @@ const batchDisable = async () => {
 
       // 批量禁用用户（逐个调用API）
       const promises = selectedUsers.value.map(userId =>
-        fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user?.id || ''}`, {
+        fetch(`/api/admin/users/${userId}?currentUserId=${authStore.user?.id || ''}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -824,7 +824,7 @@ const batchEnable = async () => {
 
       // 批量启用用户（逐个调用API）
       const promises = selectedUsers.value.map(userId =>
-        fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user?.id || ''}`, {
+        fetch(`/api/admin/users/${userId}?currentUserId=${authStore.user?.id || ''}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -863,7 +863,7 @@ const batchResetPassword = async () => {
 
       // 批量重置密码（逐个调用API）
       const promises = selectedUsers.value.map(userId =>
-        fetch(`http://localhost:5001/api/admin/users/${userId}/reset-password?currentUserId=${authStore.user?.id || ''}`, {
+        fetch(`/api/admin/users/${userId}/reset-password?currentUserId=${authStore.user?.id || ''}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -900,7 +900,7 @@ const batchDelete = async () => {
 
       // 批量删除用户（逐个调用API）
       const promises = selectedUsers.value.map(userId =>
-        fetch(`http://localhost:5001/api/admin/users/${userId}?currentUserId=${authStore.user?.id || ''}`, {
+        fetch(`/api/admin/users/${userId}?currentUserId=${authStore.user?.id || ''}`, {
           method: 'DELETE'
         })
       )

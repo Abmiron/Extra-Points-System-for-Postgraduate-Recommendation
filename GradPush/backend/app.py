@@ -62,57 +62,63 @@ from routes import main_bp
 def uploaded_graduate_file(filename):
     print(f"===== 下载推免文件 =====")
     print(f"请求的文件名: {filename}")
-    
+
     from models import GraduateFile
+
     # 先打印配置信息
     print(f"GRADUATE_FILES_FOLDER配置: {app.config['GRADUATE_FILES_FOLDER']}")
-    
+
     # 检查文件是否存在
     file_path = os.path.join(app.config["GRADUATE_FILES_FOLDER"], filename)
     print(f"检查文件是否存在: {file_path}")
     print(f"文件是否存在: {os.path.exists(file_path)}")
-    
+
     if not os.path.exists(file_path):
         return jsonify({"error": "文件不存在"}), 404
-    
+
     # 尝试发送文件
     try:
         # 使用传入的filename作为文件系统中的文件名
         response = send_from_directory(app.config["GRADUATE_FILES_FOLDER"], filename)
-        
+
         # 尝试从数据库获取原始文件名用于下载
         # 优化查询逻辑，使用更可靠的方式匹配文件名
-        graduate_file = GraduateFile.query.filter(GraduateFile.filepath.contains(filename)).first()
-        
+        graduate_file = GraduateFile.query.filter(
+            GraduateFile.filepath.contains(filename)
+        ).first()
+
         # 如果第一种方式失败，尝试更精确的匹配方式
         if not graduate_file:
             # 构建一个更精确的查询条件，确保只匹配完整的文件名部分
             from sqlalchemy import or_
+
             graduate_file = GraduateFile.query.filter(
                 or_(
-                    GraduateFile.filepath.endswith(f"\\{filename}"),  # Windows路径分隔符
-                    GraduateFile.filepath.endswith(f"/{filename}"),   # Linux路径分隔符
-                    GraduateFile.filepath == filename  # 直接匹配
+                    GraduateFile.filepath.endswith(
+                        f"\\{filename}"
+                    ),  # Windows路径分隔符
+                    GraduateFile.filepath.endswith(f"/{filename}"),  # Linux路径分隔符
+                    GraduateFile.filepath == filename,  # 直接匹配
                 )
             ).first()
         # 直接使用send_from_directory的as_attachment参数和download_name参数
         # 这样可以确保使用原始文件名进行下载
         download_filename = filename  # 默认使用传入的文件名
-        
+
         if graduate_file:
             download_filename = graduate_file.filename  # 使用原始文件名
             print(f"找到原始文件名: {download_filename}")
         else:
             print(f"未找到数据库记录，使用默认文件名: {download_filename}")
-            
+
         # 重新构建响应，确保使用正确的下载文件名
         response = send_from_directory(
-            app.config["GRADUATE_FILES_FOLDER"], 
-            filename, 
-            as_attachment=True, 
-            download_name=download_filename
+            app.config["GRADUATE_FILES_FOLDER"],
+            filename,
+            as_attachment=True,
+            download_name=download_filename,
         )
-        
+
         # 保持正确的Content-Type
         if filename.lower().endswith(".pdf"):
             response.headers["Content-Type"] = "application/pdf"
@@ -121,20 +127,27 @@ def uploaded_graduate_file(filename):
         elif filename.lower().endswith(".doc"):
             response.headers["Content-Type"] = "application/msword"
         elif filename.lower().endswith(".docx"):
-            response.headers["Content-Type"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            response.headers["Content-Type"] = (
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
         elif filename.lower().endswith(".xls"):
             response.headers["Content-Type"] = "application/vnd.ms-excel"
         elif filename.lower().endswith(".xlsx"):
-            response.headers["Content-Type"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            response.headers["Content-Type"] = (
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
         elif filename.lower().endswith(".ppt"):
             response.headers["Content-Type"] = "application/vnd.ms-powerpoint"
         elif filename.lower().endswith(".pptx"):
-            response.headers["Content-Type"] = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-        
+            response.headers["Content-Type"] = (
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            )
+
         return response
     except Exception as e:
         print(f"发送文件时出错: {str(e)}")
         return jsonify({"error": "文件下载失败"}), 500
+
 
 # 配置静态文件服务
 @app.route("/uploads/<path:filename>")
@@ -145,8 +158,6 @@ def uploaded_file(filename):
         f"attachment; filename*=UTF-8" "={quote(filename)}"
     )
     return response
-
-
 
 
 # 配置头像文件的静态服务
@@ -180,8 +191,6 @@ def uploaded_app_file(filename):
         )
 
     return response
-
-
 
 
 # 注册蓝图
