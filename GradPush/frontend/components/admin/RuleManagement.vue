@@ -181,19 +181,19 @@ const filteredRules = computed(() => {
   return rules.value.filter(rule => {
     // 规则名称筛选
     const matchesName = rule.name.toLowerCase().includes(filters.name.toLowerCase())
-    
+
     // 类型筛选
     const matchesType = filters.type === 'all' || rule.type === filters.type
-    
+
     // 子类型筛选
     const matchesSubType = filters.subType === 'all' || rule.sub_type === filters.subType
-    
+
     // 状态筛选
     const matchesStatus = filters.status === 'all' || rule.status === filters.status
-    
+
     // 学院筛选
     const matchesFaculty = filters.facultyId === 'all' || rule.faculty_id === filters.facultyId
-    
+
     return matchesName && matchesType && matchesSubType && matchesStatus && matchesFaculty
   })
 })
@@ -332,7 +332,7 @@ async function toggleRuleStatus(ruleId) {
 
     // 确定当前操作类型
     const action = rule.status === 'active' ? '禁用' : '启用'
-    
+
     await api.toggleRuleStatus(ruleId)
     toastStore.addToast({ message: `规则${action}成功`, type: 'success' })
     fetchRules()

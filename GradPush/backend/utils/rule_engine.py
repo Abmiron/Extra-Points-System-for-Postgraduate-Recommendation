@@ -117,7 +117,7 @@ class RuleEngine:
                         factor_value = application.get(factor)
                     else:
                         factor_value = getattr(application, factor, None)
-                    
+
                     if isinstance(factor_value, (int, float)):
                         result *= factor_value
                     elif isinstance(factor_value, str):
@@ -136,7 +136,7 @@ class RuleEngine:
                         factor_value = application.get(key)
                     else:
                         factor_value = getattr(application, key, None)
-                    
+
                     if isinstance(factor_value, (int, float)):
                         result *= factor_value
                     elif isinstance(factor_value, str):
@@ -154,6 +154,7 @@ class RuleEngine:
         except Exception as e:
             print(f"乘积计算错误: {e}")
             import traceback
+
             traceback.print_exc()
             return float(calculation.base_score or 0.0)
 

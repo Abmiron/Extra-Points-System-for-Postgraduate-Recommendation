@@ -43,16 +43,21 @@
               <div class="select-with-button">
                 <div class="select-with-icon">
                   <font-awesome-icon :icon="['fas', 'list-check']" />
-                  <select class="form-control" v-model="formData.ruleId" required @change="calculateEstimatedScore">
+                  <select class="form-control" v-model="formData.ruleId" required @change="calculateEstimatedScore"
+                    :disabled="loading.rules">
                     <option value="">请选择规则</option>
                     <option v-for="rule in availableRules" :key="rule.id" :value="rule.id">
                       {{ rule.name }} (基础分数: {{ rule.score }})
                     </option>
                   </select>
+                  <div v-if="loading.rules" class="loading-overlay">
+                    <div class="loading-spinner"></div>
+                  </div>
                 </div>
-                <button type="button" class="btn btn-outline btn-small" @click="refreshRules">
+                <button type="button" class="btn btn-outline btn-small" @click="refreshRules" :disabled="loading.rules">
                   <font-awesome-icon :icon="['fas', 'sync-alt']" />
-                  刷新
+                  <span v-if="loading.rules">刷新中...</span>
+                  <span v-else>刷新</span>
                 </button>
               </div>
 
@@ -74,10 +79,17 @@
           <div class="section-title">
             <font-awesome-icon :icon="['fas', 'calculator']" />
             <span>规则系数填写</span>
+            <span v-if="loading.calculation" class="loading-text">加载中...</span>
           </div>
           <div class="form-grid">
+            <!-- 加载状态 -->
+            <div v-if="loading.calculation" class="loading-container">
+              <div class="loading-spinner"></div>
+              <p>正在加载规则系数配置...</p>
+            </div>
+
             <!-- 动态生成的表单字段 -->
-            <div v-for="field in dynamicFormFields" :key="field.name" class="form-group">
+            <div v-else v-for="field in dynamicFormFields" :key="field.name" class="form-group">
               <label class="form-label">{{ field.label }}</label>
 
               <!-- 数字输入类型 -->
@@ -152,7 +164,11 @@
               <label class="form-label">预估分数</label>
               <div class="input-with-icon">
                 <font-awesome-icon :icon="['fas', 'chart-line']" />
-                <input type="number" class="form-control" v-model="estimatedScore" step="0.1" min="0" readonly>
+                <input type="number" class="form-control" v-model="estimatedScore" step="0.1" min="0" readonly
+                  :disabled="loading.score">
+                <div v-if="loading.score" class="loading-overlay small">
+                  <div class="loading-spinner small"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -289,6 +305,13 @@ const formData = reactive({
   files: [],
   // 申请类型，将从规则中获取
   applicationType: ''
+})
+
+// 加载状态
+const loading = reactive({
+  rules: false,
+  calculation: false,
+  score: false
 })
 
 // 重置表单的通用函数
@@ -428,39 +451,74 @@ watch(() => props.editApplicationId, (newId) => {
   }
 }, { immediate: true })
 
+// 防抖函数
+const debounce = (func, delay) => {
+  let timeoutId
+  return (...args) => {
+    clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => func.apply(null, args), delay)
+  }
+}
+
 // 监听表单关键字段变化，自动匹配规则
-watch([
-  () => formData.projectName,
-  () => formData.ruleId
-], () => {
+watch(() => formData.projectName, debounce(() => {
   fetchMatchingRules()
-}, { deep: true })
+}, 500)) // 500ms防抖
+
+// 仅在需要时重新加载规则
+watch(() => formData.ruleId, () => {
+  // 规则ID变化时，不需要重新加载所有规则，只需要重新计算预估分数
+  if (formData.ruleId) {
+    calculateEstimatedScore()
+  }
+})
+
+// 缓存规则数据，避免重复请求
+const cachedRules = ref([])
 
 // 获取匹配的规则
 const fetchMatchingRules = async () => {
+  // 如果已经加载过规则，直接使用缓存
+  if (cachedRules.value.length > 0) {
+    availableRules.value = cachedRules.value
+    calculateEstimatedScore()
+    return
+  }
+
+  loading.rules = true
   try {
     // 获取学生所在学院ID
     const studentFacultyId = authStore.user?.faculty_id || authStore.user?.facultyId
     // 使用正确的API方法获取规则
     const rulesResponse = await api.getRules({ faculty_id: studentFacultyId })
     // 过滤掉禁用的规则，只显示状态为'active'的规则
-    availableRules.value = rulesResponse.rules.filter(rule => rule.status === 'active')
-    // 为每个规则获取完整的计算配置信息
-    for (let i = 0; i < availableRules.value.length; i++) {
-      const rule = availableRules.value[i]
-      try {
-        const calculationResponse = await api.getRuleCalculation(rule.id)
-        if (calculationResponse.data) {
-          availableRules.value[i].calculation = calculationResponse.data
+    const activeRules = rulesResponse.rules.filter(rule => rule.status === 'active')
+
+    // 将串行请求改为并行请求
+    const rulesWithCalculation = await Promise.all(
+      activeRules.map(async (rule) => {
+        try {
+          const calculationResponse = await api.getRuleCalculation(rule.id)
+          return {
+            ...rule,
+            calculation: calculationResponse.data || null
+          }
+        } catch (error) {
+          console.error(`获取规则${rule.id}的计算配置失败:`, error)
+          return rule
         }
-      } catch (error) {
-        console.error(`获取规则${rule.id}的计算配置失败:`, error)
-      }
-    }
+      })
+    )
+
+    availableRules.value = rulesWithCalculation
+    cachedRules.value = rulesWithCalculation // 缓存规则数据
+
     // 重新计算预估分数
     calculateEstimatedScore()
   } catch (error) {
     console.error('获取规则失败:', error)
+  } finally {
+    loading.rules = false
   }
 }
 
@@ -546,16 +604,19 @@ const calculateEstimatedScore = async () => {
     estimatedScore.value = 0
     return
   }
-  const selectedRule = availableRules.value.find(rule => rule.id === formData.ruleId)
-  if (!selectedRule) {
-    estimatedScore.value = 0
-    return
-  }
-  // 从规则中获取applicationType并设置到表单数据中
-  if (selectedRule.type) {
-    formData.applicationType = selectedRule.type
-  }
+
+  loading.score = true
   try {
+    const selectedRule = availableRules.value.find(rule => rule.id === formData.ruleId)
+    if (!selectedRule) {
+      estimatedScore.value = 0
+      return
+    }
+    // 从规则中获取applicationType并设置到表单数据中
+    if (selectedRule.type) {
+      formData.applicationType = selectedRule.type
+    }
+
     // 准备学生数据
     const studentData = {
       faculty_id: authStore.user?.faculty_id || authStore.user?.facultyId,
@@ -569,6 +630,12 @@ const calculateEstimatedScore = async () => {
     console.error('计算预估分数失败:', error)
     console.error('错误详情:', error.response?.data || error.message)
     // 如果API调用失败，回退到前端计算
+    const selectedRule = availableRules.value.find(rule => rule.id === formData.ruleId)
+    if (!selectedRule) {
+      estimatedScore.value = 0
+      return
+    }
+
     let score = calculateScoreFrontend(selectedRule)
     console.log('前端计算的分数:', score)
 
@@ -579,6 +646,8 @@ const calculateEstimatedScore = async () => {
     }
 
     estimatedScore.value = parseFloat(score.toFixed(4))
+  } finally {
+    loading.score = false
   }
 }
 
@@ -675,8 +744,9 @@ const getFieldValue = (fieldName) => {
   return undefined
 }
 
-// 刷新规则列表
+// 刷新规则列表（清除缓存）
 const refreshRules = () => {
+  cachedRules.value = [] // 清除缓存
   fetchMatchingRules()
 }
 
@@ -1081,6 +1151,80 @@ const submitForm = async () => {
 /* 必填项红色星号 */
 .required {
   color: #ff4d4f;
+}
+
+/* 加载状态样式 */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 4px;
+  z-index: 10;
+}
+
+.loading-overlay.small {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.loading-spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3498db;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+}
+
+.loading-spinner.small {
+  width: 15px;
+  height: 15px;
+  border-width: 2px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-container {
+  grid-column: span 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.loading-container .loading-spinner {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 16px;
+}
+
+.loading-text {
+  margin-left: 8px;
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
+}
+
+/* 确保选择框和输入框有相对定位，以便加载覆盖层正确显示 */
+.select-with-icon,
+.input-with-icon {
+  position: relative;
 }
 
 /* 应用表单特有样式 */

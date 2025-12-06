@@ -158,7 +158,7 @@
                 <td v-else></td>
                 <td v-if="student.academicItem.projectName">
                   {{ student.academicItem.collegeApprovedScore ? student.academicItem.collegeApprovedScore.toFixed(4) :
-                  0 }}
+                    0 }}
                 </td>
                 <td v-else></td>
                 <td v-if="student.isFirstRow">
@@ -196,7 +196,7 @@
                 <td v-else></td>
                 <td v-if="student.comprehensiveItem.projectName">
                   {{ student.comprehensiveItem.collegeApprovedScore ?
-student.comprehensiveItem.collegeApprovedScore.toFixed(4) : 0 }}
+                    student.comprehensiveItem.collegeApprovedScore.toFixed(4) : 0 }}
                 </td>
                 <td v-else></td>
                 <td v-if="student.isFirstRow">
@@ -205,7 +205,7 @@ student.comprehensiveItem.collegeApprovedScore.toFixed(4) : 0 }}
                 <td v-else></td>
                 <!-- AC-AF: 总分与排名 -->
                 <td v-if="student.isFirstRow">{{ student.totalComprehensiveScore ?
-student.totalComprehensiveScore.toFixed(4) : 0 }}</td>
+                  student.totalComprehensiveScore.toFixed(4) : 0 }}</td>
                 <td v-else></td>
                 <td v-if="student.isFirstRow">{{ student.finalScore ? student.finalScore.toFixed(4) : 0 }}</td>
                 <td v-else></td>

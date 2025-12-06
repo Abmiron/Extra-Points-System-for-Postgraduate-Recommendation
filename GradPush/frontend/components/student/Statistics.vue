@@ -237,7 +237,7 @@ const loadStatistics = async () => {
 
     // 获取加分统计数据
     const statsData = await applicationsStore.fetchStatistics(studentId)
-    
+
     // 更新学生信息
     currentStudent.value = {
       facultyId: statsData.faculty_id
@@ -321,5 +321,4 @@ onMounted(() => {
 .page-content {
   position: relative;
 }
-
 </style>

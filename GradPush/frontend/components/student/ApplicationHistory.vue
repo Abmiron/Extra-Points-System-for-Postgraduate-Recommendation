@@ -160,7 +160,7 @@
       <div class="loading-spinner"></div>
       <div class="loading-text">正在加载中...</div>
     </div>
-      
+
     <!-- 详情模态框 -->
     <Teleport to="body">
       <ApplicationDetailModal v-if="selectedApplication" :application="selectedApplication"

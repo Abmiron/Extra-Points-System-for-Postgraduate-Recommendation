@@ -5,7 +5,7 @@
       <div class="loading-spinner"></div>
       <div class="loading-text">加载中...</div>
     </div>
-    
+
     <!-- 页面标题 -->
     <div class="page-title">
       <span>成绩管理</span>
@@ -331,10 +331,8 @@
       </div>
       <div class="modal-footer">
         <div class="form-actions" style="margin-top: 0; padding-top: 0; border-top: none; gap: 12px;">
-          <button type="button" class="btn btn-outline"
-            @click="scoreSettingsDialogVisible = false">取消</button>
-          <button type="button" class="btn"
-            @click="saveFacultyScoreSettings">保存</button>
+          <button type="button" class="btn btn-outline" @click="scoreSettingsDialogVisible = false">取消</button>
+          <button type="button" class="btn" @click="saveFacultyScoreSettings">保存</button>
         </div>
       </div>
     </div>

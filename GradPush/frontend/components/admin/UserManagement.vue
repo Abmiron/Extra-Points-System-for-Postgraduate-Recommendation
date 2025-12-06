@@ -211,7 +211,8 @@
               </div>
               <div class="form-group">
                 <label class="form-label">学院</label>
-                <select class="form-control" v-model="userForm.facultyId" :required="userForm.role !== 'admin'" @change="handleFacultyChange">
+                <select class="form-control" v-model="userForm.facultyId" :required="userForm.role !== 'admin'"
+                  @change="handleFacultyChange">
                   <option value="">请选择学院</option>
                   <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
                     {{ faculty.name }}
@@ -418,13 +419,13 @@ const loadMajors = async (departmentId = null) => {
       try {
         if (departments.value.length > 0) {
           // 并行获取所有系的专业数据
-          const promises = departments.value.map(dept => 
+          const promises = departments.value.map(dept =>
             api.getMajorsAdmin(dept.id).catch(error => {
               console.warn(`获取系 ${dept.name} 的专业数据失败:`, error)
               return { majors: [] }
             })
           )
-          
+
           const results = await Promise.all(promises)
           // 合并所有专业数据
           const allMajors = results.flatMap(result => result.majors || [])
@@ -964,7 +965,7 @@ const activeTabChanged = async () => {
   filters.keyword = ''
   filters.status = 'all'
   currentPage.value = 1
-  
+
   // 如果是学生选项卡，并行加载系和专业数据，然后立即开始加载用户数据
   if (activeTab.value === 'student') {
     // 并行加载系和专业数据
@@ -982,7 +983,7 @@ const activeTabChanged = async () => {
     departments.value = []
     majors.value = []
   }
-  
+
   // 立即开始加载用户数据，不需要等待系和专业数据加载完成
   loadUsersFromAPI()
 }
@@ -1108,5 +1109,4 @@ watch(activeTab, (newTab, oldTab) => {
   font-size: 12px;
   font-weight: 500;
 }
-
 </style>

@@ -27,7 +27,7 @@
         <button class="btn btn-outline" @click="saveAcademicSettings">保存设置</button>
       </div>
     </div>
-    
+
 
 
     <!-- 文件存储设置 -->
@@ -110,7 +110,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 加载遮罩 -->
     <div v-if="loading" class="loading-overlay">
       <div class="loading-spinner"></div>
@@ -156,25 +156,23 @@ const settings = reactive({
 // 加载状态变量
 const loading = ref(false)
 
-
-
 // 方法
 // 处理时间格式，确保发送到API的是正确格式，保持用户输入的原始时区
 function prepareDateTimeForApi(dateTimeString) {
   if (!dateTimeString) return ''
-  
+
   try {
     // 确保输入格式正确(YYYY-MM-DDThh:mm)
     if (!dateTimeString.includes('T')) return ''
-    
+
     // 构造ISO格式，但不进行时区转换
     // 直接在用户输入的时间后面添加时区信息，假设用户输入的是本地时间(UTC+8)
     const isoString = `${dateTimeString}:00+08:00`
-    
+
     // 验证日期有效性
     const date = new Date(isoString)
     if (isNaN(date.getTime())) return ''
-    
+
     return isoString
   } catch (error) {
     console.error('日期准备错误:', error)
@@ -189,7 +187,7 @@ const saveAcademicSettings = async () => {
     if (settings.applicationStart && settings.applicationEnd) {
       const startDate = new Date(settings.applicationStart)
       const endDate = new Date(settings.applicationEnd)
-      
+
       if (startDate >= endDate) {
         toastStore.error('申请截止时间必须晚于申请开始时间')
         return
@@ -198,17 +196,17 @@ const saveAcademicSettings = async () => {
       toastStore.error('请同时设置申请开始时间和截止时间')
       return
     }
-    
+
     // 准备发送到API的数据，确保时间格式正确
     const settingsToSave = {
       academicYear: settings.academicYear,
       applicationStart: prepareDateTimeForApi(settings.applicationStart),
       applicationEnd: prepareDateTimeForApi(settings.applicationEnd)
     }
-    
+
     await api.updateSystemSettings(settingsToSave)
     toastStore.success('设置已保存')
-    
+
     // 重新加载设置以验证保存结果
     await loadSystemSettings()
   } catch (error) {
@@ -238,10 +236,6 @@ const saveStorageSettings = async () => {
     loading.value = false
   }
 }
-
-
-
-
 
 const backupDatabase = async () => {
   loading.value = true
@@ -312,12 +306,12 @@ const systemStatusApiValue = computed(() => {
 // 格式化日期时间为datetime-local输入框所需格式，正确处理时区
 function formatDateTimeForInput(dateTimeString) {
   if (!dateTimeString) return ''
-  
+
   try {
     const date = new Date(dateTimeString)
     // 检查是否为有效日期
     if (isNaN(date.getTime())) return ''
-    
+
     // 创建上海时区(UTC+8)的Date对象，确保显示的是本地时间
     // 注意：JavaScript Date对象内部存储为UTC，但这里我们直接格式化显示本地时间
     const year = date.getFullYear()
@@ -325,7 +319,7 @@ function formatDateTimeForInput(dateTimeString) {
     const day = String(date.getDate()).padStart(2, '0')
     const hours = String(date.getHours()).padStart(2, '0')
     const minutes = String(date.getMinutes()).padStart(2, '0')
-    
+
     // 格式化为YYYY-MM-DDThh:mm格式，符合datetime-local输入框要求
     return `${year}-${month}-${day}T${hours}:${minutes}`
   } catch (error) {

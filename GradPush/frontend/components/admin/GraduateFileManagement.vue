@@ -15,19 +15,15 @@
               <p>点击上传或拖拽文件到此处</p>
               <p class="help-text">支持PDF、Word、Excel、PPT等格式文件</p>
             </div>
-            <input type="file" 
-                   ref="fileInput" 
-                   multiple 
-                   accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-                   @change="handleFileChange" 
-                   style="display: none;">
+            <input type="file" ref="fileInput" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+              @change="handleFileChange" style="display: none;">
           </div>
           <!-- 已选文件列表 -->
           <div v-if="selectedFiles.length > 0" class="selected-files-list" style="margin-top: 15px;">
             <h4>已选择文件 ({{ selectedFiles.length }})</h4>
             <div v-for="(file, index) in selectedFiles" :key="index" class="selected-file-item">
               <div style="flex: 1;">
-                <font-awesome-icon :icon="getFileIcon(file.name)" style="margin-right: 8px;"/>
+                <font-awesome-icon :icon="getFileIcon(file.name)" style="margin-right: 8px;" />
                 <span>{{ file.name }}</span>
                 <span class="file-size">({{ formatFileSize(file.size) }})</span>
               </div>
@@ -36,7 +32,7 @@
               </button>
             </div>
           </div>
-          
+
           <!-- 学院选择 -->
           <div class="form-group" style="margin-top: 15px;">
             <label class="form-label">所属学院</label>
@@ -47,7 +43,7 @@
               </option>
             </select>
           </div>
-          
+
           <div class="form-actions" style="margin-top: 10px; border-top: none; justify-content: flex-end;">
             <button class="btn btn-outline" @click="uploadFiles" :disabled="!selectedFacultyId">
               <font-awesome-icon :icon="['fas', 'upload']" /> 上传文件
@@ -192,7 +188,7 @@ const uploadFiles = async () => {
     toastStore.warning('请先选择要上传的文件')
     return
   }
-  
+
   if (!selectedFacultyId.value) {
     toastStore.warning('请选择文件所属学院')
     return
@@ -203,7 +199,7 @@ const uploadFiles = async () => {
     // 调用filesStore的uploadFiles方法，传递文件数组和学院ID
     await filesStore.uploadFiles(selectedFiles.value, selectedFacultyId.value)
     toastStore.success('文件上传成功')
-    
+
     // 清空选择的文件和学院
     selectedFiles.value = []
     selectedFacultyId.value = ''
@@ -223,10 +219,10 @@ const filteredFiles = computed(() => {
   return filesStore.files.filter(file => {
     // 文件名称筛选
     const nameMatch = !fileFilter.value || file.filename.toLowerCase().includes(fileFilter.value.toLowerCase())
-    
+
     // 学院筛选
     const facultyMatch = !selectedFacultyFilter.value || file.faculty?.id === parseInt(selectedFacultyFilter.value)
-    
+
     return nameMatch && facultyMatch
   })
 })
@@ -295,29 +291,29 @@ const batchDelete = async () => {
   if (selectedFileIds.value.length === 0) {
     return
   }
-  
+
   if (confirm(`确定要删除选中的 ${selectedFileIds.value.length} 个文件吗？`)) {
     loading.value = true
     try {
       // 批量删除文件
-      const promises = selectedFileIds.value.map(fileId => 
+      const promises = selectedFileIds.value.map(fileId =>
         filesStore.deleteFile(fileId).catch(error => {
           console.error(`删除文件 ${fileId} 失败:`, error)
           return false
         })
       )
-      
+
       const results = await Promise.all(promises)
       const successCount = results.filter(result => result !== false).length
-      
+
       if (successCount > 0) {
         toastStore.success(`成功删除 ${successCount} 个文件`)
       }
-      
+
       if (successCount < selectedFileIds.value.length) {
         toastStore.warning(`部分文件删除失败`)
       }
-      
+
       // 清空选中列表
       selectedFileIds.value = []
       selectAll.value = false
@@ -390,84 +386,82 @@ onMounted(async () => {
 @import '../common/shared-styles.css';
 
 .file-upload-area {
-    border: 2px dashed #ddd;
-    border-radius: 8px;
-    padding: 30px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s;
-    background-color: #f9f9f9;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-  }
+  border: 2px dashed #ddd;
+  border-radius: 8px;
+  padding: 30px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background-color: #f9f9f9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
 
-  .file-upload-area:hover {
-    border-color: #0057b1;
-    background-color: #f0f7ff;
-  }
+.file-upload-area:hover {
+  border-color: #0057b1;
+  background-color: #f0f7ff;
+}
 
-  .upload-icon {
-    font-size: 32px;
-    color: #0057b1;
-  }
+.upload-icon {
+  font-size: 32px;
+  color: #0057b1;
+}
 
-  .file-upload-area p {
-    margin: 5px 0;
-  }
+.file-upload-area p {
+  margin: 5px 0;
+}
 
-  .help-text {
-    font-size: 12px;
-    color: #666;
-    margin-top: 5px;
-  }
+.help-text {
+  font-size: 12px;
+  color: #666;
+  margin-top: 5px;
+}
 
-  .selected-files-list h4 {
-    margin: 0 0 10px 0;
-    font-size: 16px;
-    color: #333;
-  }
+.selected-files-list h4 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  color: #333;
+}
 
-  .selected-file-item {
-    display: flex;
-    align-items: center;
-    padding: 8px 12px;
-    margin-bottom: 8px;
-    background-color: #f8f9fa;
-    border-radius: 4px;
-    border: 1px solid #e9ecef;
-  }
+.selected-file-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
 
-  .selected-file-item .file-size {
-    font-size: 12px;
-    color: #6c757d;
-    margin-left: 5px;
-  }
+.selected-file-item .file-size {
+  font-size: 12px;
+  color: #6c757d;
+  margin-left: 5px;
+}
 
-  .selected-file-item .btn-remove {
-    background: none;
-    border: none;
-    color: #dc3545;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 2px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+.selected-file-item .btn-remove {
+  background: none;
+  border: none;
+  color: #dc3545;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-  .selected-file-item .btn-remove:hover {
-    background-color: #ffebee;
-  }
+.selected-file-item .btn-remove:hover {
+  background-color: #ffebee;
+}
 
-  .empty-state {
-    text-align: center;
-    padding: 20px;
-    color: #6c757d;
-    background-color: #f9f9f9;
-    border-radius: 4px;
-  }
-
-
+.empty-state {
+  text-align: center;
+  padding: 20px;
+  color: #6c757d;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
 </style>

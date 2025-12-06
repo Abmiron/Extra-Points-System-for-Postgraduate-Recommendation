@@ -161,7 +161,7 @@
                 <label>审核人</label>
                 <span>{{ application.reviewedBy || '-' }}</span>
               </div>
-              
+
               <div v-if="isReviewMode || application.status !== 'pending'" class="compact-group">
                 <label>最终分数</label>
                 <span>{{ application.status === 'pending' ? '-' : (application.status === 'rejected' ? 0 :
@@ -171,7 +171,7 @@
               <div class="compact-group">
                 <label>申请状态</label>
                 <span class="status-badge" :class="`status-${application.status}`">{{ getStatusText(application.status)
-                  }}</span>
+                }}</span>
               </div>
 
             </div>
@@ -371,7 +371,7 @@ const dynamicCoefficients = computed(() => {
     } else {
       coefficients = props.application.dynamicCoefficients;
     }
-  } 
+  }
   // 然后检查下划线命名的dynamic_coefficients（兼容旧格式）
   else if (props.application.dynamic_coefficients) {
     if (typeof props.application.dynamic_coefficients === 'string') {
@@ -394,10 +394,10 @@ const dynamicCoefficients = computed(() => {
 // 解析规则的计算配置，生成系数的友好标签映射
 const coefficientLabels = computed(() => {
   if (!props.application.rule?.calculation) return {};
-  
+
   const calculationType = props.application.rule.calculation.calculation_type;
   let parameters = props.application.rule.calculation.parameters || {};
-  
+
   // 解析参数（可能是JSON字符串）
   if (typeof parameters === 'string') {
     try {
@@ -407,9 +407,9 @@ const coefficientLabels = computed(() => {
       return {};
     }
   }
-  
+
   const labels = {};
-  
+
   // 根据计算类型生成不同的标签映射
   if (calculationType === 'multiplicative' || parameters.type === 'multiplicative') {
     // 乘积式计算：为每个系数生成标签
@@ -426,17 +426,17 @@ const coefficientLabels = computed(() => {
       labels['cumulative_multiplier'] = '累积乘数';
     }
   }
-  
+
   return labels;
 });
 
 // 获取系数的详细信息，包括级别名称
 const coefficientDetails = computed(() => {
   if (!props.application.rule?.calculation) return {};
-  
+
   const calculationType = props.application.rule.calculation.calculation_type;
   let parameters = props.application.rule.calculation.parameters || {};
-  
+
   // 解析参数（可能是JSON字符串）
   if (typeof parameters === 'string') {
     try {
@@ -446,9 +446,9 @@ const coefficientDetails = computed(() => {
       return {};
     }
   }
-  
+
   const details = {};
-  
+
   // 根据计算类型生成不同的系数详细信息
   if (calculationType === 'multiplicative' || parameters.type === 'multiplicative') {
     // 乘积式计算：为每个系数生成详细信息
@@ -456,7 +456,7 @@ const coefficientDetails = computed(() => {
     coefficients.forEach(coefficient => {
       const value = dynamicCoefficients.value[coefficient.key];
       let levelName = value; // 默认显示数值
-      
+
       // 如果有items，查找对应的级别名称
       if (coefficient.items && Array.isArray(coefficient.items)) {
         // 处理字符串和数字类型的匹配
@@ -468,7 +468,7 @@ const coefficientDetails = computed(() => {
           levelName = `${item.name} (${item.multiplier})`;
         }
       }
-      
+
       details[coefficient.key] = {
         label: coefficient.name,
         value: value,
@@ -492,7 +492,7 @@ const coefficientDetails = computed(() => {
       };
     }
   }
-  
+
   return details;
 });
 

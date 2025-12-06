@@ -149,7 +149,8 @@
               <td>{{ formatDate(application.reviewedAt) }}</td>
               <td>{{ application.reviewedBy || '-' }}</td>
               <td>{{ application.selfScore }}</td>
-              <td>{{ application.finalScore !== null && application.finalScore !== undefined ? application.finalScore : '-' }}</td>
+              <td>{{ application.finalScore !== null && application.finalScore !== undefined ? application.finalScore :
+                '-' }}</td>
               <td>
                 <span :class="`status-badge status-${application.status}`">
                   {{ getStatusText(application.status) }}

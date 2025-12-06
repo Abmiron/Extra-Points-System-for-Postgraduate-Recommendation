@@ -128,26 +128,33 @@ def get_applications():
     # 获取所有规则信息
     rule_ids = {app.rule_id for app in applications if app.rule_id}
     rules = Rule.query.filter(Rule.id.in_(rule_ids)).all()
-    
+
     # 获取所有规则的计算配置
     from models import RuleCalculation
-    rule_calculations = RuleCalculation.query.filter(RuleCalculation.rule_id.in_(rule_ids)).all()
+
+    rule_calculations = RuleCalculation.query.filter(
+        RuleCalculation.rule_id.in_(rule_ids)
+    ).all()
     calculation_dict = {calc.rule_id: calc for calc in rule_calculations}
-    
+
     rule_dict = {
         r.id: {
             "id": r.id,
             "name": r.name,
             "score": r.score,
             "description": r.description,
-            "calculation": {
-                "id": calculation_dict[r.id].id,
-                "rule_id": calculation_dict[r.id].rule_id,
-                "calculation_type": calculation_dict[r.id].calculation_type,
-                "formula": calculation_dict[r.id].formula,
-                "parameters": calculation_dict[r.id].parameters,
-                "max_score": calculation_dict[r.id].max_score,
-            } if r.id in calculation_dict else None
+            "calculation": (
+                {
+                    "id": calculation_dict[r.id].id,
+                    "rule_id": calculation_dict[r.id].rule_id,
+                    "calculation_type": calculation_dict[r.id].calculation_type,
+                    "formula": calculation_dict[r.id].formula,
+                    "parameters": calculation_dict[r.id].parameters,
+                    "max_score": calculation_dict[r.id].max_score,
+                }
+                if r.id in calculation_dict
+                else None
+            ),
         }
         for r in rules
     }
@@ -272,6 +279,7 @@ def get_application(id):
         if rule:
             # 获取规则的计算配置
             from models import RuleCalculation
+
             calculation = RuleCalculation.query.filter_by(rule_id=app.rule_id).first()
             calculation_data = None
             if calculation:
@@ -288,7 +296,7 @@ def get_application(id):
                 "name": rule.name,
                 "score": rule.score,
                 "description": rule.description,
-                "calculation": calculation_data
+                "calculation": calculation_data,
             }
 
     app_data = {
@@ -305,7 +313,7 @@ def get_application(id):
         "status": app.status,
         "projectName": app.project_name,
         "awardDate": app.award_date.isoformat() if app.award_date else None,
-            "description": app.description,
+        "description": app.description,
         "files": processed_files,
         "dynamicCoefficients": app.dynamic_coefficients,
         "finalScore": app.final_score,
@@ -343,7 +351,6 @@ def create_application():
             "selfScore": "self_score",
             "projectName": "project_name",
             "awardDate": "award_date",
-
             "ruleId": "rule_id",
             "finalScore": "final_score",
             "reviewComment": "review_comment",
@@ -401,7 +408,9 @@ def create_application():
                     # 检查文件类型
                     file_ext = os.path.splitext(file.filename)[1].lower()
                     # 将允许的文件类型字符串转换为列表
-                    allowed_types_list = [ext.strip().lower() for ext in allowed_file_types.split(',')]
+                    allowed_types_list = [
+                        ext.strip().lower() for ext in allowed_file_types.split(",")
+                    ]
                     if file_ext not in allowed_types_list:
                         return (
                             jsonify(
@@ -496,7 +505,6 @@ def create_application():
             files=files,
             dynamic_coefficients=data.get("dynamic_coefficients"),
             rule_id=data.get("rule_id"),
-
         )
 
         db.session.add(new_application)
@@ -583,7 +591,6 @@ def update_application(id):
             "selfScore": "self_score",
             "projectName": "project_name",
             "awardDate": "award_date",
-
             "ruleId": "rule_id",
             "finalScore": "final_score",
             "reviewComment": "review_comment",
@@ -640,7 +647,9 @@ def update_application(id):
                     # 检查文件类型
                     file_ext = os.path.splitext(file.filename)[1].lower()
                     # 将允许的文件类型字符串转换为列表
-                    allowed_types_list = [ext.strip().lower() for ext in allowed_file_types.split(',')]
+                    allowed_types_list = [
+                        ext.strip().lower() for ext in allowed_file_types.split(",")
+                    ]
                     if file_ext not in allowed_types_list:
                         return (
                             jsonify(
@@ -743,7 +752,9 @@ def update_application(id):
             "application_type", application.application_type
         )
         application.rule_id = data.get("rule_id", application.rule_id)
-        application.dynamic_coefficients = data.get("dynamic_coefficients", application.dynamic_coefficients)
+        application.dynamic_coefficients = data.get(
+            "dynamic_coefficients", application.dynamic_coefficients
+        )
 
         # 只有当有新文件上传时才更新文件列表
         if files:
@@ -768,8 +779,6 @@ def update_application(id):
                 updated_files.append(updated_file)
 
             application.files = updated_files
-
-
 
         db.session.commit()
 
@@ -951,27 +960,37 @@ def get_pending_applications():
     # 批量获取规则信息
     rule_ids = {app.rule_id for app in applications if app.rule_id}
     rules = Rule.query.filter(Rule.id.in_(rule_ids)).all() if rule_ids else []
-    
+
     # 获取所有规则的计算配置
     from models import RuleCalculation
-    rule_calculations = RuleCalculation.query.filter(RuleCalculation.rule_id.in_(rule_ids)).all() if rule_ids else []
+
+    rule_calculations = (
+        RuleCalculation.query.filter(RuleCalculation.rule_id.in_(rule_ids)).all()
+        if rule_ids
+        else []
+    )
     calculation_dict = {calc.rule_id: calc for calc in rule_calculations}
-    
+
     rule_dict = {
         rule.id: {
-            "id": rule.id, 
-            "name": rule.name, 
+            "id": rule.id,
+            "name": rule.name,
             "score": rule.score,
             "description": rule.description,
-            "calculation": {
-                "id": calculation_dict[rule.id].id,
-                "rule_id": calculation_dict[rule.id].rule_id,
-                "calculation_type": calculation_dict[rule.id].calculation_type,
-                "formula": calculation_dict[rule.id].formula,
-                "parameters": calculation_dict[rule.id].parameters,
-                "max_score": calculation_dict[rule.id].max_score,
-            } if rule.id in calculation_dict else None
-        } for rule in rules
+            "calculation": (
+                {
+                    "id": calculation_dict[rule.id].id,
+                    "rule_id": calculation_dict[rule.id].rule_id,
+                    "calculation_type": calculation_dict[rule.id].calculation_type,
+                    "formula": calculation_dict[rule.id].formula,
+                    "parameters": calculation_dict[rule.id].parameters,
+                    "max_score": calculation_dict[rule.id].max_score,
+                }
+                if rule.id in calculation_dict
+                else None
+            ),
+        }
+        for rule in rules
     }
 
     for app in applications:
@@ -1015,7 +1034,6 @@ def get_pending_applications():
             "rule": rule_dict.get(app.rule_id) if app.rule_id else None,
             # 动态系数字段
             "dynamicCoefficients": app.dynamic_coefficients,
-
         }
         app_list.append(app_data)
 

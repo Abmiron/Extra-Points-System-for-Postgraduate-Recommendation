@@ -377,7 +377,7 @@ watch(() => props.editingRule, (newRule) => {
     if (newRule.calculation) {
       // 设置计算类型，支持json_formula、multiplicative和cumulative
       jsonFormulaConfig.type = newRule.calculation.calculation_type || 'multiplicative'
-      
+
       // 从计算参数中复制配置
       if (newRule.calculation.parameters) {
         // 检查是否有动态系数配置

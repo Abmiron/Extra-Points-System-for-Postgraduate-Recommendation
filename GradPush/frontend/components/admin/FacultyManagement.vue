@@ -501,10 +501,10 @@ export default {
       try {
         const response = await api.getFacultiesAdmin()
         faculties.value = response.faculties  // 后端返回 {'faculties': [...]} 格式
-          updateFilters() // 数据加载完成后更新筛选
-        } catch (error) {
-          console.error('加载学院数据失败:', error)
-          toastStore.error('加载学院数据失败')
+        updateFilters() // 数据加载完成后更新筛选
+      } catch (error) {
+        console.error('加载学院数据失败:', error)
+        toastStore.error('加载学院数据失败')
       } finally {
         loading.value = false
       }
@@ -856,8 +856,8 @@ export default {
 @import '../common/shared-styles.css';
 
 /* 加载状态样式 */
-  /* 确保加载遮罩正确显示 */
-  .card {
-    position: relative;
-  }
-  </style>
+/* 确保加载遮罩正确显示 */
+.card {
+  position: relative;
+}
+</style>
