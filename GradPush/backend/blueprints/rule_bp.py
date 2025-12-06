@@ -494,13 +494,16 @@ def calculate_rule_score(rule_id):
         if not student_data:
             return jsonify({"code": 400, "message": "Student data is required"}), 400
 
-        # 获取规则
-        rule = Rule.query.get_or_404(rule_id)
+        # 获取规则 - 使用get而不是get_or_404，避免返回HTML错误页面
+        rule = Rule.query.get(rule_id)
+        if not rule:
+            return jsonify({"code": 404, "message": "Rule not found"}), 404
 
         # 初始化规则引擎
         rule_engine = RuleEngine()
 
         # 计算单个规则的分数
+        # 注意：这里直接传递字典而不是对象，因为calculate_score方法已经支持处理字典
         score = rule_engine.calculate_score(rule, student_data)
 
         return (

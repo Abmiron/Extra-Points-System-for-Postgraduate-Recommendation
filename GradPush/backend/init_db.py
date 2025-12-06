@@ -99,7 +99,7 @@ def init_base_data():
             role="admin",
             status="active"
         )
-        admin_user.set_password("admin123")  # 设置默认密码
+        admin_user.set_password("123456")  # 设置默认密码
         db.session.add(admin_user)
         
         # 5. 创建系统设置

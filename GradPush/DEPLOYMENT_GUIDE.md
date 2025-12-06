@@ -1,491 +1,392 @@
-# GradPush 公网部署方案
+# GradPush 系统部署指南（大白话版）
 
-## 一、项目概述
+## 一、先说说这是个啥系统
 
-GradPush是一个基于Vue 3 + Flask的推免管理系统，包含前端和后端两个独立的模块：
+GradPush 是一个用于管理大学生推免（推荐免试研究生）的系统，简单来说就是帮学校和老师管理学生推免申请的软件。
 
-- **前端**：Vue 3 + Vite，运行在3000端口（开发环境）
-- **后端**：Flask + PostgreSQL，运行在5001端口（开发环境）
+这个系统分两部分：
+- **前端**：就是我们在浏览器里看到的界面，比如登录页面、申请表格这些
+- **后端**：就是看不见的部分，负责处理数据、保存信息这些工作
 
-## 二、服务器环境准备
+## 二、得先准备个服务器
 
-### 1. 服务器选择
+### 1. 选个合适的服务器
 
-推荐使用以下云服务器：
-- 阿里云ECS（推荐配置：2核4G，40GB SSD，5Mbps带宽）
-- 腾讯云CVM（推荐配置：2核4G，40GB SSD，5Mbps带宽）
-- 华为云ECS（推荐配置：2核4G，40GB SSD，5Mbps带宽）
+就像咱们家里要有个电脑才能上网一样，系统也需要一个"电脑"来运行，这个"电脑"就是服务器。推荐选这几家的云服务器（就像租一个放在网上的电脑）：
+- 阿里云ECS（建议选2核4G内存，40GB硬盘，5Mbps网速）
+- 腾讯云CVM（同上配置）
+- 华为云ECS（同上配置）
 
-### 2. 操作系统
+### 2. 装个简单的操作系统
 
-推荐使用：
-- Ubuntu 22.04 LTS（长期支持版，稳定性好）
+服务器上要装个操作系统，推荐用：
+- CentOS 7.9 或者 Ubuntu 22.04 LTS
 
-### 3. 环境配置
+这两个系统比较稳定，后面好管理。
 
-#### 3.1 更新系统
+### 3. 安装宝塔面板（重要！）
 
+宝塔面板就像给服务器装了个"老人机界面"，让我们不用记复杂的命令，用鼠标点点就能操作服务器。
+
+#### 3.1 先登录到服务器
+
+用SSH工具（比如Xshell、FinalShell）登录到你租的服务器，就像我们用账号密码登录微信一样。
+
+#### 3.2 安装宝塔面板
+
+登录后，复制下面的命令粘贴进去，按回车：
+
+如果你的服务器是CentOS系统：
 ```bash
-sudo apt update
-sudo apt upgrade -y
+yum install -y wget && wget -O install.sh https://download.bt.cn/install/install_6.0.sh && sh install.sh ed8484bec
 ```
 
-#### 3.2 安装必要软件
-
+如果是Ubuntu系统：
 ```bash
-sudo apt install -y git curl wget build-essential nginx certbot python3-certbot-nginx
-sudo apt install -y python3-pip python3-venv postgresql postgresql-contrib
+wget -O install.sh https://download.bt.cn/install/install-ubuntu_6.0.sh && sudo bash install.sh ed8484bec
 ```
 
-## 三、数据库配置
-
-### 1. PostgreSQL安装与配置
+等一会儿，安装完成后，会出现一个网址、用户名和密码，一定要记下来！
 
-#### 1.1 启动PostgreSQL服务
-
-```bash
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-```
+#### 3.3 登录宝塔面板
 
-#### 1.2 创建数据库用户和数据库
+打开浏览器，输入刚才记下来的网址，用记下来的用户名和密码登录。
 
-```bash
-sudo -u postgres psql
-```
+#### 3.4 安装必要的软件
 
-在PostgreSQL命令行中执行：
+登录后，找到"软件商店"，安装这些软件：
+1. **Nginx**：就像服务器的"门童"，负责接待访问系统的人
+2. **PostgreSQL**：数据库，用来存系统里的所有数据（比如学生信息、申请记录）
+3. **Python项目管理器**：用来运行后端程序
+4. **Node.js**：用来构建前端界面（选20.x版本）
+5. **Git**：版本控制工具（可选）
+
+## 三、配置数据库
+
+### 1. 安装PostgreSQL数据库
+
+1. 登录宝塔面板，进入"软件商店"
+2. 搜索"PostgreSQL"，找到"PostgreSQL管理器"点击安装
+3. 打开"PostgreSQL管理器"，点击"安装PostgreSQL"，选推荐版本（比如15）
+
+### 2. 配置数据库
 
-```sql
-CREATE USER gradpush WITH PASSWORD 'your_strong_password';
-CREATE DATABASE gradpush OWNER gradpush;
-GRANT ALL PRIVILEGES ON DATABASE gradpush TO gradpush;
-\q
-```
+1. 在"PostgreSQL管理器"里，点击"设置"
+2. 把"监听地址"改成"localhost"（这样更安全）
+3. 点"保存"，然后重启PostgreSQL服务
 
-### 2. 数据库初始化
+### 3. 创建数据库和用户
 
-```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+1. 在"PostgreSQL管理器"里，点击"数据库"标签
+2. 点击"创建数据库"按钮
+3. 填写这些信息：
+   - 数据库名：就填`gradpush`
+   - 用户名：也填`gradpush`
+   - 密码：设一个复杂点的密码，比如"GradPush@2024"（一定要记下来！）
+   - 编码：默认的UTF8就行
+4. 点"创建"按钮
 
-# 设置环境变量
-export FLASK_APP=app.py
-export FLASK_ENV=production
+## 四、部署后端程序
 
-# 初始化数据库
-flask db init
-flask db migrate -m "Initial migration"
-flask db upgrade
-```
+### 1. 上传代码
 
-## 四、后端部署
+#### 1.1 先建个文件夹
 
-### 1. 配置修改
+1. 登录宝塔面板，进入"文件"管理
+2. 在网站根目录（比如`/www/wwwroot/`）下建一个叫`gradpush`的文件夹
+3. 在`gradpush`文件夹里再建两个子文件夹：`backend`（放后端代码）和`frontend`（放前端代码）
+
+#### 1.2 上传后端代码
 
-#### 1.1 修改配置文件 `backend/config.py`
+把你本地电脑上的`backend`文件夹里的所有文件，都上传到服务器上的`/www/wwwroot/gradpush/backend/`文件夹里。
 
-```python
-class Config:
-    # 数据库配置 - 修改为生产环境配置
-    SQLALCHEMY_DATABASE_URI = "postgresql://gradpush:your_strong_password@localhost:5432/gradpush"
-    
-    # 密钥配置 - 生产环境必须使用强密钥
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "your_production_secret_key_here"
-    
-    # 其他配置保持不变...
-```
+### 2. 修改配置文件
 
-#### 1.2 修改应用入口文件 `backend/app.py`
+#### 2.1 修改`backend/config.py`文件
 
-```python
-# 修改调试模式为False
-if __name__ == "__main__":
-    app.run(debug=False, port=5001, use_reloader=False)
-```
+1. 在宝塔面板里找到`/www/wwwroot/gradpush/backend/config.py`文件，点击编辑
+2. 修改这些内容：
+   ```python
+   class Config:
+       # 数据库配置 - 改成你刚才设的密码
+       SQLALCHEMY_DATABASE_URI = "postgresql://gradpush:你刚才设的密码@localhost:5432/gradpush"
+       
+       # 密钥配置 - 改成一个复杂点的字符串，比如"GradPushSecretKey2024"
+       SECRET_KEY = "GradPushSecretKey2024"
+   ```
+3. 点"保存"按钮
 
-### 2. 使用Gunicorn部署Flask应用
+#### 2.2 修改`backend/app.py`文件
 
-#### 2.1 安装Gunicorn
+1. 找到`/www/wwwroot/gradpush/backend/app.py`文件，点击编辑
+2. 把调试模式改成False：
+   ```python
+   if __name__ == "__main__":
+       app.run(debug=False, port=5001, use_reloader=False)
+   ```
+3. 点"保存"按钮
 
-```bash
-pip install gunicorn
-```
+### 3. 用Python项目管理器部署后端
 
-#### 2.2 创建Gunicorn配置文件 `backend/gunicorn.conf.py`
+1. 打开宝塔面板，进入"软件商店"，找到"Python项目管理器"点击"设置"
+2. 点击"添加项目"按钮
+3. 填写这些信息：
+   - 项目路径：选`/www/wwwroot/gradpush/backend`
+   - Python版本：选3.8以上的版本
+   - 框架：选Flask
+   - 启动方式：选Gunicorn
+   - 应用名称：填`app:app`
+   - 端口：填5001
+4. 点"确认"按钮
 
-```python
-bind = "127.0.0.1:5001"
-workers = 4
-worker_class = "gthread"
-threads = 2
-max_requests = 1000
-max_requests_jitter = 50
-```
+### 4. 安装依赖
 
-#### 2.3 创建systemd服务文件 `/etc/systemd/system/gradpush-backend.service`
+1. 在Python项目列表里，找到刚创建的项目，点击"管理"
+2. 进入"依赖管理"标签
+3. 点击"从requirements.txt安装"按钮
+4. 选择`/www/wwwroot/gradpush/backend/requirements.txt`文件
+5. 点"安装"按钮
 
-```ini
-[Unit]
-Description=GradPush Backend Service
-After=network.target
+### 5. 初始化数据库
 
-[Service]
-User=ubuntu
-WorkingDirectory=/path/to/gradpush/backend
-ExecStart=/path/to/gradpush/backend/venv/bin/gunicorn -c gunicorn.conf.py app:app
-Restart=always
-Environment="FLASK_ENV=production"
-Environment="SECRET_KEY=your_production_secret_key_here"
-
-[Install]
-WantedBy=multi-user.target
-```
-
-#### 2.4 启动后端服务
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl start gradpush-backend
-sudo systemctl enable gradpush-backend
-```
-
-## 五、前端部署
-
-### 1. 安装Node.js
-
-```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
-```
-
-### 2. 配置修改（已优化）
-
-#### 2.1 API请求地址配置
-
-**注意：** 前端API请求地址已经修改为相对路径，无需手动修改域名。
-
-我们已经将 `frontend/utils/api.js` 中的硬编码URL修改为相对路径：
-
-```javascript
-// 旧配置（已修改）
-// const API_BASE_URL = 'http://localhost:5001/api';
-
-// 新配置 - 使用相对路径
-const API_BASE_URL = '/api';
-
-// 公开系统信息接口也已修改为相对路径
-getPublicSystemInfo: async () => {
-  // 旧配置（已修改）
-  // const url = 'http://localhost:5001/public/system-info';
-  
-  // 新配置 - 使用相对路径
-  const url = '/public/system-info';
-  // 其他代码保持不变...
-}
-```
-
-这样修改的好处：
-1. 自动适应开发环境和生产环境
-2. 自动使用当前页面的域名和协议（支持HTTPS）
-3. 部署时无需手动修改URL配置
-4. 提高了代码的可维护性
-
-### 3. 构建前端应用
-
-```bash
-cd frontend
-npm install
-npm run build
-```
-
-### 4. 部署前端静态文件
-
-将构建后的静态文件复制到Nginx的web根目录：
-
-```bash
-sudo cp -r frontend/dist/* /var/www/html/
-```
-
-## 六、Nginx配置
-
-### 1. 创建Nginx配置文件 `/etc/nginx/sites-available/gradpush`
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com www.your-domain.com;
-    root /var/www/html;
-    index index.html;
-
-    # 前端静态文件处理
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # 后端API代理
-    location /api {
-        proxy_pass http://127.0.0.1:5001/api;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # 公开系统信息接口代理
-    location /public {
-        proxy_pass http://127.0.0.1:5001/public;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # 文件上传下载代理
-    location /uploads {
-        proxy_pass http://127.0.0.1:5001/uploads;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-### 2. 启用Nginx配置
-
-```bash
-sudo ln -s /etc/nginx/sites-available/gradpush /etc/nginx/sites-enabled/
-sudo nginx -t  # 测试配置文件是否正确
-sudo systemctl reload nginx
-```
-
-## 七、SSL证书配置
-
-### 1. 使用Certbot获取免费SSL证书
-
-```bash
-sudo certbot --nginx -d your-domain.com -d www.your-domain.com
-```
-
-### 2. 配置自动续期
-
-```bash
-sudo systemctl enable certbot.timer
-sudo systemctl start certbot.timer
-```
-
-## 八、安全配置
-
-### 1. 防火墙配置
-
-```bash
-sudo ufw enable
-sudo ufw allow 22/tcp  # SSH
-sudo ufw allow 80/tcp  # HTTP
-sudo ufw allow 443/tcp  # HTTPS
-sudo ufw status
-```
-
-### 2. PostgreSQL安全配置
-
-修改PostgreSQL配置文件 `/etc/postgresql/14/main/pg_hba.conf`（版本号可能不同）：
-
-```
-# 只允许本地连接
-host    all             all             127.0.0.1/32            md5
-host    all             all             ::1/128                 md5
-```
-
-重启PostgreSQL服务：
-
-```bash
-sudo systemctl restart postgresql
-```
-
-### 3. 禁用不必要的服务
-
-```bash
-sudo systemctl stop postgresql
-```
-
-## 九、性能优化
-
-### 1. Nginx性能优化
-
-在 `/etc/nginx/nginx.conf` 的 `http` 块中添加：
-
-```nginx
-http {
-    # ... 其他配置 ...
-    
-    # 性能优化配置
-    worker_processes auto;
-    worker_connections 1024;
-    
-    # 启用压缩
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
-    
-    # 缓存静态文件
-    location ~* \.(jpg|jpeg|png|gif|ico|css|js)$ {
-        expires 7d;
-        add_header Cache-Control "public, max-age=604800";
-    }
-}
-```
-
-### 2. 后端性能优化
-
-#### 2.1 增加Gunicorn工作进程数
-
-修改 `backend/gunicorn.conf.py`：
-
-```python
-workers = 8  # 根据服务器CPU核心数调整
-```
-
-#### 2.2 启用数据库连接池
-
-在 `backend/config.py` 中添加：
-
-```python
-SQLALCHEMY_ENGINE_OPTIONS = {
-    'pool_size': 10,
-    'max_overflow': 20,
-    'pool_timeout': 30,
-    'pool_recycle': 1800
-}
-```
+1. 在Python项目管理界面，进入"终端"标签
+2. 输入下面的命令，每行输完按回车（创建数据库表结构）：
+   ```bash
+   flask db init
+   flask db migrate -m "Initial migration"
+   flask db upgrade
+   ```
+3. 然后运行下面的命令，初始化基础数据（包括管理员账号）：
+   ```bash
+   python init_db.py --auto
+   ```
+   
+   **默认管理员账号**：
+   - 用户名：`admin`
+   - 密码：`123456`
+
+### 6. 启动后端服务
+
+1. 在Python项目管理界面，点击"启动"按钮
+2. 确认服务状态显示为"运行中"
+
+## 五、部署前端界面
+
+### 1. 上传前端代码
+
+把你本地电脑上的`frontend`文件夹里的所有文件，都上传到服务器上的`/www/wwwroot/gradpush/frontend/`文件夹里。
+
+### 2. 构建前端应用
+
+1. 在宝塔面板里找到`/www/wwwroot/gradpush/frontend/`文件夹，点击右侧的"终端"按钮
+2. 输入下面的命令，每行输完按回车：
+   ```bash
+   npm install
+   npm run build
+   ```
+3. 等一会儿，构建完成后，会在`/www/wwwroot/gradpush/frontend/`文件夹里生成一个叫`dist`的文件夹
+
+### 3. 创建网站
+
+1. 登录宝塔面板，进入"网站"管理
+2. 点击"添加站点"按钮
+3. 填写这些信息：
+   - 域名：填你自己的域名（比如`your-domain.com`）
+   - 根目录：选`/www/wwwroot/gradpush/frontend/dist/`
+   - PHP版本：选"纯静态"
+4. 点"提交"按钮
+
+## 六、配置Nginx（网站门童）
+
+### 1. 配置反向代理
+
+反向代理就是让Nginx把不同的请求送到不同的地方处理，比如把访问网站的请求送到前端，把访问数据的请求送到后端。
+
+1. 登录宝塔面板，进入"网站"管理
+2. 找到你刚才创建的网站，点击"设置"
+3. 进入"反向代理"标签
+4. 点击"添加反向代理"按钮
+
+#### 1.1 配置API代理
+
+- 代理名称：就填"API代理"
+- 目标URL：填`http://127.0.0.1:5001/api`
+- 其他设置都用默认的就行
+- 点"保存"按钮
+
+#### 1.2 配置公开接口代理
+
+- 代理名称：填"公开接口代理"
+- 目标URL：填`http://127.0.0.1:5001/public`
+- 其他设置和API代理一样
+- 点"保存"按钮
+
+#### 1.3 配置文件上传下载代理
+
+- 代理名称：填"文件上传下载代理"
+- 目标URL：填`http://127.0.0.1:5001/uploads`
+- 其他设置和API代理一样
+- 点"保存"按钮
+
+### 2. 配置前端路由重写
+
+1. 在网站设置里，进入"伪静态"标签
+2. 选择"Vue"或者"VuePress"的伪静态规则（如果没有，就复制下面的内容粘贴进去）：
+   ```nginx
+   location / {
+       try_files $uri $uri/ /index.html;
+   }
+   ```
+3. 点"保存"按钮
+
+### 3. 重启Nginx服务
+
+1. 在宝塔面板里，进入"软件商店"
+2. 找到已安装的"Nginx"，点击"设置"
+3. 点击"重启"按钮
+
+## 七、配置SSL证书（让网站更安全）
+
+SSL证书可以让你的网站变成HTTPS开头，这样访问更安全，就像微信聊天加密一样。
+
+### 1. 申请免费的SSL证书
+
+1. 登录宝塔面板，进入"网站"管理
+2. 找到你的网站，点击"设置"
+3. 进入"SSL"标签
+4. 在"证书类型"里选"Let's Encrypt"
+5. 勾选你的域名（比如your-domain.com、www.your-domain.com）
+6. 勾选"自动申请SSL证书"
+7. 点"申请"按钮
+
+### 2. 开启强制HTTPS
+
+1. 在"SSL"标签里，找到"强制HTTPS"选项
+2. 点击"开启"按钮
+
+这样所有人访问你的网站时，都会自动跳转到HTTPS的安全链接。
+
+## 八、安全配置（很重要！）
+
+### 1. 配置防火墙
+
+1. 登录宝塔面板，进入"安全"管理
+2. 找到"防火墙"功能
+3. 点击"添加规则"按钮，开放这些端口：
+   - HTTP：80（用来访问网站）
+   - HTTPS：443（用来安全访问网站）
+   - 后端应用：5001（用来运行后端程序）
+4. 确认规则已添加并启用
+
+### 2. 设置文件权限
+
+1. 进入"文件"管理
+2. 找到前端目录 `/www/wwwroot/gradpush/frontend/`：
+   - 右键点击目录，选择"权限"
+   - 设置所有者为 `www`，用户组为 `www`
+   - 设置权限为 `755`
+3. 找到后端目录 `/www/wwwroot/gradpush/backend/`：
+   - 右键点击目录，选择"权限"
+   - 设置所有者为 `www`，用户组为 `www`
+   - 设置权限为 `755`
+
+### 3. 其他安全设置
+
+- **登录保护**：在"面板设置"里开启"登录保护"，设置只有你自己的IP能登录宝塔面板
+- **异地登录提醒**：在"面板设置"里开启"异地登录提醒"，如果有人从别的地方登录你的面板，你会收到提醒
+- **安全加固**：在"安全"管理里，点击"安全加固"，按照提示做一些安全设置
+
+## 九、性能优化（让网站跑得更快）
+
+### 1. 优化Nginx
+
+1. 进入"软件商店"，找到已安装的"Nginx"，点击"设置"
+2. 进入"性能调整"标签
+3. 按照下面的建议调整：
+   - 工作进程数：设成和你服务器的CPU核心数一样
+   - 连接数：设成5000-10000
+   - 开启GZIP压缩：选"启用"
+4. 点"保存"按钮，重启Nginx服务
+
+### 2. 优化PostgreSQL数据库
+
+1. 进入"软件商店"，找到已安装的"PostgreSQL管理器"，点击"设置"
+2. 进入"性能调整"标签
+3. 按照下面的建议调整：
+   - 最大连接数：设成100-200
+   - 共享缓冲区：设成系统内存的25%（比如4G内存就设成1G）
+4. 点"保存"按钮，重启PostgreSQL服务
 
 ## 十、监控与维护
 
-### 1. 日志查看
+### 1. 查看日志
 
-#### 1.1 Nginx日志
+#### 1.1 查看网站访问日志
 
-```bash
-sudo tail -f /var/log/nginx/access.log
-sudo tail -f /var/log/nginx/error.log
-```
+1. 进入"网站"管理
+2. 找到你的网站，点击"设置"
+3. 进入"日志"标签
+4. 你可以查看谁访问了你的网站，有没有错误发生
 
-#### 1.2 后端日志
+#### 1.2 查看后端运行日志
 
-```bash
-sudo journalctl -u gradpush-backend -f
-```
+1. 进入"Python项目"管理
+2. 找到你的后端项目，点击"日志"
+3. 你可以查看后端程序有没有出错
 
-### 2. 定期备份
+### 2. 定期备份（非常重要！）
 
-#### 2.1 数据库备份
+备份就像给你的数据买保险，万一出问题了可以恢复。
 
-创建备份脚本 `backup-db.sh`：
+#### 2.1 备份数据库
 
-```bash
-#!/bin/bash
+1. 进入"数据库"管理
+2. 找到你的数据库，点击"备份"
+3. 选择"定期备份"
+4. 设置备份周期（比如每天备份一次）和保留天数（比如保留7天的备份）
+5. 点"保存"按钮
 
-BACKUP_DIR="/path/to/backup"
-DATE=$(date +%Y%m%d_%H%M%S)
+#### 2.2 备份网站
 
-# 创建备份目录
-mkdir -p $BACKUP_DIR
+1. 进入"网站"管理
+2. 找到你的网站，点击"备份"
+3. 选择备份内容（网站文件、数据库）
+4. 选择"定期备份"
+5. 设置备份周期和保留天数
+6. 点"保存"按钮
 
-# 备份数据库
-sudo -u postgres pg_dump gradpush > $BACKUP_DIR/gradpush_$DATE.sql
+## 十一、检查部署是否成功
 
-# 压缩备份文件
-gzip $BACKUP_DIR/gradpush_$DATE.sql
+1. **访问网站**：在浏览器里输入你的域名（比如`https://your-domain.com`），看看能不能正常显示登录页面
+2. **测试登录**：尝试用账号密码登录系统，看看能不能正常登录
+3. **测试文件上传**：上传一个测试文件，看看能不能正常上传
+4. **测试数据保存**：在系统里创建一条记录，看看能不能正常保存
 
-# 删除7天前的备份文件
-find $BACKUP_DIR -name "gradpush_*.sql.gz" -mtime +7 -delete
-```
+## 十二、常见问题及解决办法
 
-设置定时任务：
+### 1. 网站打不开怎么办？
 
-```bash
-crontab -e
-```
+- 检查Nginx服务是不是在运行
+- 检查域名是不是正确
+- 检查SSL证书是不是过期了
 
-添加以下内容（每天凌晨2点备份）：
+### 2. 登录不上系统怎么办？
 
-```
-0 2 * * * /path/to/backup-db.sh
-```
+- 检查后端服务是不是在运行
+- 检查数据库是不是连接正常
+- 检查密码是不是输错了
 
-#### 2.2 文件备份
+### 3. 文件上传失败怎么办？
 
-备份上传的文件：
+- 检查uploads目录的权限是不是755
+- 检查Nginx配置里的上传文件大小限制是不是足够大
 
-```bash
-#!/bin/bash
+### 4. 数据库连接失败怎么办？
 
-BACKUP_DIR="/path/to/backup/files"
-DATE=$(date +%Y%m%d_%H%M%S)
-
-# 创建备份目录
-mkdir -p $BACKUP_DIR
-
-# 备份上传的文件
-tar -czf $BACKUP_DIR/uploads_$DATE.tar.gz /path/to/gradpush/backend/uploads
-
-# 删除7天前的备份文件
-find $BACKUP_DIR -name "uploads_*.tar.gz" -mtime +7 -delete
-```
-
-设置定时任务：
-
-```bash
-crontab -e
-```
-
-添加以下内容（每天凌晨3点备份）：
-
-```
-0 3 * * * /path/to/backup-files.sh
-```
-
-## 十一、常见问题与解决方案
-
-### 1. 前端无法连接后端API
-
-- 检查Nginx配置中的代理设置
-- 检查后端服务是否正常运行
-- 检查防火墙设置
-- 检查SSL证书是否有效
-
-### 2. 数据库连接失败
-
-- 检查数据库服务是否正常运行
-- 检查数据库用户和密码是否正确
-- 检查数据库配置文件中的连接字符串
-
-### 3. 文件上传失败
-
-- 检查文件上传目录的权限
-- 检查Nginx的客户端最大体配置
-- 检查后端的MAX_CONTENT_LENGTH配置
-
-## 十二、部署验证
-
-1. 访问 `https://your-domain.com` 检查前端是否正常显示
-2. 尝试登录系统，检查是否能正常连接后端API
-3. 尝试上传文件，检查文件上传功能是否正常
-4. 检查数据库是否能正常存储数据
+- 检查PostgreSQL服务是不是在运行
+- 检查数据库用户名和密码是不是正确
+- 检查数据库连接字符串是不是写错了
 
 ---
 
-以上就是GradPush系统的公网部署方案。根据实际情况，你可能需要调整某些配置参数以适应你的服务器环境和需求。
+好啦，以上就是GradPush系统的部署指南，尽量写得简单明白。如果还有不明白的地方，可以找个懂电脑的年轻人帮你看看。祝你部署成功！

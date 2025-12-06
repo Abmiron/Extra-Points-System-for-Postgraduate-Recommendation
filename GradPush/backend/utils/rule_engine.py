@@ -11,8 +11,7 @@ class RuleEngine:
     def __init__(self):
         # 计算类型映射表
         self.calculation_types = {
-            "multiplicative": "乘积计算",
-            "cumulative": "累积计算",
+            "tree": "树结构计算",
         }
 
     def match_and_calculate(self, rules, student_data):
@@ -62,7 +61,11 @@ class RuleEngine:
     def calculate_score(self, rule, application, student=None):
         """
         根据规则计算实际得分
-        支持乘积式、累积式和json_formula计算
+        
+        参数:
+        - rule: 规则对象
+        - application: 可以是应用数据对象或字典
+        - student: 学生数据对象或字典（可选）
         """
         if not rule:
             return 0.0
@@ -72,21 +75,16 @@ class RuleEngine:
         if not calculation:
             return 0.0
 
-        # 支持json_formula计算类型，实际内部使用乘积计算
-        if calculation.calculation_type in ["multiplicative", "json_formula"]:
-            return self._calculate_multiplicative_score(
-                calculation, application, student
-            )
-        elif calculation.calculation_type == "cumulative":
-            return self._calculate_cumulative_score(calculation, application, student)
+        # 仅支持树结构计算类型
+        if calculation.calculation_type == "tree":
+            return self._calculate_tree_score(calculation, application, student)
         else:
             # 不支持的计算类型
             return 0.0
 
-    def _calculate_multiplicative_score(self, calculation, application, student=None):
+    def _calculate_tree_score(self, calculation, application, student=None):
         """
-        乘积计算得分
-        基于多个因素的乘积计算最终得分
+        树结构计算得分
         """
         if not calculation.parameters:
             return 0.0
@@ -100,51 +98,80 @@ class RuleEngine:
                 if not isinstance(params, dict):
                     return 0.0
 
-            # 支持两种参数名称：factors（后端命名）和coefficients（前端命名）
-            factors = params.get("factors", params.get("coefficients", []))
-            if not factors:
+            # 获取树结构配置
+            tree_config = params.get("tree", {})
+            if not tree_config:
                 return 0.0
 
-            # 基础分值
-            base_score = float(params.get("base_score", 1.0))
-            result = base_score
+            scores = tree_config.get("scores", {})
+            if not scores:
+                return 0.0
 
-            # 计算所有因素的乘积
-            for factor in factors:
-                if isinstance(factor, str):
-                    # 支持字典和对象两种类型的application参数
-                    if isinstance(application, dict):
-                        factor_value = application.get(factor)
-                    else:
-                        factor_value = getattr(application, factor, None)
+            # 获取树结构数据
+            tree = tree_config.get("structure", {})
+            if not tree or not tree.get("root"):
+                return 0.0
 
-                    if isinstance(factor_value, (int, float)):
-                        result *= factor_value
-                    elif isinstance(factor_value, str):
-                        # 尝试将字符串转换为数字
-                        try:
-                            result *= float(factor_value)
-                        except ValueError:
-                            pass
-                elif isinstance(factor, (int, float)):
-                    result *= factor
-                elif isinstance(factor, dict) and "key" in factor:
-                    # 处理前端发送的系数对象格式
-                    key = factor["key"]
-                    # 从应用数据中获取对应的值
-                    if isinstance(application, dict):
-                        factor_value = application.get(key)
-                    else:
-                        factor_value = getattr(application, key, None)
+            # 从应用数据中提取相关字段值
+            student_data = {}  # 存储学生数据字段
+            if isinstance(application, dict):
+                student_data = application
+            else:
+                # 如果是对象，将所有属性转换为字典
+                student_data = application.__dict__
 
-                    if isinstance(factor_value, (int, float)):
-                        result *= factor_value
-                    elif isinstance(factor_value, str):
-                        # 尝试将字符串转换为数字
-                        try:
-                            result *= float(factor_value)
-                        except ValueError:
-                            pass
+            # 遍历树结构，找到匹配的叶子节点路径
+            def find_matching_path(node, current_path):
+                # 如果是叶子节点，返回当前路径
+                if not node.get("children") or len(node.get("children")) == 0:
+                    return current_path
+
+                # 遍历子节点
+                for child in node.get("children", []):
+                    child_dimension = child.get("dimension", {})
+                    child_key = child_dimension.get("key")
+                    child_name = child_dimension.get("name")
+                    
+                    # 检查当前子节点是否匹配
+                    is_matched = False
+                    
+                    # 灵活匹配方式：检查是否有任何字段的值等于当前节点名
+                    for key, value in student_data.items():
+                        if str(value) == child_name:
+                            is_matched = True
+                            break
+                    
+                    # 传统匹配方式：使用节点自己的dimension.key来匹配student_data
+                    if not is_matched and child_key and child_key in student_data:
+                        child_value = str(student_data.get(child_key))
+                        if child_value == child_name:
+                            is_matched = True
+                    
+                    # 如果当前子节点匹配，继续向下遍历
+                    if is_matched:
+                        result = find_matching_path(child, current_path + [child_name])
+                        if result:
+                            return result
+                    
+                    # 如果当前子节点不匹配，但有子节点，也尝试向下遍历（处理特殊情况）
+                    elif child.get("children") and len(child.get("children")) > 0:
+                        result = find_matching_path(child, current_path + [child_name])
+                        if result:
+                            return result
+
+                # 没有找到匹配的路径
+                return None
+
+            # 从根节点开始查找匹配路径
+            matching_path = find_matching_path(tree.get("root"), [])
+            if not matching_path:
+                return 0.0
+
+            # 组合成键，格式如 "国家级_一等奖及以上_A+类"
+            tree_key = "_".join(matching_path)
+
+            # 获取对应的分数
+            result = float(scores.get(tree_key, 0.0))
 
             # 应用最大值限制
             if calculation.max_score is not None:
@@ -152,57 +179,11 @@ class RuleEngine:
 
             return round(result, 4)
         except Exception as e:
-            print(f"乘积计算错误: {e}")
+            print(f"树结构计算错误: {e}")
             import traceback
 
             traceback.print_exc()
-            return float(calculation.base_score or 0.0)
-
-    def _calculate_cumulative_score(self, calculation, application, student=None):
-        """
-        累积计算得分
-        基于多个项目的累积值计算最终得分
-        """
-        if not calculation.parameters:
             return 0.0
-
-        try:
-            params = json.loads(calculation.parameters)
-            if not isinstance(params, dict):
-                return 0.0
-
-            cumulative_field = params.get("cumulative_field")
-            multiplier = float(params.get("multiplier", 1.0))
-
-            if not cumulative_field:
-                return float(calculation.base_score or 0.0)
-
-            # 获取累积字段值（支持字典和对象两种类型的application参数）
-            if isinstance(application, dict):
-                cumulative_value = application.get(cumulative_field)
-            else:
-                cumulative_value = getattr(application, cumulative_field, None)
-
-            if not cumulative_value:
-                return float(calculation.base_score or 0.0)
-
-            if not isinstance(cumulative_value, (int, float)):
-                try:
-                    cumulative_value = float(cumulative_value)
-                except (ValueError, TypeError):
-                    return float(calculation.base_score or 0.0)
-
-            # 计算累积得分
-            result = cumulative_value * multiplier
-
-            # 应用最小值限制
-            if params.get("min_score") is not None:
-                result = max(result, float(params.get("min_score")))
-
-            return round(result, 4)
-        except Exception as e:
-            print(f"累积计算错误: {e}")
-            return float(calculation.base_score or 0.0)
 
 
 # 创建规则引擎实例

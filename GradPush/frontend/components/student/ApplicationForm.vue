@@ -96,14 +96,16 @@
               <div v-if="field.type === 'number'" class="input-with-icon">
                 <font-awesome-icon :icon="['fas', 'hashtag']" />
                 <input type="number" class="form-control" v-model="formData.dynamicCoefficients[field.name]"
-                  :min="field.min" :step="field.step || '1'" :placeholder="'请输入' + field.label">
+                  :min="field.min" :step="field.step || '1'" :placeholder="'请输入' + field.label"
+                  @input="debouncedCalculateEstimatedScore">
               </div>
 
               <!-- 文本输入类型 -->
               <div v-else-if="field.type === 'text'" class="input-with-icon">
                 <font-awesome-icon :icon="['fas', 'font']" />
                 <input type="text" class="form-control" v-model="formData.dynamicCoefficients[field.name]"
-                  :placeholder="'请输入' + field.label">
+                  :placeholder="'请输入' + field.label"
+                  @input="debouncedCalculateEstimatedScore">
               </div>
 
               <!-- 单选按钮类型 -->
@@ -115,7 +117,10 @@
                     <font-awesome-icon
                       :icon="['fas', option.value === 'top' || option.value === '1' ? 'star' : 'circle']" />
                   </div>
-                  <span>{{ option.label }} ({{ option.value }}x)</span>
+                  <span>
+                    {{ option.label }}
+
+                  </span>
                 </div>
               </div>
 
@@ -126,7 +131,7 @@
                   @change="calculateEstimatedScore()">
                   <option value="" disabled>请选择{{ field.label }}</option>
                   <option v-for="option in field.options" :key="option.value" :value="option.value">
-                    {{ option.label }} (x{{ option.value }})
+                    {{ option.label }}
                   </option>
                 </select>
               </div>
@@ -460,6 +465,13 @@ const debounce = (func, delay) => {
   }
 }
 
+// 创建防抖版本的预估分数计算函数，避免频繁计算
+const debouncedCalculateEstimatedScore = debounce(() => {
+  if (formData.ruleId) {
+    calculateEstimatedScore()
+  }
+}, 300) // 300ms防抖
+
 // 监听表单关键字段变化，自动匹配规则
 watch(() => formData.projectName, debounce(() => {
   fetchMatchingRules()
@@ -467,7 +479,10 @@ watch(() => formData.projectName, debounce(() => {
 
 // 仅在需要时重新加载规则
 watch(() => formData.ruleId, () => {
-  // 规则ID变化时，不需要重新加载所有规则，只需要重新计算预估分数
+  // 规则ID变化时，重置选中的树节点路径
+  selectedTreePath.value = []
+  
+  // 规则ID变化时，重新计算预估分数
   if (formData.ruleId) {
     calculateEstimatedScore()
   }
@@ -528,11 +543,105 @@ const selectedRule = computed(() => {
   return availableRules.value.find(rule => rule.id === formData.ruleId)
 })
 
-// 动态生成的表单字段配置
-const dynamicFormFields = computed(() => {
-  if (!selectedRule.value?.calculation) return []
+// 跟踪当前选中的树节点路径，用于层级显示表单
+const selectedTreePath = ref([])
+
+// 监听表单字段变化，更新选中的树节点路径
+watch(() => formData.dynamicCoefficients, (newCoefficients) => {
+  if (!selectedRule.value?.calculation) return
+  
   const calculationType = selectedRule.value.calculation.calculation_type
   let parameters = selectedRule.value.calculation.parameters || {}
+  if (typeof parameters === 'string') {
+    try {
+      parameters = JSON.parse(parameters)
+    } catch (error) {
+      console.error('解析规则参数失败:', error)
+      return
+    }
+  }
+  
+  if (calculationType !== 'tree' && parameters.type !== 'tree') return
+  
+  const treeConfig = parameters.tree || {}
+  const tree = treeConfig.root || (treeConfig.structure && treeConfig.structure.root)
+  if (!tree) return
+  
+  // 根据当前表单值重建选中的树节点路径
+  const buildPath = (node, path = [], level = 0) => {
+    if (!node || !node.dimension) return path
+    
+    // 查找当前节点的表单值（支持带索引的字段名）
+    const indexedKey = `${node.dimension.key}_${level}`
+    let fieldValue = newCoefficients[indexedKey]
+    
+    if (fieldValue !== undefined && fieldValue !== null && fieldValue !== '') {
+      path.push(fieldValue)
+      
+      // 查找匹配的子节点
+      const selectedChild = node.children?.find(child => child.dimension.name === fieldValue)
+      if (selectedChild) {
+        return buildPath(selectedChild, path, level + 1)
+      }
+    }
+    
+    return path
+  }
+  
+  // 重建选中的树节点路径
+  const newPath = buildPath(tree)
+  
+  // 如果路径发生变化，清除不再需要的字段值
+  if (JSON.stringify(newPath) !== JSON.stringify(selectedTreePath.value)) {
+    // 保存当前需要的字段名
+    const neededFields = new Set()
+    
+    // 标记当前路径需要的字段
+    let currentNode = tree
+    for (let i = 0; i < newPath.length; i++) {
+      const indexedKey = `${currentNode.dimension.key}_${i}`
+      neededFields.add(indexedKey)
+      
+      // 移动到下一个节点
+      if (currentNode?.children) {
+        currentNode = currentNode.children.find(child => child.dimension.name === newPath[i])
+      }
+    }
+    
+    // 标记下一层级需要的字段
+    if (currentNode && currentNode.children && currentNode.children.length > 0) {
+      const nextLevelKey = `${currentNode.dimension.key}_${newPath.length}`
+      neededFields.add(nextLevelKey)
+    }
+    
+    // 清除不再需要的字段值
+    const keysToDelete = []
+    for (const key in newCoefficients) {
+      if (!neededFields.has(key)) {
+        keysToDelete.push(key)
+      }
+    }
+    
+    keysToDelete.forEach(key => {
+      delete newCoefficients[key]
+    })
+  }
+  
+  selectedTreePath.value = newPath
+    
+  // 重新计算预估分数
+  calculateEstimatedScore()
+}, { deep: true })
+
+// 动态生成的表单字段配置 - 实现层级选择，每层显示独立选择框
+const dynamicFormFields = computed(() => {
+  if (!selectedRule.value?.calculation) {
+    return []
+  }
+  
+  const calculationType = selectedRule.value.calculation.calculation_type
+  let parameters = selectedRule.value.calculation.parameters || {}
+  
   // 解析参数（可能是JSON字符串）
   if (typeof parameters === 'string') {
     try {
@@ -542,59 +651,66 @@ const dynamicFormFields = computed(() => {
       return []
     }
   }
+  
   const fields = []
+  
   // 根据计算类型生成不同的表单字段
-  if (calculationType === 'multiplicative' || parameters.type === 'multiplicative') {
-    // 为每个系数生成选择框
-    const coefficients = parameters.coefficients || []
-    coefficients.forEach(coefficient => {
-      // 检查是否有items字段，如果有则生成下拉选择框
-      if (coefficient.items && Array.isArray(coefficient.items)) {
-        fields.push({
-          name: coefficient.key,
-          label: coefficient.name,
-          type: 'select',
-          options: coefficient.items.map(item => ({
-            value: item.multiplier,
-            label: item.name
-          })),
-          required: true
-        })
-      } else {
-        // 否则生成数字输入框
-        fields.push({
-          name: coefficient.key,
-          label: coefficient.name,
-          type: 'number',
-          min: 0,
-          step: '0.1',
-          required: true
-        })
-      }
-    })
-  } else if (calculationType === 'cumulative' || parameters.type === 'cumulative') {
-    // 累积式计算：累积字段 + 乘数
-    if (parameters.cumulative_field) {
+  if (calculationType === 'tree' || parameters.type === 'tree') {
+    // 树结构计算：生成路径中每个层级的表单字段
+    const treeConfig = parameters.tree || {}
+    const tree = treeConfig.root || (treeConfig.structure && treeConfig.structure.root)
+    
+    if (!tree) return []
+    
+    // 生成路径中每个层级的选择框
+    let currentNode = tree
+    let currentDepth = 0
+    
+    // 显示已选择的层级，每个层级都显示为选择框
+    for (let i = 0; i < selectedTreePath.value.length; i++) {
+      const selectedValue = selectedTreePath.value[i]
+      
+      // 获取当前节点的子节点作为选项
+      const options = currentNode.children?.map(child => ({
+        value: child.dimension.name,
+        label: child.dimension.name
+      })) || []
+      
       fields.push({
-        name: parameters.cumulative_field,
-        label: parameters.cumulative_field,
-        type: 'number',
-        min: 0,
-        step: '1',
-        required: true
+        name: `${currentNode.dimension.key}_${i}`, // 使用唯一名称避免字段冲突
+        label: currentNode.dimension.name,
+        type: 'select',
+        options: options,
+        value: selectedValue,
+        required: true,
+        depth: currentDepth,
+        originalKey: currentNode.dimension.key // 保存原始key用于数据处理
       })
+      
+      // 移动到下一个节点
+      if (currentNode?.children) {
+        currentNode = currentNode.children.find(child => child.dimension.name === selectedValue)
+        currentDepth++
+      }
     }
-    if (parameters.cumulative_multiplier !== undefined) {
+    
+    // 如果当前节点有子节点，显示下一层级的选择框
+    if (currentNode && currentNode.children && currentNode.children.length > 0) {
       fields.push({
-        name: 'cumulative_multiplier',
-        label: '累积乘数',
-        type: 'number',
-        min: 0,
-        step: '0.1',
-        required: true
+        name: `${currentNode.dimension.key}_${selectedTreePath.value.length}`, // 使用唯一名称
+        label: currentNode.dimension.name,
+        type: 'select',
+        options: currentNode.children.map(child => ({
+          value: child.dimension.name,
+          label: child.dimension.name
+        })),
+        required: true,
+        depth: currentDepth,
+        originalKey: currentNode.dimension.key // 保存原始key用于数据处理
       })
     }
   }
+
   return fields
 })
 
@@ -617,18 +733,27 @@ const calculateEstimatedScore = async () => {
       formData.applicationType = selectedRule.type
     }
 
-    // 准备学生数据
+    // 准备学生数据，清理带索引的字段名
     const studentData = {
-      faculty_id: authStore.user?.faculty_id || authStore.user?.facultyId,
-      // 动态系数字段
-      ...formData.dynamicCoefficients
+      faculty_id: authStore.user?.faculty_id || authStore.user?.facultyId
     }
+    
+    // 处理动态系数字段，清理索引后缀
+    for (const [key, value] of Object.entries(formData.dynamicCoefficients)) {
+      // 移除索引后缀（如：rule_level_0 -> rule_level）
+      const cleanedKey = key.replace(/(_\d+)$/, '')
+      studentData[cleanedKey] = value
+    }
+    // 将字符串类型的数字转换为数字类型
+    Object.keys(studentData).forEach(key => {
+      if (typeof studentData[key] === 'string' && !isNaN(Number(studentData[key]))) {
+        studentData[key] = Number(studentData[key])
+      }
+    })
     // 调用后端API计算分数
     const scoreResponse = await api.calculateRuleScore(selectedRule.id, { student_data: studentData })
     estimatedScore.value = parseFloat(scoreResponse.data.score.toFixed(4))
   } catch (error) {
-    console.error('计算预估分数失败:', error)
-    console.error('错误详情:', error.response?.data || error.message)
     // 如果API调用失败，回退到前端计算
     const selectedRule = availableRules.value.find(rule => rule.id === formData.ruleId)
     if (!selectedRule) {
@@ -637,15 +762,14 @@ const calculateEstimatedScore = async () => {
     }
 
     let score = calculateScoreFrontend(selectedRule)
-    console.log('前端计算的分数:', score)
-
     // 应用最大分数限制
     if (selectedRule.max_score && score > selectedRule.max_score) {
       score = selectedRule.max_score
-      console.log('应用最大分数限制后:', score)
+      console.log('应用最大分数限制:', score)
     }
 
     estimatedScore.value = parseFloat(score.toFixed(4))
+    console.log('设置预估分数为:', estimatedScore.value)
   } finally {
     loading.score = false
   }
@@ -662,14 +786,11 @@ const calculateScoreFrontend = (rule) => {
 
   // 根据计算类型执行不同的计算逻辑
   switch (rule.calculation.calculation_type) {
-    case 'multiplicative':
-      // 乘积式计算
-      totalScore = calculateMultiplicativeScore(rule)
+    case 'tree':
+      // 树结构计算
+      totalScore = calculateTreeScore(rule)
       break
-    case 'cumulative':
-      // 累积式计算
-      totalScore = calculateCumulativeScore(rule)
-      break
+
     default:
       // 默认使用基础分数
       totalScore = rule.score || 0
@@ -678,8 +799,8 @@ const calculateScoreFrontend = (rule) => {
   return totalScore
 }
 
-// 计算乘积式分数
-const calculateMultiplicativeScore = (rule) => {
+// 计算树结构分数
+const calculateTreeScore = (rule) => {
   let parameters = rule.calculation.parameters || {}
 
   // 解析参数（可能是JSON字符串）
@@ -687,61 +808,92 @@ const calculateMultiplicativeScore = (rule) => {
     try {
       parameters = JSON.parse(parameters)
     } catch (error) {
-      console.error('解析乘积式参数失败:', error)
+      console.error('解析矩阵参数失败:', error)
       return rule.score || 0
     }
   }
-
-  // 获取基础分值（使用规则或参数中定义的基础分值，不需要学生输入）
-  const baseScore = parseFloat(parameters.base_score) || parseFloat(rule.score) || 0
-  const coefficients = parameters.coefficients || []
-
-  let totalMultiplier = 1.0
-
-  // 计算所有系数的乘积
-  coefficients.forEach(coefficient => {
-    // 获取系数的值
-    const fieldValue = parseFloat(getFieldValue(coefficient.key))
-    if (!isNaN(fieldValue)) {
-      totalMultiplier *= fieldValue
-    }
-  })
-
-  return parseFloat((baseScore * totalMultiplier).toFixed(4))
-}
-
-// 计算累积式分数
-const calculateCumulativeScore = (rule) => {
-  let parameters = rule.calculation.parameters || {}
-
-  // 解析参数（可能是JSON字符串）
-  if (typeof parameters === 'string') {
+  
+  // 获取树结构配置
+  const treeConfig = parameters.tree || {}
+  
+  // 获取对应的分数
+  let scores = treeConfig.scores || {}
+  // 如果scores是字符串，尝试解析为JSON
+  if (typeof scores === 'string') {
     try {
-      parameters = JSON.parse(parameters)
-    } catch (error) {
-      console.error('解析累积式参数失败:', error)
-      return rule.score || 0
+      scores = JSON.parse(scores)
+    } catch (e) {
+      scores = {}
     }
   }
-
-  const baseScore = parseFloat(rule.score) || parseFloat(parameters.base_score) || 0
-  const cumulativeField = parameters.cumulative_field
-  const cumulativeMultiplier = parseFloat(getFieldValue('cumulative_multiplier')) || parseFloat(parameters.cumulative_multiplier) || 0.1
-
-  // 获取累积字段的值
-  const cumulativeValue = parseFloat(getFieldValue(cumulativeField)) || 0
-
-  // 计算累积分数
-  return parseFloat((baseScore * cumulativeValue * cumulativeMultiplier).toFixed(4))
-}
-
-// 获取表单字段值
-const getFieldValue = (fieldName) => {
-  // 从动态系数中获取字段值
-  if (formData.dynamicCoefficients[fieldName] !== undefined && formData.dynamicCoefficients[fieldName] !== null) {
-    return formData.dynamicCoefficients[fieldName]
+  
+  // 获取树结构
+  const tree = treeConfig.structure || treeConfig.tree || {}
+  if (!tree || !tree.root) {
+    return 0
   }
-  return undefined
+  
+  // 递归查找匹配路径
+  const findMatchingPath = (node, path = []) => {
+    if (!node) return null
+    
+    // 获取当前节点的维度键
+  const dimensionKey = node.dimension.key
+  // 获取表单中该维度的值（支持带索引的字段名）
+  let fieldValue = formData.dynamicCoefficients[dimensionKey]
+  
+  // 如果没有找到，尝试查找带索引的字段名（格式如：key_0, key_1）
+  if (fieldValue === undefined) {
+    for (const [key, value] of Object.entries(formData.dynamicCoefficients)) {
+      if (key.startsWith(`${dimensionKey}_`)) {
+        fieldValue = value
+        break
+      }
+    }
+  }
+    
+    // 如果表单中没有该维度的值，返回null
+    if (fieldValue === undefined || fieldValue === null || fieldValue === '') {
+      return null
+    }
+    
+    // 将当前节点的值加入路径
+    const currentPath = [...path, fieldValue]
+    
+    // 如果节点没有子节点，返回完整路径
+    if (!node.children || node.children.length === 0) {
+      return currentPath
+    }
+    
+    // 查找匹配的子节点
+    const selectedChild = node.children.find(child => child.dimension.name === fieldValue)
+    if (selectedChild) {
+      // 递归查找子节点
+      return findMatchingPath(selectedChild, currentPath)
+    }
+    
+    return null
+  }
+  
+  // 查找匹配路径
+  const matchingPath = findMatchingPath(tree.root)
+  if (!matchingPath) {
+    return 0
+  }
+  
+  // 组合成键，格式如 "国家级_一等奖及以上_A+类"
+  const treeKey = matchingPath.join('_')
+  
+  // 获取对应的分数
+  const score = parseFloat(scores[treeKey] || 0)
+  
+  // 应用最大值限制
+  if (rule.calculation.max_score !== undefined) {
+    const maxScore = parseFloat(rule.calculation.max_score)
+    return Math.min(score, maxScore)
+  }
+  
+  return score
 }
 
 // 刷新规则列表（清除缓存）
@@ -999,9 +1151,15 @@ const toFrontendFields = (data) => {
 const prepareApplicationData = (status) => {
   const { studentName, studentId, facultyId, departmentId, majorId } = getStudentInfo()
   const applicationType = getApplicationType()
+  
+  // 保留所有dynamicCoefficients字段，包括带索引的字段名
+  // 这些带索引的字段名对于层级选择的分数计算是必需的
+  const cleanedFormData = {
+    ...formData
+  }
 
   return {
-    ...formData,
+    ...cleanedFormData,
     // 确保使用正确的字段名，与显示组件保持一致
     studentName,
     studentId,

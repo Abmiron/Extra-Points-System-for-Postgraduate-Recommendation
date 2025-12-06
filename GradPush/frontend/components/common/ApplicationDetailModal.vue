@@ -391,44 +391,7 @@ const dynamicCoefficients = computed(() => {
   return coefficients;
 });
 
-// 解析规则的计算配置，生成系数的友好标签映射
-const coefficientLabels = computed(() => {
-  if (!props.application.rule?.calculation) return {};
 
-  const calculationType = props.application.rule.calculation.calculation_type;
-  let parameters = props.application.rule.calculation.parameters || {};
-
-  // 解析参数（可能是JSON字符串）
-  if (typeof parameters === 'string') {
-    try {
-      parameters = JSON.parse(parameters);
-    } catch (error) {
-      console.error('解析规则参数失败:', error);
-      return {};
-    }
-  }
-
-  const labels = {};
-
-  // 根据计算类型生成不同的标签映射
-  if (calculationType === 'multiplicative' || parameters.type === 'multiplicative') {
-    // 乘积式计算：为每个系数生成标签
-    const coefficients = parameters.coefficients || [];
-    coefficients.forEach(coefficient => {
-      labels[coefficient.key] = coefficient.name;
-    });
-  } else if (calculationType === 'cumulative' || parameters.type === 'cumulative') {
-    // 累积式计算：累积字段 + 乘数
-    if (parameters.cumulative_field) {
-      labels[parameters.cumulative_field] = parameters.cumulative_field;
-    }
-    if (parameters.cumulative_multiplier !== undefined) {
-      labels['cumulative_multiplier'] = '累积乘数';
-    }
-  }
-
-  return labels;
-});
 
 // 获取系数的详细信息，包括级别名称
 const coefficientDetails = computed(() => {
@@ -442,7 +405,6 @@ const coefficientDetails = computed(() => {
     try {
       parameters = JSON.parse(parameters);
     } catch (error) {
-      console.error('解析规则参数失败:', error);
       return {};
     }
   }
@@ -450,47 +412,23 @@ const coefficientDetails = computed(() => {
   const details = {};
 
   // 根据计算类型生成不同的系数详细信息
-  if (calculationType === 'multiplicative' || parameters.type === 'multiplicative') {
-    // 乘积式计算：为每个系数生成详细信息
-    const coefficients = parameters.coefficients || [];
-    coefficients.forEach(coefficient => {
-      const value = dynamicCoefficients.value[coefficient.key];
-      let levelName = value; // 默认显示数值
-
-      // 如果有items，查找对应的级别名称
-      if (coefficient.items && Array.isArray(coefficient.items)) {
-        // 处理字符串和数字类型的匹配
-        const item = coefficient.items.find(item => {
-          // 尝试将两者转换为相同类型进行比较
-          return parseFloat(item.multiplier) === parseFloat(value);
-        });
-        if (item) {
-          levelName = `${item.name} (${item.multiplier})`;
-        }
-      }
-
-      details[coefficient.key] = {
-        label: coefficient.name,
+  if (calculationType === 'tree' || parameters.type === 'tree') {
+    // 直接遍历动态系数中的所有键，生成详情
+    for (const [key, value] of Object.entries(dynamicCoefficients.value)) {
+      if (value === undefined || value === null || value === '') continue;
+      
+      // 解析键，提取维度键和级别
+      const [dimensionKey, level] = key.split('_');
+      
+      // 为每个键生成详情
+      details[key] = {
+        label: dimensionKey === 'root' ? '项目级别' : dimensionKey,
         value: value,
-        displayValue: levelName
-      };
-    });
-  } else if (calculationType === 'cumulative' || parameters.type === 'cumulative') {
-    // 累积式计算：累积字段 + 乘数
-    if (parameters.cumulative_field) {
-      details[parameters.cumulative_field] = {
-        label: parameters.cumulative_field,
-        value: dynamicCoefficients.value[parameters.cumulative_field],
-        displayValue: dynamicCoefficients.value[parameters.cumulative_field]
+        displayValue: value
       };
     }
-    if (parameters.cumulative_multiplier !== undefined) {
-      details['cumulative_multiplier'] = {
-        label: '累积乘数',
-        value: dynamicCoefficients.value['cumulative_multiplier'],
-        displayValue: dynamicCoefficients.value['cumulative_multiplier']
-      };
-    }
+    
+
   }
 
   return details;
@@ -506,65 +444,51 @@ const estimatedScore = computed(() => {
 
 // 前端分数计算函数（与后端RuleEngine保持一致）
 const calculateScoreFrontend = (rule) => {
-  if (!rule || !rule.calculation) {
-    // 如果没有计算配置，使用基础分数
-    return rule.score || 0;
+  if (!rule) {
+    return 0;
   }
 
-  let totalScore = 0;
+  // 获取基础分数
+  const baseScore = rule.score || 0;
+  
+  // 如果没有计算配置，只返回基础分数
+  if (!rule.calculation) {
+    return baseScore;
+  }
+
+  let totalScore = baseScore;
 
   // 根据计算类型执行不同的计算逻辑
   switch (rule.calculation.calculation_type) {
-    case 'multiplicative':
-      // 乘积式计算
-      totalScore = calculateMultiplicativeScore(rule);
+    case 'tree':
+      // 树结构计算（树结构分数直接作为总分数）
+      totalScore = calculateTreeScore(rule);
       break;
-    case 'cumulative':
-      // 累积式计算
-      totalScore = calculateCumulativeScore(rule);
+    
+    case 'additive':
+      // 累加计算（将系数分数加到基础分数上）
+      const coefficientsScore = calculateCoefficientsScore(rule);
+      totalScore = baseScore + coefficientsScore;
       break;
+
     default:
       // 默认使用基础分数
-      totalScore = rule.score || 0;
+      totalScore = baseScore;
   }
 
   return totalScore;
 };
 
-// 计算乘积式分数
-const calculateMultiplicativeScore = (rule) => {
-  let parameters = rule.calculation.parameters || {};
-
-  // 解析参数（可能是JSON字符串）
-  if (typeof parameters === 'string') {
-    try {
-      parameters = JSON.parse(parameters);
-    } catch (error) {
-      console.error('解析乘积式参数失败:', error);
-      return rule.score || 0;
-    }
-  }
-
-  // 获取基础分值（使用规则或参数中定义的基础分值，不需要学生输入）
-  const baseScore = parseFloat(parameters.base_score) || parseFloat(rule.score) || 0;
-  const coefficients = parameters.coefficients || [];
-
-  let totalMultiplier = 1.0;
-
-  // 计算所有系数的乘积
-  coefficients.forEach(coefficient => {
-    // 获取系数的值
-    const fieldValue = parseFloat(dynamicCoefficients.value[coefficient.key]);
-    if (!isNaN(fieldValue)) {
-      totalMultiplier *= fieldValue;
-    }
-  });
-
-  return parseFloat((baseScore * totalMultiplier).toFixed(4));
+// 计算系数分数（累加类型）
+const calculateCoefficientsScore = (rule) => {
+  let score = 0;
+  // 这里可以根据规则的配置实现累加计算逻辑
+  // 目前先返回0，后续可以根据实际需求扩展
+  return score;
 };
 
-// 计算累积式分数
-const calculateCumulativeScore = (rule) => {
+// 计算树结构分数
+const calculateTreeScore = (rule) => {
   let parameters = rule.calculation.parameters || {};
 
   // 解析参数（可能是JSON字符串）
@@ -572,20 +496,56 @@ const calculateCumulativeScore = (rule) => {
     try {
       parameters = JSON.parse(parameters);
     } catch (error) {
-      console.error('解析累积式参数失败:', error);
       return rule.score || 0;
     }
   }
-
-  const baseScore = parseFloat(rule.score) || parseFloat(parameters.base_score) || 0;
-  const cumulativeField = parameters.cumulative_field;
-  const cumulativeMultiplier = parseFloat(dynamicCoefficients.value['cumulative_multiplier']) || parseFloat(parameters.cumulative_multiplier) || 0.1;
-
-  // 获取累积字段的值
-  const cumulativeValue = parseFloat(dynamicCoefficients.value[cumulativeField]) || 0;
-
-  // 计算累积分数
-  return parseFloat((baseScore * cumulativeValue * cumulativeMultiplier).toFixed(4));
+  
+  // 获取树结构配置
+  const treeConfig = parameters.tree || {};
+  
+  // 获取所有动态系数值
+  const coefficients = Object.values(dynamicCoefficients.value);
+  
+  // 如果没有动态系数值，返回0
+  if (coefficients.length === 0) {
+    return 0;
+  }
+  
+  // 直接使用动态系数值查找对应的分数
+  // 假设系数值的组合直接对应分数
+  // 例如：['国家级', 'A'] 对应 scores['国家级_A']
+  let score = 0;
+  try {
+    // 获取分数配置
+    const scores = treeConfig.scores || {};
+    
+    // 将动态系数值组合成键（例如：['国家级', 'A'] -> '国家级_A'）
+    const combinedKey = coefficients.join('_');
+    
+    // 查找对应的分数
+    if (combinedKey in scores) {
+      score = scores[combinedKey] || 0;
+    } else {
+      // 如果找不到匹配的组合键，尝试其他可能的组合格式
+      const alternativeKeys = [
+        coefficients.join('-'),  // 例如：国家级-A
+        coefficients[0] + coefficients[1],  // 例如：国家级A
+        coefficients.join('')  // 例如：国家级A（与上一个相同，但为了完整性）
+      ];
+      
+      for (const key of alternativeKeys) {
+        if (key in scores) {
+          score = scores[key] || 0;
+          break;
+        }
+      }
+    }
+    
+  } catch (error) {
+    score = 0;
+  }
+  
+  return score;
 };
 
 const pdfFiles = computed(() => {
