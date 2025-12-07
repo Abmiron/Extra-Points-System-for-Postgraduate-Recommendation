@@ -5,10 +5,12 @@
       class="node-content"
       :class="{ 
         selected: node.id === selectedNodeId,
-        leaf: !node.children || node.children.length === 0
+        leaf: !node.children || node.children.length === 0,
+        editing: isEditing
       }"
-      @click="$emit('node-select', node.id)"
-      :data-node-id="node.id"
+      @click="handleNodeContentClick"
+      ref="nodeContentRef"
+      :title="getNodePath ? getNodePath(node) : ''"
     >
       <!-- 展开/折叠按钮 -->
       <button 
@@ -21,33 +23,73 @@
         <font-awesome-icon :icon="node.expanded ? 'chevron-down' : 'chevron-right'" />
       </button>
       
-      <!-- 节点信息 -->
-      <div class="node-info">
-        <div class="node-name">{{ node.dimension.name }}</div>
-        <div class="node-meta">
-          <span class="node-score">分数: {{ node.score }}</span>
-        </div>
+      <!-- 节点信息 - 统一样式的内联编辑 -->
+      <div class="node-info" ref="nodeInfoRef">
+          <div class="node-name">
+            <template v-if="isEditing">
+              <input 
+                type="text" 
+                class="node-name-input"
+                v-model="editName"
+                @input="updateNodeName"
+                placeholder="节点名称"
+                ref="nameInputRef"
+                @keydown.enter.prevent.stop="focusScoreInput"
+                @keydown.esc.prevent.stop="handleEscKey"
+                @click.stop
+              >
+            </template>
+            <template v-else>
+              {{ node.dimension.name }}
+            </template>
+          </div>
+          <div class="node-meta">
+            <span class="node-score">
+              分数: 
+              <template v-if="isEditing">
+                <input 
+                  type="number" 
+                  class="node-score-input"
+                  v-model="editScore"
+                  @input="updateNodeScore"
+                  step="0.1"
+                  min="0"
+                  placeholder="0"
+                  ref="scoreInputRef"
+                  @keydown.enter.prevent.stop="saveEdit"
+                  @keydown.esc.prevent.stop="handleEscKey"
+                  @click.stop
+                >
+              </template>
+              <template v-else>
+                {{ node.score }}
+              </template>
+            </span>
+          </div>
       </div>
       
       <!-- 节点操作 -->
       <div class="node-actions">
-        <button 
-          type="button" 
-          class="btn-icon"
-          @click.stop="$emit('add-child', node)"
-          title="添加子节点"
-        >
-          <font-awesome-icon icon="plus" />
-        </button>
-        <button 
-          v-if="node.id !== 'root'"
-          type="button" 
-          class="btn-icon"
-          @click.stop="$emit('delete-node', node)"
-          title="删除节点"
-        >
-          <font-awesome-icon icon="trash" />
-        </button>
+        <!-- 查看模式操作按钮 -->
+        <template v-if="!isEditing">
+          <button 
+            type="button" 
+            class="btn-icon"
+            @click.stop="$emit('add-child', node)"
+            title="添加子节点"
+          >
+            <font-awesome-icon icon="plus" />
+          </button>
+          <button 
+            v-if="node.id !== 'root'"
+            type="button" 
+            class="btn-icon"
+            @click.stop="$emit('delete-node', node)"
+            title="删除节点"
+          >
+            <font-awesome-icon icon="trash" />
+          </button>
+        </template>
       </div>
     </div>
     
@@ -59,6 +101,7 @@
         :node="child"
         :level="level + 1"
         :selected-node-id="selectedNodeId"
+        :get-node-path="getNodePath"
         @node-select="$emit('node-select', $event)"
         @add-child="$emit('add-child', $event)"
         @delete-node="$emit('delete-node', $event)"
@@ -69,7 +112,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from 'vue'
+import { defineProps, defineEmits, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 
 const props = defineProps({
   node: {
@@ -83,15 +126,148 @@ const props = defineProps({
   selectedNodeId: {
     type: String,
     default: null
+  },
+  getNodePath: {
+    type: Function,
+    default: null
   }
 })
 
 const emit = defineEmits(['node-select', 'add-child', 'delete-node', 'update-node'])
 
+// 编辑状态
+const isEditing = ref(false)
+const editName = ref('')
+const editScore = ref(0)
+const nodeContentRef = ref(null)
+const nodeInfoRef = ref(null)
+const nameInputRef = ref(null)
+const scoreInputRef = ref(null)
+
+// 原始值，用于取消编辑时恢复
+const originalName = ref('')
+const originalScore = ref(0)
+
+// 初始化编辑数据
+watch(() => props.node, (newNode) => {
+  if (newNode) {
+    editName.value = newNode.dimension?.name || ''
+    editScore.value = newNode.score || 0
+  }
+}, { immediate: true, deep: true })
+
+// 进入编辑模式或保存编辑
+function enterEditMode() {
+  if (isEditing.value) {
+    // 当前已在编辑模式，退出并保存
+    saveEdit()
+  } else {
+    // 当前不在编辑模式，进入编辑
+    // 保存原始值用于取消编辑
+    originalName.value = props.node.dimension?.name || ''
+    originalScore.value = props.node.score || 0
+    
+    isEditing.value = true
+    editName.value = props.node.dimension?.name || ''
+    editScore.value = props.node.score || 0
+    
+    // 延迟聚焦到名称输入框
+    setTimeout(() => {
+      if (nameInputRef.value) {
+        nameInputRef.value.focus()
+        nameInputRef.value.select()
+      }
+    }, 100)
+    
+    // 添加全局点击监听器
+    document.addEventListener('click', handleClickOutside)
+  }
+}
+
+// 处理节点内容区域点击
+function handleNodeContentClick() {
+  // 点击整个节点内容区域都触发编辑状态切换
+  enterEditMode()
+}
+
+// 名称输入框回车后聚焦到分数输入框
+function focusScoreInput() {
+  // 使用setTimeout确保DOM更新后再聚焦
+  setTimeout(() => {
+    if (scoreInputRef.value) {
+      scoreInputRef.value.focus()
+      scoreInputRef.value.select()
+    }
+  }, 0)
+}
+
+// 处理外部点击事件
+function handleClickOutside(event) {
+  // 使用ref直接引用DOM元素
+  if (isEditing.value && nodeContentRef.value) {
+    // 检查点击是否在节点内容区域之外
+    if (!nodeContentRef.value.contains(event.target)) {
+      // 点击在外部区域，保存并退出编辑
+      saveEdit()
+    }
+  }
+}
+
+// 更新节点名称
+function updateNodeName() {
+  // 只在内部更新编辑值，不实时发送更新事件
+  // 保存时才统一发送更新
+}
+
+// 更新节点分数
+function updateNodeScore() {
+  // 只在内部更新编辑值，不实时发送更新事件
+  // 保存时才统一发送更新
+}
+
+// 保存编辑
+function saveEdit() {
+  if (props.node.dimension) {
+    props.node.dimension.name = editName.value
+    // 根据名称生成键值：转换为小写，空格替换为下划线，删除特殊字符
+    props.node.dimension.key = editName.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+  }
+  const savedScore = parseFloat(editScore.value) || 0
+  props.node.score = savedScore
+  isEditing.value = false
+  // 移除全局点击监听器
+  document.removeEventListener('click', handleClickOutside)
+  emit('update-node', props.node)
+}
+
+// 取消编辑并恢复原始值
+function cancelEdit() {
+  if (props.node.dimension) {
+    editName.value = originalName.value
+    props.node.dimension.name = originalName.value
+  }
+  editScore.value = originalScore.value
+  props.node.score = originalScore.value
+  isEditing.value = false
+  // 移除全局点击监听器
+  document.removeEventListener('click', handleClickOutside)
+}
+
+// 处理Esc键
+function handleEscKey() {
+  cancelEdit()
+}
+
+// 切换展开/折叠
 function toggleExpand() {
   props.node.expanded = !props.node.expanded
   emit('update-node', props.node)
 }
+// 在组件卸载时清理事件监听器
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+
 </script>
 
 <style scoped>
@@ -111,6 +287,8 @@ function toggleExpand() {
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .node-content:hover {
@@ -136,11 +314,13 @@ function toggleExpand() {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 8px;
   color: #666;
   cursor: pointer;
   border-radius: 4px;
   transition: all 0.2s ease;
+  flex-shrink: 0;
+  flex-grow: 0;
+  flex-basis: auto;
 }
 
 .node-toggle:hover {
@@ -151,6 +331,9 @@ function toggleExpand() {
 .node-info {
   flex: 1;
   min-width: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
 }
 
 .node-name {
@@ -158,6 +341,7 @@ function toggleExpand() {
   color: #333;
   margin-bottom: 2px;
   font-size: 14px;
+  word-break: break-all;
 }
 
 .node-meta {
@@ -176,11 +360,38 @@ function toggleExpand() {
   font-weight: 500;
 }
 
+.node-name-input, .node-score-input {
+  display: inline-block;
+  width: auto;
+  min-width: 80px;
+  max-width: 100px;
+  padding: 2px 4px;
+  margin: 0;
+  border: 1px solid #2196f3;
+  border-radius: 3px;
+  background: #fff;
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 600;
+  color: #333;
+  transition: none;
+  height: auto;
+  box-sizing: border-box;
+  vertical-align: baseline;
+}
+
+.node-name-input:focus, .node-score-input:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 1px rgba(25, 118, 210, 0.3);
+}
+
 .node-actions {
   display: flex;
   gap: 4px;
   opacity: 0;
   transition: opacity 0.2s ease;
+  flex-shrink: 0;
 }
 
 .node-content:hover .node-actions {
@@ -206,6 +417,24 @@ function toggleExpand() {
   color: #333;
 }
 
+.btn-save {
+  color: #4caf50;
+}
+
+.btn-save:hover {
+  background: #e8f5e9;
+  color: #388e3c;
+}
+
+.btn-cancel {
+  color: #f44336;
+}
+
+.btn-cancel:hover {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
 .node-children {
   margin-left: 24px;
   border-left: 1px dashed #e0e0e0;
@@ -221,9 +450,13 @@ function toggleExpand() {
     padding: 8px 10px;
   }
   
-  .node-meta {
-    gap: 8px;
-    font-size: 11px;
+  /* 移动端内联编辑样式 */
+  .node-name-input, .node-score-input {
+    font-size: 13px;
+    padding: 2px 4px;
+    min-width: 70px;
+    max-width: 120px;
+    height: auto;
   }
 }
 </style>

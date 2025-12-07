@@ -13,7 +13,7 @@
 """
 
 from flask import Blueprint, request, jsonify
-from models import Rule, RuleCalculation
+from models import Rule, RuleCalculation, Application
 from extensions import db
 import traceback
 import json
@@ -170,11 +170,22 @@ def create_rule():
         # 处理规则计算
         calculation_data = data.get("calculation")
         if calculation_data:
+            # 验证parameters是否为有效的JSON对象
+            parameters = calculation_data.get("parameters")
+            if parameters is not None:
+                if isinstance(parameters, str):
+                    try:
+                        parameters = json.loads(parameters)
+                    except json.JSONDecodeError:
+                        return jsonify({"error": "Invalid JSON format for parameters"}), 400
+                elif not isinstance(parameters, dict):
+                    return jsonify({"error": "Parameters must be a valid JSON object"}), 400
+            
             new_calculation = RuleCalculation(
                 rule_id=new_rule.id,
                 calculation_type=calculation_data.get("calculation_type"),
                 formula=calculation_data.get("formula"),
-                parameters=calculation_data.get("parameters"),
+                parameters=parameters,
                 max_score=calculation_data.get("max_score"),
             )
             db.session.add(new_calculation)
@@ -262,11 +273,22 @@ def update_rule(rule_id):
             RuleCalculation.query.filter_by(rule_id=rule_id).delete()
             # 添加新的计算
             if calculation_data:
+                # 验证parameters是否为有效的JSON对象
+                parameters = calculation_data.get("parameters")
+                if parameters is not None:
+                    if isinstance(parameters, str):
+                        try:
+                            parameters = json.loads(parameters)
+                        except json.JSONDecodeError:
+                            return jsonify({"error": "Invalid JSON format for parameters"}), 400
+                    elif not isinstance(parameters, dict):
+                        return jsonify({"error": "Parameters must be a valid JSON object"}), 400
+                
                 new_calculation = RuleCalculation(
                     rule_id=rule_id,
                     calculation_type=calculation_data.get("calculation_type"),
                     formula=calculation_data.get("formula"),
-                    parameters=calculation_data.get("parameters"),
+                    parameters=parameters,
                     max_score=calculation_data.get("max_score"),
                 )
                 db.session.add(new_calculation)
@@ -310,7 +332,11 @@ def update_rule(rule_id):
 def delete_rule(rule_id):
     try:
         rule = Rule.query.get_or_404(rule_id)
-
+        
+        # 删除所有引用该规则的申请记录
+        Application.query.filter_by(rule_id=rule_id).update({"rule_id": None})
+        
+        # 删除规则
         db.session.delete(rule)
         db.session.commit()
 
@@ -499,12 +525,24 @@ def calculate_rule_score(rule_id):
         if not rule:
             return jsonify({"code": 404, "message": "Rule not found"}), 404
 
+        # 调试信息
+        print(f"[DEBUG] API调用: rule_id={rule_id}, student_data={student_data}")
+        print(f"[DEBUG] Rule对象: id={rule.id}, name={rule.name}")
+        
         # 初始化规则引擎
         rule_engine = RuleEngine()
 
         # 计算单个规则的分数
         # 注意：这里直接传递字典而不是对象，因为calculate_score方法已经支持处理字典
         score = rule_engine.calculate_score(rule, student_data)
+        
+        # 调试信息
+        print(f"[DEBUG] 计算结果: score={score}")
+        
+        # 获取RuleCalculation对象以获取max_score
+        from models import RuleCalculation
+        calculation = RuleCalculation.query.filter_by(rule_id=rule.id).first()
+        max_score = calculation.max_score if calculation else None
 
         return (
             jsonify(
@@ -515,7 +553,7 @@ def calculate_rule_score(rule_id):
                         "rule_id": rule_id,
                         "rule_name": rule.name,
                         "score": score,
-                        "max_score": rule.max_score,
+                        "max_score": max_score,
                     },
                 }
             ),

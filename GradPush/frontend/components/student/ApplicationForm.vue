@@ -104,8 +104,7 @@
               <div v-else-if="field.type === 'text'" class="input-with-icon">
                 <font-awesome-icon :icon="['fas', 'font']" />
                 <input type="text" class="form-control" v-model="formData.dynamicCoefficients[field.name]"
-                  :placeholder="'请输入' + field.label"
-                  @input="debouncedCalculateEstimatedScore">
+                  :placeholder="'请输入' + field.label" @input="debouncedCalculateEstimatedScore">
               </div>
 
               <!-- 单选按钮类型 -->
@@ -319,6 +318,10 @@ const loading = reactive({
   score: false
 })
 
+// 监听规则变化，清空旧规则的动态系数字段
+// 添加一个标志，避免在加载编辑数据时清空动态系数
+const isLoadingEditData = ref(false)
+
 // 重置表单的通用函数
 const resetForm = () => {
   Object.assign(formData, {
@@ -369,18 +372,26 @@ const loadEditData = async (applicationId) => {
     resetForm()
     return
   }
+  
+  // 设置加载标志，避免在加载过程中清空动态系数
+  isLoadingEditData.value = true
+  
   try {
     const application = await applicationsStore.fetchApplicationById(applicationId)
+    
+    // 将后端字段转换为前端字段名
+    const frontendData = toFrontendFields(application)
+    
     // 清空表单
     resetForm()
-    // 先获取转换后的前端数据
-    const frontendData = toFrontendFields(application)
+    
     // 先设置ruleId，确保selectedRule能够正确计算
     if (frontendData.ruleId) {
       formData.ruleId = frontendData.ruleId
     }
     // 这将确保系数选择字段能够正确显示
     await fetchMatchingRules()
+    
     // 填充表单基本数据（排除动态系数字段和ruleId，单独处理）
     for (const [key, value] of Object.entries(frontendData)) {
       if (key in formData && key !== 'dynamicCoefficients' && key !== 'ruleId') {
@@ -389,27 +400,22 @@ const loadEditData = async (applicationId) => {
     }
     // 填充动态系数字段
     let dynamicCoefficients = {}
-    // 从后端返回的数据中获取动态系数，处理不同的字段名和可能的JSON字符串
-    if (application.dynamic_coefficients) {
-      if (typeof application.dynamic_coefficients === 'string') {
+    
+    // 优先使用转换后的字段，如果没有则使用原始字段
+    const rawDynamicCoefficients = frontendData.dynamicCoefficients || application.dynamic_coefficients
+    if (rawDynamicCoefficients) {
+      if (typeof rawDynamicCoefficients === 'string') {
         try {
-          dynamicCoefficients = JSON.parse(application.dynamic_coefficients)
+          dynamicCoefficients = JSON.parse(rawDynamicCoefficients)
         } catch (error) {
+          console.error('解析动态系数失败:', error)
           dynamicCoefficients = {}
         }
       } else {
-        dynamicCoefficients = application.dynamic_coefficients
+        dynamicCoefficients = rawDynamicCoefficients
       }
-    } else if (application.dynamicCoefficients) {
-      if (typeof application.dynamicCoefficients === 'string') {
-        try {
-          dynamicCoefficients = JSON.parse(application.dynamicCoefficients)
-        } catch (error) {
-          dynamicCoefficients = {}
-        }
-      } else {
-        dynamicCoefficients = application.dynamicCoefficients
-      }
+    } else {
+      console.log('没有找到动态系数数据')
     }
     // 确保dynamicCoefficients是对象
     if (typeof dynamicCoefficients !== 'object' || dynamicCoefficients === null) {
@@ -422,8 +428,101 @@ const loadEditData = async (applicationId) => {
     }
     // 清空现有的dynamicCoefficients
     Object.keys(formData.dynamicCoefficients).forEach(key => delete formData.dynamicCoefficients[key])
-    // 使用Object.assign来更新dynamicCoefficients对象的属性，确保Vue的响应式系统能够正确跟踪变化
-    Object.assign(formData.dynamicCoefficients, stringifiedCoefficients)
+    // 将tree_path转换为前端需要的带索引的树结构字段
+    // 先将tree_path字符串转换为数组
+    if (stringifiedCoefficients.tree_path && typeof stringifiedCoefficients.tree_path === 'string') {
+      stringifiedCoefficients.tree_path = stringifiedCoefficients.tree_path.split(',');
+    }
+    if (stringifiedCoefficients.tree_path && Array.isArray(stringifiedCoefficients.tree_path)) {
+      // 获取当前选中的规则
+      const currentRule = availableRules.value.find(rule => rule.id === formData.ruleId);
+      if (currentRule && currentRule.calculation) {
+        let parameters = currentRule.calculation.parameters || {};
+        if (typeof parameters === 'string') {
+          try {
+            parameters = JSON.parse(parameters);
+          } catch (error) {
+            console.error('解析规则参数失败:', error);
+            parameters = {};
+          }
+        }
+        
+        // 检查是否是树结构计算
+        if (currentRule.calculation.calculation_type === 'tree' || parameters.type === 'tree') {
+          const treeConfig = parameters.tree || {};
+          const tree = treeConfig.root || (treeConfig.structure && treeConfig.structure.root);
+          
+          if (tree && tree.dimension) {
+            // 遍历tree_path数组，为每个元素创建对应的索引字段
+            let currentNode = tree;
+            stringifiedCoefficients.tree_path.forEach((path, index) => {
+              // 使用当前节点的dimension.key作为字段名前缀
+              const fieldName = `${currentNode.dimension.key}_${index}`;
+              stringifiedCoefficients[fieldName] = path;
+              
+              // 移动到下一个节点
+              if (currentNode.children && currentNode.children.length > 0) {
+                const nextNode = currentNode.children.find(child => child.dimension.name === path);
+                if (nextNode) {
+                  currentNode = nextNode;
+                }
+              }
+            });
+            
+            // 如果有下一层级，创建对应的字段
+            if (currentNode.children && currentNode.children.length > 0) {
+              const nextLevelIndex = stringifiedCoefficients.tree_path.length;
+              const nextFieldName = `${currentNode.dimension.key}_${nextLevelIndex}`;
+              stringifiedCoefficients[nextFieldName] = '';
+            }
+          }
+        } else {
+          // 非树结构计算，直接使用tree_${index}格式
+          stringifiedCoefficients.tree_path.forEach((path, index) => {
+            const fieldName = `tree_${index}`;
+            stringifiedCoefficients[fieldName] = path;
+          });
+        }
+      } else {
+        // 如果没有找到规则或计算配置，直接使用tree_${index}格式
+        stringifiedCoefficients.tree_path.forEach((path, index) => {
+          const fieldName = `tree_${index}`;
+          stringifiedCoefficients[fieldName] = path;
+        });
+      }
+      
+      // 移除tree_path字段，因为前端不再需要它
+      delete stringifiedCoefficients.tree_path;
+    }
+    
+    // 检查是否存在直接的tree_字段（如果后端没有返回tree_path数组）
+    const hasDirectTreeFields = Object.keys(stringifiedCoefficients)
+      .some(key => /tree_(\d+)$/.test(key));
+    
+    // 如果没有tree_path数组也没有直接的tree_字段，尝试从rule配置中创建默认的tree_字段
+    if (!stringifiedCoefficients.tree_path && !hasDirectTreeFields) {
+      // 获取当前选中的规则
+      const selectedRule = availableRules.value.find(rule => rule.id === formData.ruleId);
+      if (selectedRule && selectedRule.calculation && selectedRule.calculation.fields) {
+        // 检查规则中是否有树结构字段
+        const treeFields = selectedRule.calculation.fields.filter(field => field.type === 'tree');
+        if (treeFields.length > 0) {
+          // 创建默认的tree_字段
+          treeFields.forEach((field, index) => {
+            const fieldName = `tree_${index}`;
+            stringifiedCoefficients[fieldName] = '';
+          });
+        }
+      }
+    }
+    
+    // 使用reactive创建一个新的dynamicCoefficients对象，确保Vue的响应式系统能够正确跟踪变化
+    const newDynamicCoefficients = reactive({});
+    Object.assign(newDynamicCoefficients, stringifiedCoefficients);
+    formData.dynamicCoefficients = newDynamicCoefficients;
+    
+    // 手动重建选中的树节点路径，确保表单字段能正确显示之前选择的层级
+    rebuildSelectedTreePath();
     // 处理文件（如果有）
     if (application.files && Array.isArray(application.files)) {
       // 将后端返回的文件数据转换为前端可用的格式
@@ -446,6 +545,9 @@ const loadEditData = async (applicationId) => {
     console.error('加载编辑数据失败:', error)
     // 当加载失败（如404），重置为新表单
     resetForm()
+  } finally {
+    // 无论加载成功或失败，都重置加载标志
+    isLoadingEditData.value = false
   }
 }
 
@@ -479,9 +581,6 @@ watch(() => formData.projectName, debounce(() => {
 
 // 仅在需要时重新加载规则
 watch(() => formData.ruleId, () => {
-  // 规则ID变化时，重置选中的树节点路径
-  selectedTreePath.value = []
-  
   // 规则ID变化时，重新计算预估分数
   if (formData.ruleId) {
     calculateEstimatedScore()
@@ -546,10 +645,27 @@ const selectedRule = computed(() => {
 // 跟踪当前选中的树节点路径，用于层级显示表单
 const selectedTreePath = ref([])
 
-// 监听表单字段变化，更新选中的树节点路径
-watch(() => formData.dynamicCoefficients, (newCoefficients) => {
+watch(() => selectedRule.value?.id, (newRuleId, oldRuleId) => {
+  if (newRuleId !== oldRuleId && !isLoadingEditData.value) {
+    // 清空动态系数，只保留当前规则相关的字段
+    formData.dynamicCoefficients = {}
+
+    // 重置预估分数
+    estimatedScore.value = 0
+  }
+})
+
+// 通用监听：所有动态系数变化都触发预估分数重新计算
+watch(() => formData.dynamicCoefficients, () => {
+  if (selectedRule.value?.calculation) {
+    calculateEstimatedScore()
+  }
+}, { deep: true })
+
+// 根据当前表单值重建选中的树节点路径
+const rebuildSelectedTreePath = (newCoefficients = formData.dynamicCoefficients) => {
   if (!selectedRule.value?.calculation) return
-  
+
   const calculationType = selectedRule.value.calculation.calculation_type
   let parameters = selectedRule.value.calculation.parameters || {}
   if (typeof parameters === 'string') {
@@ -560,77 +676,91 @@ watch(() => formData.dynamicCoefficients, (newCoefficients) => {
       return
     }
   }
-  
+
   if (calculationType !== 'tree' && parameters.type !== 'tree') return
-  
+
   const treeConfig = parameters.tree || {}
   const tree = treeConfig.root || (treeConfig.structure && treeConfig.structure.root)
   if (!tree) return
-  
+
   // 根据当前表单值重建选中的树节点路径
   const buildPath = (node, path = [], level = 0) => {
     if (!node || !node.dimension) return path
-    
+
     // 查找当前节点的表单值（支持带索引的字段名）
     const indexedKey = `${node.dimension.key}_${level}`
     let fieldValue = newCoefficients[indexedKey]
-    
+
     if (fieldValue !== undefined && fieldValue !== null && fieldValue !== '') {
-      path.push(fieldValue)
-      
-      // 查找匹配的子节点
-      const selectedChild = node.children?.find(child => child.dimension.name === fieldValue)
-      if (selectedChild) {
-        return buildPath(selectedChild, path, level + 1)
+      // 检查当前值是否为当前节点的有效子节点
+      const isValidChild = node.children?.some(child => child.dimension.name === fieldValue)
+
+      if (isValidChild) {
+        path.push(fieldValue)
+
+        // 查找匹配的子节点
+        const selectedChild = node.children.find(child => child.dimension.name === fieldValue)
+        if (selectedChild && selectedChild.children && selectedChild.children.length > 0) {
+          return buildPath(selectedChild, path, level + 1)
+        }
       }
     }
-    
+
     return path
   }
-  
+
   // 重建选中的树节点路径
   const newPath = buildPath(tree)
-  
+
   // 如果路径发生变化，清除不再需要的字段值
   if (JSON.stringify(newPath) !== JSON.stringify(selectedTreePath.value)) {
     // 保存当前需要的字段名
     const neededFields = new Set()
-    
+
     // 标记当前路径需要的字段
     let currentNode = tree
     for (let i = 0; i < newPath.length; i++) {
       const indexedKey = `${currentNode.dimension.key}_${i}`
       neededFields.add(indexedKey)
-      
+
       // 移动到下一个节点
-      if (currentNode?.children) {
+      if (currentNode?.children && currentNode.children.length > 0) {
         currentNode = currentNode.children.find(child => child.dimension.name === newPath[i])
+        if (!currentNode) break
+      } else {
+        currentNode = null
+        break
       }
     }
-    
+
     // 标记下一层级需要的字段
     if (currentNode && currentNode.children && currentNode.children.length > 0) {
       const nextLevelKey = `${currentNode.dimension.key}_${newPath.length}`
       neededFields.add(nextLevelKey)
     }
-    
-    // 清除不再需要的字段值
+
+    // 更直接地清除不再需要的字段值
     const keysToDelete = []
     for (const key in newCoefficients) {
-      if (!neededFields.has(key)) {
+      // 检查是否是树结构字段（带索引的字段名）
+      const isTreeField = /_\d+$/.test(key)
+      if (isTreeField && !neededFields.has(key)) {
         keysToDelete.push(key)
       }
     }
-    
+
+    // 执行删除操作
     keysToDelete.forEach(key => {
       delete newCoefficients[key]
     })
   }
-  
+
   selectedTreePath.value = newPath
-    
-  // 重新计算预估分数
-  calculateEstimatedScore()
+}
+
+// 监听表单字段变化，更新选中的树节点路径
+watch(() => formData.dynamicCoefficients, (newCoefficients) => {
+  rebuildSelectedTreePath(newCoefficients)
 }, { deep: true })
 
 // 动态生成的表单字段配置 - 实现层级选择，每层显示独立选择框
@@ -638,10 +768,10 @@ const dynamicFormFields = computed(() => {
   if (!selectedRule.value?.calculation) {
     return []
   }
-  
+
   const calculationType = selectedRule.value.calculation.calculation_type
   let parameters = selectedRule.value.calculation.parameters || {}
-  
+
   // 解析参数（可能是JSON字符串）
   if (typeof parameters === 'string') {
     try {
@@ -651,63 +781,78 @@ const dynamicFormFields = computed(() => {
       return []
     }
   }
-  
+
   const fields = []
-  
+
   // 根据计算类型生成不同的表单字段
   if (calculationType === 'tree' || parameters.type === 'tree') {
     // 树结构计算：生成路径中每个层级的表单字段
-    const treeConfig = parameters.tree || {}
-    const tree = treeConfig.root || (treeConfig.structure && treeConfig.structure.root)
-    
-    if (!tree) return []
-    
-    // 生成路径中每个层级的选择框
-    let currentNode = tree
-    let currentDepth = 0
-    
-    // 显示已选择的层级，每个层级都显示为选择框
-    for (let i = 0; i < selectedTreePath.value.length; i++) {
-      const selectedValue = selectedTreePath.value[i]
-      
-      // 获取当前节点的子节点作为选项
-      const options = currentNode.children?.map(child => ({
-        value: child.dimension.name,
-        label: child.dimension.name
-      })) || []
-      
-      fields.push({
-        name: `${currentNode.dimension.key}_${i}`, // 使用唯一名称避免字段冲突
-        label: currentNode.dimension.name,
-        type: 'select',
-        options: options,
-        value: selectedValue,
-        required: true,
-        depth: currentDepth,
-        originalKey: currentNode.dimension.key // 保存原始key用于数据处理
-      })
-      
-      // 移动到下一个节点
-      if (currentNode?.children) {
-        currentNode = currentNode.children.find(child => child.dimension.name === selectedValue)
-        currentDepth++
+    try {
+      const treeConfig = parameters.tree || {}
+      const tree = treeConfig.root || (treeConfig.structure && treeConfig.structure.root)
+
+      if (!tree || !tree.dimension) return []
+
+      // 生成路径中每个层级的选择框
+      let currentNode = tree
+      let currentDepth = 0
+
+      // 显示已选择的层级，每个层级都显示为选择框
+      for (let i = 0; i < selectedTreePath.value.length; i++) {
+        const selectedValue = selectedTreePath.value[i]
+
+        // 只有当当前节点有子节点时，才生成选择框
+        if (currentNode.children && currentNode.children.length > 0) {
+          // 获取当前节点的子节点作为选项
+          const options = currentNode.children?.map(child => ({
+            value: child.dimension.name,
+            label: child.dimension.name
+          })) || []
+
+          fields.push({
+            name: `${currentNode.dimension.key}_${i}`, // 使用唯一名称避免字段冲突
+            label: currentNode.dimension.name,
+            type: 'select',
+            options: options,
+            value: selectedValue,
+            required: true,
+            depth: currentDepth,
+            originalKey: currentNode.dimension.key // 保存原始key用于数据处理
+          })
+        }
+
+        // 移动到下一个节点
+        if (currentNode?.children && currentNode.children.length > 0) {
+          const nextNode = currentNode.children.find(child => child.dimension.name === selectedValue)
+          if (nextNode && nextNode.dimension) {
+            currentNode = nextNode
+            currentDepth++
+          } else {
+            currentNode = null; // 如果没有匹配的子节点，终止遍历
+          }
+        } else {
+          currentNode = null; // 如果当前节点没有子节点，终止遍历
+        }
       }
-    }
-    
-    // 如果当前节点有子节点，显示下一层级的选择框
-    if (currentNode && currentNode.children && currentNode.children.length > 0) {
-      fields.push({
-        name: `${currentNode.dimension.key}_${selectedTreePath.value.length}`, // 使用唯一名称
-        label: currentNode.dimension.name,
-        type: 'select',
-        options: currentNode.children.map(child => ({
-          value: child.dimension.name,
-          label: child.dimension.name
-        })),
-        required: true,
-        depth: currentDepth,
-        originalKey: currentNode.dimension.key // 保存原始key用于数据处理
-      })
+
+      // 如果当前节点有子节点，显示下一层级的选择框
+      if (currentNode && currentNode.children && currentNode.children.length > 0) {
+        fields.push({
+          name: `${currentNode.dimension.key}_${selectedTreePath.value.length}`, // 使用唯一名称
+          label: currentNode.dimension.name,
+          type: 'select',
+          options: currentNode.children.map(child => ({
+            value: child.dimension.name,
+            label: child.dimension.name
+          })),
+          required: true,
+          depth: currentDepth,
+          originalKey: currentNode.dimension.key // 保存原始key用于数据处理
+        })
+      }
+    } catch (error) {
+      console.error('解析树结构参数失败:', error)
+      return []
     }
   }
 
@@ -733,16 +878,53 @@ const calculateEstimatedScore = async () => {
       formData.applicationType = selectedRule.type
     }
 
-    // 准备学生数据，清理带索引的字段名
+    // 准备学生数据
     const studentData = {
       faculty_id: authStore.user?.faculty_id || authStore.user?.facultyId
     }
-    
-    // 处理动态系数字段，清理索引后缀
+
+    // 处理动态系数，将树结构字段转换为后端期望的格式
+    // 与prepareApplicationData函数保持完全一致的处理逻辑
+    const processedCoefficients = {};
+
+    // 第一步：直接将所有树结构字段转换为路径数组，总是使用'tree_path'作为键名
+    // 这样后端可以统一处理所有规则的树路径
+    const treePathValues = [];
+
+    // 找出所有树结构字段并按索引排序
+    const treeFieldKeys = Object.keys(formData.dynamicCoefficients)
+      .filter(key => /.*?_\d+$/.test(key))
+      .sort((a, b) => {
+        const indexA = parseInt(a.match(/.*?_(\d+)$/)[1]);
+        const indexB = parseInt(b.match(/.*?_(\d+)$/)[1]);
+        return indexA - indexB;
+      });
+
+    // 提取树路径值
+    for (const key of treeFieldKeys) {
+      const value = formData.dynamicCoefficients[key];
+      if (value !== undefined && value !== null && value !== '') {
+        treePathValues.push(value);
+      }
+    }
+
+    // 保存树路径到固定的'tree_path'字段
+    if (treePathValues.length > 0) {
+      processedCoefficients.tree_path = treePathValues;
+    }
+
+    // 复制所有非树结构字段
     for (const [key, value] of Object.entries(formData.dynamicCoefficients)) {
-      // 移除索引后缀（如：rule_level_0 -> rule_level）
-      const cleanedKey = key.replace(/(_\d+)$/, '')
-      studentData[cleanedKey] = value
+      // 跳过树结构字段（带索引的字段）
+      if (!/(.*?)_\d+$/.test(key)) {
+        processedCoefficients[key] = value;
+      }
+    }
+
+
+    // 将处理后的动态系数字段添加到学生数据中
+    for (const [key, value] of Object.entries(processedCoefficients)) {
+      studentData[key] = value;
     }
     // 将字符串类型的数字转换为数字类型
     Object.keys(studentData).forEach(key => {
@@ -752,8 +934,14 @@ const calculateEstimatedScore = async () => {
     })
     // 调用后端API计算分数
     const scoreResponse = await api.calculateRuleScore(selectedRule.id, { student_data: studentData })
-    estimatedScore.value = parseFloat(scoreResponse.data.score.toFixed(4))
+    if (scoreResponse.code === 200) {
+      estimatedScore.value = parseFloat(scoreResponse.data.score.toFixed(4))
+    } else {
+      // 如果API返回错误，回退到前端计算
+      throw new Error('API calculation failed')
+    }
   } catch (error) {
+    console.log('计算错误:', error);
     // 如果API调用失败，回退到前端计算
     const selectedRule = availableRules.value.find(rule => rule.id === formData.ruleId)
     if (!selectedRule) {
@@ -801,6 +989,11 @@ const calculateScoreFrontend = (rule) => {
 
 // 计算树结构分数
 const calculateTreeScore = (rule) => {
+  // 验证规则和计算配置
+  if (!rule || !rule.calculation) {
+    return rule.score || 0
+  }
+
   let parameters = rule.calculation.parameters || {}
 
   // 解析参数（可能是JSON字符串）
@@ -808,15 +1001,23 @@ const calculateTreeScore = (rule) => {
     try {
       parameters = JSON.parse(parameters)
     } catch (error) {
-      console.error('解析矩阵参数失败:', error)
+      console.error('解析参数失败:', error)
       return rule.score || 0
     }
   }
-  
+
   // 获取树结构配置
   const treeConfig = parameters.tree || {}
-  
-  // 获取对应的分数
+
+  // 获取树结构
+  const tree = treeConfig.structure || {}
+  const rootNode = tree.root
+
+  if (!rootNode) {
+    return 0
+  }
+
+  // 获取分数配置
   let scores = treeConfig.scores || {}
   // 如果scores是字符串，尝试解析为JSON
   if (typeof scores === 'string') {
@@ -826,73 +1027,155 @@ const calculateTreeScore = (rule) => {
       scores = {}
     }
   }
-  
-  // 获取树结构
-  const tree = treeConfig.structure || treeConfig.tree || {}
-  if (!tree || !tree.root) {
-    return 0
+
+  // 确保scores是对象
+  if (typeof scores !== 'object' || scores === null) {
+    scores = {}
   }
-  
-  // 递归查找匹配路径
-  const findMatchingPath = (node, path = []) => {
-    if (!node) return null
-    
-    // 获取当前节点的维度键
-  const dimensionKey = node.dimension.key
-  // 获取表单中该维度的值（支持带索引的字段名）
-  let fieldValue = formData.dynamicCoefficients[dimensionKey]
-  
-  // 如果没有找到，尝试查找带索引的字段名（格式如：key_0, key_1）
-  if (fieldValue === undefined) {
-    for (const [key, value] of Object.entries(formData.dynamicCoefficients)) {
-      if (key.startsWith(`${dimensionKey}_`)) {
-        fieldValue = value
+
+  // 获取完整的学生数据（与后端逻辑完全一致）
+  const studentData = {
+    ...formData.dynamicCoefficients,
+    ...(authStore.user || {})
+  }
+
+  // 优先使用studentData中的tree_path字段（与后端逻辑一致）
+  let treePath = studentData.tree_path;
+  let matchingPath = null;
+
+  if (treePath && Array.isArray(treePath) && treePath.length > 0) {
+    matchingPath = treePath;
+  } else {
+    // 如果没有tree_path字段，再回退到动态查找路径
+
+    // 递归查找匹配路径（修复：确保找到最深层的匹配叶子节点）
+    const findMatchingPath = (node, currentPath = []) => {
+
+      // 获取当前节点的名称
+      const nodeDimension = node.dimension || {};
+      const nodeName = nodeDimension.name || node.name;
+
+      // 将当前节点添加到路径中
+      const fullPath = [...currentPath, nodeName];
+
+      // 如果是叶子节点，检查是否与studentData中的值匹配
+      if (!node.children || node.children.length === 0) {
+        // 检查当前叶子节点是否匹配
+        let is_leaf_matched = false;
+
+        // 灵活匹配方式：检查是否有任何字段的值等于当前叶子节点名
+        for (const key in studentData) {
+          const value = studentData[key];
+          if (value !== undefined && value !== null && value !== '') {
+            if (String(value).trim() === nodeName.trim()) {
+              is_leaf_matched = true;
+              break;
+            }
+          }
+        }
+
+        // 如果叶子节点匹配，返回完整路径
+        if (is_leaf_matched) {
+          return fullPath;
+        } else {
+          // 叶子节点不匹配，返回null
+          return null;
+        }
+      }
+
+      // 用于存储找到的最长路径
+      let longestPath = null;
+
+      // 遍历当前节点的所有子节点
+      for (const child of node.children) {
+
+        // 获取子节点的名称和键（兼容不同的节点结构）
+        const childDimension = child.dimension || {};
+        const childKey = childDimension.key || child.key;
+        const childName = childDimension.name || child.name;
+
+        // 检查当前子节点是否匹配
+        let is_child_matched = false;
+
+        // 灵活匹配方式：检查是否有任何字段的值等于当前子节点名
+        for (const key in studentData) {
+          const value = studentData[key];
+          if (value !== undefined && value !== null && value !== '') {
+            if (String(value).trim() === childName.trim()) {
+              is_child_matched = true;
+              break;
+            }
+          }
+        }
+
+        // 传统匹配方式：使用节点自己的key来匹配student_data
+        if (!is_child_matched && childKey && studentData.hasOwnProperty(childKey)) {
+          const child_value = String(studentData[childKey]);
+          if (child_value.trim() === childName.trim()) {
+            is_child_matched = true;
+          }
+        }
+
+        // 对于每个子节点，无论是否匹配，都尝试向下遍历
+        // 这确保我们能找到最深层的匹配叶子节点
+        const result = findMatchingPath(child, fullPath);
+
+        // 如果找到匹配路径，且该路径比当前最长路径更长，则更新最长路径
+        if (result) {
+          if (!longestPath || result.length > longestPath.length) {
+            longestPath = result;
+          }
+        }
+      }
+
+      // 返回找到的最长匹配路径
+      return longestPath;
+    };
+
+    // 查找匹配路径
+    matchingPath = findMatchingPath(rootNode);
+  }
+
+  if (!matchingPath) {
+    console.log('没有找到匹配路径，返回0分');
+    return 0;
+  }
+
+  // 根据匹配路径找到对应的叶子节点，并获取其score属性
+  let currentNode = rootNode
+
+  // 跳过根节点（如果路径包含根节点的话）
+  const pathToUse = matchingPath[0] === '根节点' ? matchingPath.slice(1) : matchingPath;
+
+  for (const nodeName of pathToUse) {
+    if (currentNode?.children) {
+      // 使用更宽松的匹配方式，忽略空格和大小写差异
+      const nextNode = currentNode.children.find(child => {
+        const childName = child.dimension.name || '';
+        return childName.trim() === nodeName.trim();
+      });
+      if (nextNode) {
+        currentNode = nextNode
+      } else {
+        console.log('没有找到匹配的子节点:', nodeName);
         break
       }
+    } else {
+      console.log('当前节点没有子节点');
+      break
     }
   }
-    
-    // 如果表单中没有该维度的值，返回null
-    if (fieldValue === undefined || fieldValue === null || fieldValue === '') {
-      return null
-    }
-    
-    // 将当前节点的值加入路径
-    const currentPath = [...path, fieldValue]
-    
-    // 如果节点没有子节点，返回完整路径
-    if (!node.children || node.children.length === 0) {
-      return currentPath
-    }
-    
-    // 查找匹配的子节点
-    const selectedChild = node.children.find(child => child.dimension.name === fieldValue)
-    if (selectedChild) {
-      // 递归查找子节点
-      return findMatchingPath(selectedChild, currentPath)
-    }
-    
-    return null
-  }
-  
-  // 查找匹配路径
-  const matchingPath = findMatchingPath(tree.root)
-  if (!matchingPath) {
-    return 0
-  }
-  
-  // 组合成键，格式如 "国家级_一等奖及以上_A+类"
-  const treeKey = matchingPath.join('_')
-  
-  // 获取对应的分数
-  const score = parseFloat(scores[treeKey] || 0)
-  
+
+  // 获取叶子节点的score属性
+  const score = parseFloat(currentNode?.score || 0)
+
   // 应用最大值限制
   if (rule.calculation.max_score !== undefined) {
     const maxScore = parseFloat(rule.calculation.max_score)
-    return Math.min(score, maxScore)
+    const finalScore = Math.min(score, maxScore)
+    return finalScore
   }
-  
+
   return score
 }
 
@@ -1131,7 +1414,8 @@ const backToFrontMappings = {
   applied_at: 'appliedAt',
   created_at: 'createdAt',
   updated_at: 'updatedAt',
-  application_type: 'applicationType'
+  application_type: 'applicationType',
+  dynamic_coefficients: 'dynamicCoefficients'
 }
 
 // 将后端字段名转换为前端字段名
@@ -1151,16 +1435,53 @@ const toFrontendFields = (data) => {
 const prepareApplicationData = (status) => {
   const { studentName, studentId, facultyId, departmentId, majorId } = getStudentInfo()
   const applicationType = getApplicationType()
-  
-  // 保留所有dynamicCoefficients字段，包括带索引的字段名
-  // 这些带索引的字段名对于层级选择的分数计算是必需的
+
+  // 处理动态系数，将树结构字段转换为后端期望的格式
+  const processedCoefficients = {};
+
+  // 第一步：直接将所有树结构字段转换为路径数组，总是使用'tree_path'作为键名
+  // 这样后端可以统一处理所有规则的树路径
+  const treePathValues = [];
+
+  // 找出所有树结构字段并按索引排序
+  const treeFieldKeys = Object.keys(formData.dynamicCoefficients)
+    .filter(key => /.*?_(\d+)$/.test(key))
+    .sort((a, b) => {
+      const indexA = parseInt(a.match(/.*?_(\d+)$/)[1]);
+      const indexB = parseInt(b.match(/.*?_(\d+)$/)[1]);
+      return indexA - indexB;
+    });
+
+  // 提取树路径值
+  for (const key of treeFieldKeys) {
+    const value = formData.dynamicCoefficients[key];
+    if (value !== undefined && value !== null && value !== '') {
+      treePathValues.push(value);
+    }
+  }
+
+  // 保存树路径到固定的'tree_path'字段
+  if (treePathValues.length > 0) {
+    processedCoefficients.tree_path = treePathValues;
+  }
+
+  // 复制所有非树结构字段
+  for (const [key, value] of Object.entries(formData.dynamicCoefficients)) {
+    // 跳过树结构字段（带索引的字段）
+    if (!/(.*?)_(\d+)$/.test(key)) {
+      processedCoefficients[key] = value;
+    }
+  }
+
+  // 创建清理后的表单数据
   const cleanedFormData = {
-    ...formData
+    ...formData,
+    dynamicCoefficients: processedCoefficients
   }
 
   return {
     ...cleanedFormData,
-    // 确保使用正确的字段名，与显示组件保持一致
+    // 确保使用正确的字段名，与后端期望保持一致
     studentName,
     studentId,
     facultyId,
@@ -1183,17 +1504,28 @@ const saveDraft = async () => {
     const draftData = prepareApplicationData('draft')
 
     let success
+    let newAppId
     if (formData.id) {
       // 更新现有申请
       success = await applicationsStore.updateApplication(formData.id, draftData)
+      newAppId = formData.id
     } else {
       // 创建新申请
-      success = await applicationsStore.addApplication(draftData)
+      const result = await applicationsStore.addApplication(draftData)
+      if (result) {
+        newAppId = result
+        success = true
+      } else {
+        success = false
+      }
     }
 
-    if (success) {
+    if (success && newAppId) {
       toastStore.success('草稿已保存')
-      // 保存成功后继续留在当前页面
+      // 保存成功后重新加载最新数据
+      await loadEditData(newAppId)
+      // 重新计算预估分数
+      calculateEstimatedScore()
     } else {
       toastStore.error('保存草稿失败，请稍后重试')
     }

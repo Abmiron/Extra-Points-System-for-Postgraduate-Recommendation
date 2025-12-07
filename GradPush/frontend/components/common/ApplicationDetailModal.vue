@@ -171,7 +171,7 @@
               <div class="compact-group">
                 <label>申请状态</label>
                 <span class="status-badge" :class="`status-${application.status}`">{{ getStatusText(application.status)
-                }}</span>
+                  }}</span>
               </div>
 
             </div>
@@ -391,6 +391,25 @@ const dynamicCoefficients = computed(() => {
   return coefficients;
 });
 
+// 辅助函数：获取学生信息（参考ApplicationForm.vue）
+const getStudentData = () => {
+  const data = {
+    ...dynamicCoefficients.value,
+    studentName: props.application.studentName || props.application.student_name || '未知学生',
+    studentId: props.application.studentId || props.application.student_id || '未知学号',
+    facultyId: props.application.facultyId || props.application.faculty_id || '',
+    departmentId: props.application.departmentId || props.application.department_id || '',
+    majorId: props.application.majorId || props.application.major_id || ''
+  };
+  
+  // 将tree_path字符串转换为数组（与ApplicationForm.vue保持一致）
+  if (data.tree_path && typeof data.tree_path === 'string') {
+    data.tree_path = data.tree_path.split(',');
+  }
+  
+  return data;
+};
+
 
 
 // 获取系数的详细信息，包括级别名称
@@ -410,25 +429,93 @@ const coefficientDetails = computed(() => {
   }
 
   const details = {};
+  const studentData = getStudentData();
 
   // 根据计算类型生成不同的系数详细信息
   if (calculationType === 'tree' || parameters.type === 'tree') {
-    // 直接遍历动态系数中的所有键，生成详情
-    for (const [key, value] of Object.entries(dynamicCoefficients.value)) {
-      if (value === undefined || value === null || value === '') continue;
-      
-      // 解析键，提取维度键和级别
-      const [dimensionKey, level] = key.split('_');
-      
-      // 为每个键生成详情
-      details[key] = {
-        label: dimensionKey === 'root' ? '项目级别' : dimensionKey,
-        value: value,
-        displayValue: value
-      };
-    }
-    
+    // 优先处理tree_path字段（参考ApplicationForm.vue）
+    if (studentData.tree_path && Array.isArray(studentData.tree_path)) {
+      // 使用tree_path字段直接构建系数详情
+      for (let i = 0; i < studentData.tree_path.length; i++) {
+        const value = studentData.tree_path[i];
+        if (value !== undefined && value !== null && value !== '') {
+          const key = i === 0 ? '项目级别' : `级别${i}`;
+          details[`_${i}`] = {
+            label: key,
+            value: value,
+            displayValue: value
+          };
+        }
+      }
+    } else {
+      // 处理带有索引的字段名（如：key_0, key_1）
+      const treeFieldKeys = Object.keys(studentData)
+        .filter(key => /.*?_\d+$/.test(key))
+        .sort((a, b) => {
+          const indexA = parseInt(a.match(/.*?_\d+$/)[0].substring(1));
+          const indexB = parseInt(b.match(/.*?_\d+$/)[0].substring(1));
+          return indexA - indexB;
+        });
 
+      // 提取树路径值
+      for (const key of treeFieldKeys) {
+        const value = studentData[key];
+        if (value !== undefined && value !== null && value !== '') {
+          const index = parseInt(key.match(/.*?_\d+$/)[0].substring(1));
+          const label = index === 0 ? '项目级别' : `级别${index}`;
+          details[key] = {
+            label: label,
+            value: value,
+            displayValue: value
+          };
+        }
+      }
+
+      // 如果没有找到带索引的字段，尝试处理普通字段
+      if (Object.keys(details).length === 0) {
+        // 获取树结构配置
+        const treeConfig = parameters.tree || {};
+        const tree = treeConfig.structure || treeConfig.tree || {};
+        
+        // 如果有树结构，按照树的层次顺序生成详情
+        if (tree && tree.root) {
+          // 递归遍历树结构，按照用户选择的路径收集维度键
+          const dimensionKeys = [];
+          const traverseTree = (node) => {
+            if (!node) return;
+            
+            const dimensionKey = node.dimension.key;
+            const dimensionValue = studentData[dimensionKey];
+            
+            if (dimensionKey && dimensionValue) {
+              dimensionKeys.push(dimensionKey);
+            }
+            
+            if (node.children && node.children.length > 0 && dimensionValue) {
+              // 找到与动态系数值匹配的子节点
+              const selectedChild = node.children.find(child => child.dimension.name === dimensionValue);
+              if (selectedChild) {
+                traverseTree(selectedChild);
+              }
+            }
+          };
+          
+          traverseTree(tree.root);
+          
+          // 根据收集到的维度键顺序生成详情
+          for (const key of dimensionKeys) {
+            const value = studentData[key];
+            if (value === undefined || value === null || value === '') continue;
+            
+            details[key] = {
+              label: key === 'root' ? '项目级别' : key,
+              value: value,
+              displayValue: value
+            };
+          }
+        }
+      }
+    }
   }
 
   return details;
@@ -439,41 +526,34 @@ const estimatedScore = computed(() => {
   if (!props.application.rule) {
     return 0;
   }
-  return calculateScoreFrontend(props.application.rule);
+  const score = calculateScoreFrontend(props.application.rule);
+  return parseFloat(score.toFixed(4));
 });
 
 // 前端分数计算函数（与后端RuleEngine保持一致）
 const calculateScoreFrontend = (rule) => {
-  if (!rule) {
-    return 0;
+  if (!rule || !rule.calculation) {
+    // 如果没有计算配置，使用基础分数
+    return rule.score || 0;
   }
 
-  // 获取基础分数
-  const baseScore = rule.score || 0;
-  
-  // 如果没有计算配置，只返回基础分数
-  if (!rule.calculation) {
-    return baseScore;
-  }
-
-  let totalScore = baseScore;
+  let totalScore = 0;
 
   // 根据计算类型执行不同的计算逻辑
   switch (rule.calculation.calculation_type) {
     case 'tree':
-      // 树结构计算（树结构分数直接作为总分数）
+      // 树结构计算
       totalScore = calculateTreeScore(rule);
-      break;
-    
-    case 'additive':
-      // 累加计算（将系数分数加到基础分数上）
-      const coefficientsScore = calculateCoefficientsScore(rule);
-      totalScore = baseScore + coefficientsScore;
       break;
 
     default:
       // 默认使用基础分数
-      totalScore = baseScore;
+      totalScore = rule.score || 0;
+  }
+
+  // 应用最大分数限制
+  if (rule.max_score && totalScore > rule.max_score) {
+    totalScore = rule.max_score;
   }
 
   return totalScore;
@@ -487,7 +567,7 @@ const calculateCoefficientsScore = (rule) => {
   return score;
 };
 
-// 计算树结构分数
+// 计算树结构分数（参考ApplicationForm.vue的实现）
 const calculateTreeScore = (rule) => {
   let parameters = rule.calculation.parameters || {};
 
@@ -496,57 +576,198 @@ const calculateTreeScore = (rule) => {
     try {
       parameters = JSON.parse(parameters);
     } catch (error) {
+      console.error('Failed to parse parameters:', error);
       return rule.score || 0;
     }
   }
-  
+
   // 获取树结构配置
   const treeConfig = parameters.tree || {};
-  
-  // 获取所有动态系数值
-  const coefficients = Object.values(dynamicCoefficients.value);
-  
-  // 如果没有动态系数值，返回0
-  if (coefficients.length === 0) {
+
+  // 获取对应的分数
+  let scores = treeConfig.scores || {};
+
+  // 如果scores是字符串，尝试解析为JSON
+  if (typeof scores === 'string') {
+    try {
+      scores = JSON.parse(scores);
+    } catch (e) {
+      console.error('Failed to parse scores:', e);
+      scores = {};
+    }
+  }
+
+  // 获取树结构
+  const tree = treeConfig.structure || treeConfig.tree || {};
+  const rootNode = tree.root;
+
+  if (!rootNode) {
     return 0;
   }
-  
-  // 直接使用动态系数值查找对应的分数
-  // 假设系数值的组合直接对应分数
-  // 例如：['国家级', 'A'] 对应 scores['国家级_A']
-  let score = 0;
-  try {
-    // 获取分数配置
-    const scores = treeConfig.scores || {};
-    
-    // 将动态系数值组合成键（例如：['国家级', 'A'] -> '国家级_A'）
-    const combinedKey = coefficients.join('_');
-    
-    // 查找对应的分数
-    if (combinedKey in scores) {
-      score = scores[combinedKey] || 0;
-    } else {
-      // 如果找不到匹配的组合键，尝试其他可能的组合格式
-      const alternativeKeys = [
-        coefficients.join('-'),  // 例如：国家级-A
-        coefficients[0] + coefficients[1],  // 例如：国家级A
-        coefficients.join('')  // 例如：国家级A（与上一个相同，但为了完整性）
-      ];
-      
-      for (const key of alternativeKeys) {
-        if (key in scores) {
-          score = scores[key] || 0;
-          break;
-        }
+
+  // 获取完整的学生数据（与后端逻辑完全一致）
+  const studentData = getStudentData();
+
+  // 优先使用studentData中的tree_path字段（与后端逻辑一致）
+  let treePath = studentData.tree_path;
+  let matchingPath = null;
+
+  if (treePath && Array.isArray(treePath) && treePath.length > 0) {
+    matchingPath = treePath;
+  } else {
+    // 如果没有tree_path字段，再回退到动态查找路径
+    console.log('没有找到tree_path字段，尝试动态查找路径');
+
+    // 处理带有索引的字段名（如：key_0, key_1）
+    const treeFieldKeys = Object.keys(studentData)
+      .filter(key => /.*?_\d+$/.test(key))
+      .sort((a, b) => {
+        const indexA = parseInt(a.match(/.*?_\d+$/)[0].substring(1));
+        const indexB = parseInt(b.match(/.*?_\d+$/)[0].substring(1));
+        return indexA - indexB;
+      });
+
+    // 提取树路径值
+    const indexedPath = [];
+    for (const key of treeFieldKeys) {
+      const value = studentData[key];
+      if (value !== undefined && value !== null && value !== '') {
+        indexedPath.push(value);
       }
     }
-    
-  } catch (error) {
-    score = 0;
+
+    if (indexedPath.length > 0) {
+      matchingPath = indexedPath;
+    } else {
+      // 递归查找匹配路径（确保找到最深层的匹配叶子节点）
+      const findMatchingPath = (node, currentPath = []) => {
+        // 获取当前节点的名称
+        const nodeDimension = node.dimension || {};
+        const nodeName = nodeDimension.name || node.name;
+
+        // 将当前节点添加到路径中
+        const fullPath = [...currentPath, nodeName];
+
+        // 如果是叶子节点，检查是否与studentData中的值匹配
+        if (!node.children || node.children.length === 0) {
+          // 检查当前叶子节点是否匹配
+          let is_leaf_matched = false;
+
+          // 灵活匹配方式：检查是否有任何字段的值等于当前叶子节点名
+          for (const key in studentData) {
+            const value = studentData[key];
+            if (value !== undefined && value !== null && value !== '') {
+              if (String(value).trim() === nodeName.trim()) {
+                is_leaf_matched = true;
+                break;
+              }
+            }
+          }
+
+          // 如果叶子节点匹配，返回完整路径
+          if (is_leaf_matched) {
+            return fullPath;
+          } else {
+            // 叶子节点不匹配，返回null
+            return null;
+          }
+        }
+
+        // 用于存储找到的最长路径
+        let longestPath = null;
+
+        // 遍历当前节点的所有子节点
+        for (const child of node.children) {
+          // 获取子节点的名称和键（兼容不同的节点结构）
+          const childDimension = child.dimension || {};
+          const childKey = childDimension.key || child.key;
+          const childName = childDimension.name || child.name;
+
+          // 检查当前子节点是否匹配
+          let is_child_matched = false;
+
+          // 灵活匹配方式：检查是否有任何字段的值等于当前子节点名
+          for (const key in studentData) {
+            const value = studentData[key];
+            if (value !== undefined && value !== null && value !== '') {
+              if (String(value).trim() === childName.trim()) {
+                is_child_matched = true;
+                break;
+              }
+            }
+          }
+
+          // 传统匹配方式：使用节点自己的key来匹配student_data
+          if (!is_child_matched && childKey && studentData.hasOwnProperty(childKey)) {
+            const child_value = String(studentData[childKey]);
+            if (child_value.trim() === childName.trim()) {
+              is_child_matched = true;
+            }
+          }
+
+          // 对于每个子节点，无论是否匹配，都尝试向下遍历
+          // 这确保我们能找到最深层的匹配叶子节点
+          const result = findMatchingPath(child, fullPath);
+
+          // 如果找到匹配路径，且该路径比当前最长路径更长，则更新最长路径
+          if (result) {
+            if (!longestPath || result.length > longestPath.length) {
+              longestPath = result;
+            }
+          }
+        }
+
+        // 返回找到的最长匹配路径
+        return longestPath;
+      };
+
+      // 查找匹配路径
+      matchingPath = findMatchingPath(rootNode);
+    }
   }
-  
+
+  if (!matchingPath) {
+    return 0;
+  }
+
+  // 根据匹配路径找到对应的叶子节点，并获取其score属性
+  let currentNode = rootNode;
+
+  // 跳过根节点（如果路径包含根节点的话）
+  const pathToUse = matchingPath[0] === '根节点' ? matchingPath.slice(1) : matchingPath;
+
+  for (const nodeName of pathToUse) {
+    if (currentNode?.children) {
+      // 使用更宽松的匹配方式，忽略空格和大小写差异
+      const nextNode = currentNode.children.find(child => {
+        const childName = child.dimension.name || '';
+        return childName.trim() === nodeName.trim();
+      });
+      if (nextNode) {
+        currentNode = nextNode;
+      } else {
+        break;
+      }
+    } else {
+      break;
+    }
+  }
+
+  // 获取叶子节点的score属性
+  const score = parseFloat(currentNode?.score || 0);
+
+  // 应用最大值限制
+  if (rule.calculation && rule.calculation.max_score !== undefined && rule.calculation.max_score !== null && rule.calculation.max_score !== '') {
+    const maxScore = parseFloat(rule.calculation.max_score);
+    // 确保maxScore是有效的数字
+    if (!isNaN(maxScore)) {
+      const finalScore = Math.min(score, maxScore);
+      return finalScore;
+    }
+  }
+
   return score;
-};
+}
 
 const pdfFiles = computed(() => {
   // 确保 files 是数组，且过滤掉 null/undefined 等无效元素

@@ -11,8 +11,8 @@ export const useApplicationsStore = defineStore('applications', () => {
       'studentName': 'student_name',
       'name': 'student_name', // 兼容前端使用name字段的情况
       'facultyId': 'faculty_id',
-      'department': 'department',
-      'major': 'major',
+      'departmentId': 'department_id',
+      'majorId': 'major_id',
       'applicationType': 'application_type',
       'selfScore': 'self_score',
       'projectName': 'project_name',
@@ -137,7 +137,9 @@ export const useApplicationsStore = defineStore('applications', () => {
 
     try {
       const data = await api.apiRequest(`/applications/${applicationId}`)
-      return data
+      // 转换字段名，确保前端使用正确的命名方式
+      const transformedData = transformFieldNames(data)
+      return transformedData
     } catch (err) {
       console.error('加载申请详情失败:', err)
       error.value = '加载申请详情失败'
@@ -228,7 +230,7 @@ export const useApplicationsStore = defineStore('applications', () => {
       // 获取完整的申请数据
       const newApplication = await fetchApplicationById(data.id)
       applications.value.unshift(newApplication)
-      return true
+      return data.id // 返回新创建的申请ID
     } catch (err) {
       console.error('创建申请失败:', err)
       error.value = '创建申请失败'

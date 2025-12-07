@@ -12,6 +12,15 @@
     <!-- 筛选区域 -->
     <div class="filters">
       <div class="filter-group">
+        <span class="filter-label">学院:</span>
+        <select class="form-control" v-model="filters.facultyId">
+          <option value="all">全部</option>
+          <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
+            {{ faculty.name }}
+          </option>
+        </select>
+      </div>
+      <div class="filter-group">
         <span class="filter-label">规则名称:</span>
         <input type="text" class="form-control" v-model="filters.name" placeholder="请输入规则名称">
       </div>
@@ -52,15 +61,7 @@
           <option value="disabled">禁用</option>
         </select>
       </div>
-      <div class="filter-group">
-        <span class="filter-label">学院:</span>
-        <select class="form-control" v-model="filters.facultyId">
-          <option value="all">全部</option>
-          <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
-            {{ faculty.name }}
-          </option>
-        </select>
-      </div>
+      
       <button class="btn btn-outline" @click="resetFilters">清空筛选</button>
     </div>
 
@@ -75,10 +76,10 @@
         <table class="application-table">
           <thead>
             <tr>
+              <th>学院</th>
               <th>规则名称</th>
               <th>类型</th>
               <th>子类型</th>
-              <th>学院</th>
               <th>基础分值</th>
               <th>最大分数</th>
               <th>最大数量</th>
@@ -89,10 +90,10 @@
           </thead>
           <tbody>
             <tr v-for="rule in paginatedRules" :key="rule.id">
+              <td>{{ getFacultyName(rule.faculty_id) }}</td>
               <td>{{ rule.name }}</td>
               <td>{{ getTypeText(rule.type) }}</td>
               <td>{{ getSubTypeText(rule.sub_type) }}</td>
-              <td>{{ getFacultyName(rule.faculty_id) }}</td>
               <td>{{ rule.score }}</td>
               <td>{{ rule.max_score || '-' }}</td>
               <td>{{ rule.max_count || '-' }}</td>

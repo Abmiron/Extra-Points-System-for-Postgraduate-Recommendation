@@ -340,10 +340,10 @@ class RuleCalculation(db.Model):
         db.DateTime, default=get_current_time, onupdate=get_current_time
     )  # 更新时间
 
-    # 关系定义
+    # 关系定义 - 设置为一对一关系
     rule = db.relationship(
         "Rule",
-        backref=db.backref("calculations", lazy=True, cascade="all, delete-orphan"),
+        backref=db.backref("calculation", uselist=False, lazy=True, cascade="all, delete-orphan"),
     )
 
     def __repr__(self):

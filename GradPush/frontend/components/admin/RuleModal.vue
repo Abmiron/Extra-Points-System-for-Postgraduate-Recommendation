@@ -1,6 +1,6 @@
 <template>
   <div v-if="visible" class="modal-overlay" @click="$emit('close')">
-    <div class="modal-content" @click.stop>
+    <div class="modal-content" @click.stop="handleModalContentClick">
       <div class="modal-header">
         <h3>{{ editingRule ? '编辑规则' : '添加规则' }}</h3>
         <button class="close-btn" @click="$emit('close')">
@@ -165,7 +165,9 @@
                     <div v-if="jsonFormulaConfig.type === 'tree'" class="tree-config">
                       <div class="help-text">
                         树结构计算支持层级化的计分配置，适用于复杂的评分场景。
-                        <br>计算方式：根据树结构的节点组合应用对应分数
+                        <br>计算方式：根据树结构的节点组合应用对应分数，绿色标记的节点分数即表示不同组合下的分数。
+                        <br>
+                        <br>点击节点进入编辑状态，可修改节点名称和分数。可以使用Enter键保存编辑，或Esc键取消编辑，也可以再次点击节点退出编辑状态。
                       </div>
 
                       <!-- 树结构配置 -->
@@ -178,7 +180,8 @@
                             <div v-if="treeData.root" class="tree-root">
                               <tree-node :node="treeData.root" :level="0" :selected-node-id="selectedNodeId"
                                 @node-select="handleNodeSelect" @add-child="handleAddChild"
-                                @delete-node="handleDeleteNode" @update-node="handleUpdateNode" />
+                                @delete-node="handleDeleteNode" @update-node="handleUpdateNode"
+                                :get-node-path="getNodePath" />
                             </div>
                             <div v-else class="tree-empty">
                               <p>树结构为空，请添加根节点</p>
@@ -186,76 +189,6 @@
                                 <font-awesome-icon icon="tree" /> 初始化树结构
                               </button>
                             </div>
-                          </div>
-
-                          <!-- 节点编辑面板 -->
-                          <div v-if="selectedNode" class="node-editor-panel">
-                            <div class="panel-header">
-                              <h5>节点编辑</h5>
-                              <button type="button" class="close-btn" @click="selectedNodeId = null">
-                                <font-awesome-icon icon="times" />
-                              </button>
-                            </div>
-
-                            <div class="panel-body">
-                              <!-- 节点基本信息 -->
-                              <div class="form-group">
-                                <label class="form-label">节点名称</label>
-                                <input type="text" class="form-control" v-model="selectedNode.dimension.name"
-                                  @input="updateNodeDimensionName" placeholder="输入节点名称">
-                              </div>
-
-                              <div class="form-group">
-                                <label class="form-label">分数</label>
-                                <input type="number" class="form-control" v-model="selectedNode.score"
-                                  @input="updateNodeScore" step="0.1" min="0" :max="maxScore">
-                              </div>
-
-                              <!-- 节点路径显示 -->
-                              <div class="form-group">
-                                <label class="form-label">节点路径</label>
-                                <div class="node-path">{{ getNodePath(selectedNode) }}</div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <!-- 分数矩阵 -->
-                      <div class="tree-scores">
-                        <h4>分数矩阵</h4>
-                        <div class="tree-table">
-                          <!-- 表头 - 仅在矩阵模式下显示 -->
-                          <div v-if="jsonFormulaConfig.tree.mode === 'tree'" class="tree-header">
-                            <div v-for="(dimension, index) in getTreeDimensions()" :key="index"
-                              class="tree-header-cell">
-                              {{ dimension }}
-                            </div>
-                            <div class="tree-header-cell">分数</div>
-                          </div>
-
-                          <!-- 分数表内容 -->
-                          <div v-for="key in generateKeysFromTree()" :key="key" class="tree-row">
-                            <div v-for="(value, index) in key.split('_')" :key="index" class="tree-cell">
-                              {{ value }}
-                            </div>
-                            <div class="tree-cell">
-                              <input type="number" class="form-control" :value="jsonFormulaConfig.tree.scores[key] || 0"
-                                @input="updateTreeScore(key, $event.target.value)" step="0.1">
-                            </div>
-                          </div>
-
-                          <!-- 树结构模式下的提示 -->
-                          <div v-if="jsonFormulaConfig.tree.mode === 'tree' && generateKeysFromTree().length === 0"
-                            class="text-center text-muted mt-3">
-                            <p>树结构中没有叶子节点，无法生成分数矩阵。</p>
-                            <p>请在树结构中添加叶子节点（无子节点的节点）或切换到矩阵模式。</p>
-                          </div>
-
-                          <!-- 矩阵模式下的空提示 -->
-                          <div v-else-if="jsonFormulaConfig.tree.mode === 'tree' && generateKeysFromTree().length === 0"
-                            class="text-center text-muted mt-3">
-                            <p>请添加维度和维度项以生成分数矩阵。</p>
                           </div>
                         </div>
                       </div>
@@ -276,7 +209,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, watch } from 'vue'
+import { ref, computed, reactive, watch, onMounted, onUnmounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 // 属性
@@ -333,156 +266,9 @@ const jsonFormulaConfig = reactive({
         value: 'root',
         children: []
       }
-    },
-    scores: {} // 存储维度组合的分数
+    }
   }
 })
-
-// 获取树结构的所有维度名称
-function getTreeDimensions() {
-  // 检查树结构是否存在
-  if (!jsonFormulaConfig.tree.structure || !jsonFormulaConfig.tree.structure.root) {
-    return []
-  }
-
-  const root = jsonFormulaConfig.tree.structure.root
-  const dimensions = []
-
-  // 递归遍历树，获取所有维度名称
-  function traverse(node, depth = 0) {
-    if (node.dimension && node.dimension.key === 'root') {
-      // 跳过根节点
-      node.children.forEach(child => {
-        traverse(child, depth)
-      })
-    } else {
-      // 如果是第一层节点，添加到维度列表
-      if (depth === 0) {
-        dimensions.push(node.dimension.name)
-      }
-
-      if (node.children.length > 0) {
-        // 有子节点，继续遍历
-        node.children.forEach(child => {
-          traverse(child, depth + 1)
-        })
-      }
-    }
-  }
-
-  traverse(root)
-  return dimensions
-}
-
-// 从树结构生成所有维度组合的键
-function generateKeysFromTree() {
-  // 检查树结构是否存在
-  if (!jsonFormulaConfig.tree.structure || !jsonFormulaConfig.tree.structure.root) {
-    return []
-  }
-
-  const root = jsonFormulaConfig.tree.structure.root
-  const keys = []
-  const keyCount = new Map() // 用于跟踪重复键的数量
-
-  // 递归遍历树，生成所有叶子节点的路径键
-  function traverse(node, currentPath) {
-    if (node.dimension && node.dimension.key === 'root') {
-      // 跳过根节点
-      node.children.forEach(child => {
-        traverse(child, [])
-      })
-    } else {
-      // 添加当前节点到路径，优先使用node.value
-      let nodeValue = node.value || (node.dimension ? node.dimension.name : '')
-      const newPath = [...currentPath, nodeValue]
-
-      if (node.children.length > 0) {
-        // 有子节点，继续遍历
-        node.children.forEach(child => {
-          traverse(child, newPath)
-        })
-      } else {
-        // 叶子节点，生成键
-        let key = newPath.join('_')
-
-        // 检查键是否重复，如果重复则添加唯一标识符
-        if (keyCount.has(key)) {
-          const count = keyCount.get(key)
-          keyCount.set(key, count + 1)
-          key = `${key}_${count}`
-        } else {
-          keyCount.set(key, 1)
-        }
-
-        keys.push(key)
-      }
-    }
-  }
-
-  traverse(root, [])
-  return keys
-}
-
-// 更新分数矩阵，确保所有维度组合都有对应的分数
-function updateTreeScores() {
-  const keys = generateKeysFromTree()
-  const scores = { ...jsonFormulaConfig.tree.scores }
-
-  // 从树节点获取分数（我们只支持树结构模式）
-  // 遍历树结构，获取所有叶子节点的分数
-  const keyCount = new Map() // 用于跟踪重复键的数量
-
-  function traverseTree(node, currentPath) {
-    if (!node) return
-
-    if (node.dimension && node.dimension.key === 'root') {
-      // 跳过根节点
-      node.children.forEach(child => {
-        traverseTree(child, [])
-      })
-    } else {
-      // 添加当前节点到路径，优先使用node.value
-      const nodeValue = node.value || (node.dimension ? node.dimension.name : '')
-      const newPath = [...currentPath, nodeValue]
-
-      if (node.children && node.children.length > 0) {
-        // 有子节点，继续遍历
-        node.children.forEach(child => {
-          traverseTree(child, newPath)
-        })
-      } else {
-        // 叶子节点，更新分数矩阵
-        let key = newPath.join('_')
-
-        // 检查键是否重复，如果重复则添加唯一标识符（与generateKeysFromTree保持一致）
-        if (keyCount.has(key)) {
-          const count = keyCount.get(key)
-          keyCount.set(key, count + 1)
-          key = `${key}_${count}`
-        } else {
-          keyCount.set(key, 1)
-        }
-
-        scores[key] = parseFloat(node.score || 0)
-      }
-    }
-  }
-
-  // 从根节点开始遍历
-  if (treeData.value.root) {
-    traverseTree(treeData.value.root, [])
-  }
-
-  // 移除不再存在的组合的分数
-  Object.keys(scores).forEach(key => {
-    if (!keys.includes(key)) {
-      delete scores[key]
-    }
-  })
-
-  jsonFormulaConfig.tree.scores = scores
-}
 
 // 树节点组件
 // 导入TreeNode组件
@@ -520,47 +306,25 @@ function findNodeById(node, id) {
   return null
 }
 
+// 处理模态框内容点击事件，点击编辑框外部关闭编辑框
+function handleModalContentClick(event) {
+  if (selectedNodeId.value) {
+    // 忽略对树节点的点击
+    const treeNodeElement = event.target.closest('.tree-node')
+    if (treeNodeElement) {
+      return
+    }
+
+    // 点击树节点外部时取消节点选择
+    selectedNodeId.value = null
+  }
+}
+
 // 节点操作函数
+
 // 处理节点选择
 function handleNodeSelect(nodeId) {
   selectedNodeId.value = nodeId
-
-  // 定位编辑面板到选中节点右侧
-  setTimeout(() => {
-    const selectedNodeElement = document.querySelector(`[data-node-id="${nodeId}"]`)
-    const editorPanel = document.querySelector('.node-editor-panel')
-
-    if (selectedNodeElement && editorPanel) {
-      const nodeRect = selectedNodeElement.getBoundingClientRect()
-      const panelRect = editorPanel.getBoundingClientRect()
-
-      // 使用fixed定位直接相对于视口定位
-      let top = nodeRect.top
-      let left = nodeRect.right + 10 // 10px间距
-
-      // 确保面板不会超出视口右侧
-      const viewportWidth = window.innerWidth
-      if (left + panelRect.width > viewportWidth - 20) {
-        left = nodeRect.left - panelRect.width - 10
-      }
-
-      // 确保面板不会超出视口底部
-      const viewportHeight = window.innerHeight
-      if (top + panelRect.height > viewportHeight - 20) {
-        top = viewportHeight - panelRect.height - 20
-      }
-
-      // 确保面板不会超出视口顶部
-      if (top < 20) {
-        top = 20
-      }
-
-      // 设置面板位置
-      editorPanel.style.position = 'fixed'
-      editorPanel.style.top = `${top}px`
-      editorPanel.style.left = `${left}px`
-    }
-  }, 0)
 }
 
 // 处理添加子节点
@@ -568,13 +332,17 @@ function handleAddChild(parent) {
   const parentNode = typeof parent === 'object' ? parent : findNodeById(treeData.value.root, parent)
   if (!parentNode) return
 
+  const nodeName = '新维度'
+  // 根据名称生成默认键值：转换为小写，空格替换为下划线，删除特殊字符
+  const nodeKey = nodeName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+
   const newNode = {
     id: generateNodeId(),
     dimension: {
-      name: '新维度',
-      key: 'new_dimension'
+      name: nodeName,
+      key: nodeKey
     },
-    value: '新维度',
+    value: nodeName,
     children: [],
     score: 0
   }
@@ -616,11 +384,17 @@ function handleDeleteNode(node) {
   }
 }
 
-// 处理更新节点
+// 更新节点
 function handleUpdateNode(updatedNode) {
   const node = findNodeById(treeData.value.root, updatedNode.id)
   if (node) {
-    Object.assign(node, updatedNode)
+    // 深度更新节点属性
+    node.score = updatedNode.score
+    node.value = updatedNode.value
+    // 特殊处理dimension对象的更新
+    if (updatedNode.dimension && node.dimension) {
+      Object.assign(node.dimension, updatedNode.dimension)
+    }
   }
 }
 
@@ -641,27 +415,6 @@ function initializeTree() {
   }
   // 初始选中根节点
   selectedNodeId.value = 'root'
-}
-
-// 更新节点维度名称
-function updateNodeDimensionName() {
-  if (selectedNode.value) {
-    selectedNode.value.dimension.key = selectedNode.value.dimension.name.toLowerCase().replace(/\s+/g, '_')
-    selectedNode.value.value = selectedNode.value.dimension.name
-    updateTreeScores()
-  }
-}
-
-// 更新节点分数
-function updateNodeScore() {
-  if (selectedNode.value) {
-    updateTreeScores()
-  }
-}
-
-// 更新树分数
-function updateTreeScore(key, value) {
-  jsonFormulaConfig.tree.scores[key] = parseFloat(value) || 0
 }
 
 // 获取节点路径
@@ -708,10 +461,6 @@ watch(() => props.editingRule, (newRule) => {
           if (newRule.calculation.parameters.tree.structure) {
             jsonFormulaConfig.tree.structure = newRule.calculation.parameters.tree.structure
           }
-          // 复制分数配置
-          if (newRule.calculation.parameters.tree.scores) {
-            jsonFormulaConfig.tree.scores = newRule.calculation.parameters.tree.scores
-          }
         } else {
           // 如果没有树结构配置，创建默认配置
           jsonFormulaConfig.tree.structure = {
@@ -722,7 +471,6 @@ watch(() => props.editingRule, (newRule) => {
               children: []
             }
           }
-          jsonFormulaConfig.tree.scores = {}
         }
 
         // 如果存在，从计算参数设置最大分数和最大数量
@@ -767,8 +515,7 @@ watch(() => props.editingRule, (newRule) => {
             value: 'root',
             children: []
           }
-        },
-        scores: {} // 存储维度组合的分数
+        }
       }
     })
   }
@@ -1052,44 +799,6 @@ const handleSave = () => {
   margin-top: 15px;
 }
 
-.tree-scores {
-  margin-top: 25px;
-}
-
-.tree-table {
-  overflow-x: auto;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-}
-
-.tree-header {
-  display: flex;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #dee2e6;
-  font-weight: bold;
-}
-
-.tree-row {
-  display: flex;
-  border-bottom: 1px solid #dee2e6;
-}
-
-.tree-row:last-child {
-  border-bottom: none;
-}
-
-.tree-header-cell,
-.tree-cell {
-  padding: 10px;
-  min-width: 120px;
-  border-right: 1px solid #dee2e6;
-}
-
-.tree-header-cell:last-child,
-.tree-cell:last-child {
-  border-right: none;
-}
-
 /* Tree Structure Styles */
 .tree-config-container {
   display: flex;
@@ -1128,76 +837,6 @@ const handleSave = () => {
   margin-bottom: 20px;
 }
 
-.node-editor-panel {
-  position: absolute;
-  width: 280px;
-  max-height: 80vh;
-  background-color: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  overflow-y: auto;
-}
-
-.node-editor-panel .panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 12px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.node-editor-panel .panel-header h5 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.node-editor-panel .panel-header .close-btn {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: #9ca3af;
-  cursor: pointer;
-  padding: 0;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.node-editor-panel .panel-body {
-  padding: 10px 12px;
-}
-
-.node-editor-panel .form-group {
-  margin-bottom: 12px;
-}
-
-.node-editor-panel .form-label {
-  display: block;
-  font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 4px;
-  color: #374151;
-}
-
-.node-editor-panel .form-control {
-  width: 100%;
-  padding: 6px 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 13px;
-}
-
-.node-editor-panel .help-text {
-  font-size: 12px;
-  color: #9ca3af;
-  margin-top: 4px;
-}
-
 .node-path {
   padding: 8px 12px;
   background-color: #f3f4f6;
@@ -1221,240 +860,6 @@ const handleSave = () => {
   flex: 1;
   font-size: 14px;
   padding: 8px 12px;
-}
-
-.tree-node {
-  margin-bottom: 20px;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* 图形化树结构样式 */
-.tree-children {
-  display: flex !important;
-  flex-direction: row !important;
-  justify-content: center;
-  gap: 50px;
-  margin-top: 40px;
-  position: relative;
-  flex-wrap: wrap;
-  width: 100%;
-  box-sizing: border-box;
-  overflow-x: auto;
-  padding: 0 20px;
-  /* 确保连接线不被裁剪 */
-  overflow: visible;
-}
-
-/* 连接线样式 - 水平连接线（节点间） */
-.tree-children::after {
-  content: '';
-  position: absolute;
-  top: -10px;
-  left: 20px;
-  right: 20px;
-  height: 4px;
-  background-color: #3b82f6 !important;
-  z-index: 1 !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  pointer-events: none;
-  width: calc(100% - 40px);
-  /* 确保连接线在节点之间 */
-}
-
-/* 连接线样式 - 垂直连接线（父节点到子节点组） */
-.tree-children::before {
-  content: '';
-  position: absolute;
-  top: -30px;
-  left: 50%;
-  width: 4px;
-  height: 30px;
-  background-color: #3b82f6 !important;
-  transform: translateX(-50%) !important;
-  z-index: 1 !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  pointer-events: none;
-}
-
-/* 确保所有层次的连接线都能正确显示 */
-.tree-node .tree-children::after,
-.tree-node .tree-children::before {
-  display: block !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-/* 隐藏旧的连接线 */
-.tree-node::before {
-  display: none;
-}
-
-/* 节点内容样式 - 数据结构节点风格 */
-.node-content {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 40px !important;
-  height: 40px !important;
-  border-radius: 50% !important;
-  cursor: pointer !important;
-  user-select: none !important;
-  transition: all 0.3s ease !important;
-  background-color: #ffffff !important;
-  border: 2px solid #6366f1 !important;
-  position: relative !important;
-  z-index: 2 !important;
-  /* 确保节点在连接线之上 */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1) !important;
-  margin: 0 auto !important;
-  margin-bottom: 10px !important;
-  padding: 0 !important;
-}
-
-/* 节点悬停效果 */
-.node-content:hover {
-  background-color: #f0f4ff;
-  border-color: #4f46e5;
-  transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
-}
-
-/* 选中节点样式 */
-.node-content.selected {
-  background-color: #003366;
-  color: white;
-  border: 2px solid #002244;
-  box-shadow: 0 10px 30px rgba(0, 51, 102, 0.4);
-  transform: translateY(-4px) scale(1.05);
-}
-
-/* 选中状态下的子元素颜色 */
-.node-content.selected .node-label {
-  color: white;
-}
-
-.node-content.selected .node-score {
-  color: #b3d7ff;
-}
-
-.node-content.selected .node-toggle {
-  color: white;
-}
-
-.node-toggle {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #6366f1;
-  margin-right: 16px;
-  font-size: 20px;
-  transition: all 0.3s ease;
-  border-radius: 50%;
-  background-color: #f0f4ff;
-  border: 2px solid #e0e7ff;
-}
-
-.node-content:hover .node-toggle {
-  background-color: #e0e7ff;
-  border-color: #c7d2fe;
-}
-
-.node-content.selected .node-toggle {
-  background-color: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: white;
-}
-
-.node-label {
-  flex: 1;
-  font-weight: 700;
-  margin-right: 16px;
-  font-size: 18px;
-  color: #1f2937;
-  text-align: center;
-}
-
-.node-score {
-  padding: 8px 20px;
-  border-radius: 25px;
-  background-color: #fef3c7;
-  color: #d97706;
-  font-weight: 700;
-  font-size: 16px;
-  border: 2px solid #fde68a;
-  white-space: nowrap;
-}
-
-.node-content.selected .node-score {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: #b3d7ff;
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-/* 节点操作按钮容器 */
-.node-actions {
-  display: flex;
-  gap: 10px;
-  margin-left: 45px;
-  margin-top: 8px;
-  padding: 12px;
-  background-color: #f8fafc;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-}
-
-/* 树节点按钮样式 */
-.node-actions .btn {
-  padding: 8px 16px;
-  font-size: 14px;
-  opacity: 1;
-  transition: all 0.3s ease;
-  transform-origin: left center;
-  border-radius: 6px;
-  font-weight: 500;
-  min-width: 100px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.node-actions .btn:hover {
-  opacity: 1;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* 根节点特殊样式 */
-.root-node .node-content {
-  background-color: #f0f8ff;
-  border-color: #d0e8ff;
-}
-
-.root-node .node-content:hover {
-  background-color: #e6f3ff;
-}
-
-/* 树控件面板样式 */
-.tree-controls {
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 20px;
-  background-color: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  margin-left: 20px;
-}
-
-.tree-controls .form-group {
-  margin-bottom: 15px;
 }
 
 /* Tree Styles */
