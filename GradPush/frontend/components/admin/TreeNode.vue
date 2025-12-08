@@ -441,22 +441,4 @@ onUnmounted(() => {
   padding-left: 12px;
 }
 
-@media (max-width: 768px) {
-  .tree-node {
-    margin-left: calc(var(--level, 0) * 16px);
-  }
-  
-  .node-content {
-    padding: 8px 10px;
-  }
-  
-  /* 移动端内联编辑样式 */
-  .node-name-input, .node-score-input {
-    font-size: 13px;
-    padding: 2px 4px;
-    min-width: 70px;
-    max-width: 120px;
-    height: auto;
-  }
-}
 </style>

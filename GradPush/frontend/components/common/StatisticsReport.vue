@@ -852,6 +852,9 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* 引入共享样式 */
+@import '../common/shared-styles.css';
+
 /* 组件特有样式 */
 .table-wrapper {
   position: relative;
@@ -991,9 +994,4 @@ onMounted(async () => {
   padding-bottom: 10px;
   border-bottom: 1px solid #e9ecef;
 }
-</style>
-
-<style>
-/* 引入共享样式 */
-@import '../common/shared-styles.css';
 </style>

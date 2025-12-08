@@ -171,7 +171,7 @@
               <div class="compact-group">
                 <label>申请状态</label>
                 <span class="status-badge" :class="`status-${application.status}`">{{ getStatusText(application.status)
-                  }}</span>
+                }}</span>
               </div>
 
             </div>
@@ -401,12 +401,12 @@ const getStudentData = () => {
     departmentId: props.application.departmentId || props.application.department_id || '',
     majorId: props.application.majorId || props.application.major_id || ''
   };
-  
+
   // 将tree_path字符串转换为数组（与ApplicationForm.vue保持一致）
   if (data.tree_path && typeof data.tree_path === 'string') {
     data.tree_path = data.tree_path.split(',');
   }
-  
+
   return data;
 };
 
@@ -476,21 +476,21 @@ const coefficientDetails = computed(() => {
         // 获取树结构配置
         const treeConfig = parameters.tree || {};
         const tree = treeConfig.structure || treeConfig.tree || {};
-        
+
         // 如果有树结构，按照树的层次顺序生成详情
         if (tree && tree.root) {
           // 递归遍历树结构，按照用户选择的路径收集维度键
           const dimensionKeys = [];
           const traverseTree = (node) => {
             if (!node) return;
-            
+
             const dimensionKey = node.dimension.key;
             const dimensionValue = studentData[dimensionKey];
-            
+
             if (dimensionKey && dimensionValue) {
               dimensionKeys.push(dimensionKey);
             }
-            
+
             if (node.children && node.children.length > 0 && dimensionValue) {
               // 找到与动态系数值匹配的子节点
               const selectedChild = node.children.find(child => child.dimension.name === dimensionValue);
@@ -499,14 +499,14 @@ const coefficientDetails = computed(() => {
               }
             }
           };
-          
+
           traverseTree(tree.root);
-          
+
           // 根据收集到的维度键顺序生成详情
           for (const key of dimensionKeys) {
             const value = studentData[key];
             if (value === undefined || value === null || value === '') continue;
-            
+
             details[key] = {
               label: key === 'root' ? '项目级别' : key,
               value: value,
@@ -1077,6 +1077,10 @@ const rejectApplication = () => {
 </script>
 
 <style scoped>
+/* 引入共享样式 */
+@import './shared-styles.css';
+
+/* 模态框特有样式*/
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1098,40 +1102,11 @@ const rejectApplication = () => {
   width: 100%;
   max-width: 1500px;
   max-height: 90vh;
+  min-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #eee;
-  background-color: #f8f9fa;
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 18px;
-  color: #333;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 18px;
-  color: #666;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-}
-
-.close-btn:hover {
-  background-color: #eee;
-  color: #333;
 }
 
 .modal-body {
@@ -1140,7 +1115,6 @@ const rejectApplication = () => {
   padding: 0;
   overflow: hidden;
   height: calc(100% - 60px);
-  /* 减去header高度 */
 }
 
 .left-column {
@@ -1205,7 +1179,6 @@ const rejectApplication = () => {
   margin-bottom: 0;
   height: 100%;
   min-height: 0;
-  /* 固定高度 */
   overflow: hidden;
 }
 
@@ -1226,8 +1199,6 @@ const rejectApplication = () => {
   justify-content: space-between;
 }
 
-
-
 .main-preview {
   margin-bottom: 5px;
   border: 1px solid #eee;
@@ -1236,7 +1207,6 @@ const rejectApplication = () => {
   background: #fafafa;
   flex: 1;
   min-height: 0;
-  /* 允许收缩 */
 }
 
 .image-container {
@@ -1479,12 +1449,12 @@ const rejectApplication = () => {
 
 .file-list {
   margin-top: 12px;
-  overflow: visible !important;
-  /* 覆盖shared-styles.css中的overflow: hidden设置 */
   border: none !important;
 }
 
-
+.file-actions {
+  margin-left: auto;
+}
 
 .btn-icon {
   background: none;
@@ -1502,59 +1472,7 @@ const rejectApplication = () => {
   color: white;
 }
 
-.status-badge {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: capitalize;
-}
-
-.status-pending {
-  background-color: #fff3cd;
-  color: #856404;
-}
-
-.status-approved {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.status-rejected {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
-.form-group {
-  margin-bottom: 12px;
-}
-
-.form-row {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-
-.form-row .form-group {
-  flex: 1;
-  margin-bottom: 0;
-}
-
-.form-control {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  transition: border-color 0.2s ease;
-}
-
-.form-control:focus {
-  outline: none;
-  border-color: #003366;
-  box-shadow: 0 0 0 2px rgba(0, 51, 102, 0.1);
-}
-
+/* 组件特有样式 */
 .small-input {
   padding: 6px 10px;
   font-size: 13px;
@@ -1572,20 +1490,7 @@ const rejectApplication = () => {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-  margin-top: 16px;
-}
-
-.btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 500;
-  transition: background-color 0.2s ease;
+  margin-top: -26px;
 }
 
 .btn-approve {
@@ -1615,63 +1520,6 @@ const rejectApplication = () => {
   border-radius: 4px;
   margin-bottom: 5px;
   font-size: 13px;
-}
-
-.file-name {
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.file-actions {
-  display: flex;
-  gap: 5px;
-}
-
-.file-item-compact {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  background: #f8f9fa;
-  border-radius: 4px;
-  margin-bottom: 5px;
-  font-size: 13px;
-}
-
-.file-name {
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.file-actions {
-  display: flex;
-  gap: 5px;
-}
-
-.btn-icon {
-  background: none;
-  border: none;
-  color: #003366;
-  cursor: pointer;
-  padding: 4px 6px;
-  border-radius: 3px;
-  font-size: 12px;
-}
-
-.btn-icon:hover,
-.btn-icon.active {
-  background: #003366;
-  color: white;
-}
-
-/* 分数相关样式 */
-.highlight-score {
-  color: #003366;
-  font-weight: 600;
 }
 
 .score-mismatch-warning {
@@ -1760,9 +1608,4 @@ const rejectApplication = () => {
     align-items: flex-start;
   }
 }
-</style>
-
-<style>
-/* 引入共享样式 */
-@import './shared-styles.css';
 </style>

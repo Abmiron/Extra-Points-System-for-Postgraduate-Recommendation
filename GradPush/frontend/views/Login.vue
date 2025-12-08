@@ -1,6 +1,6 @@
 <template>
   <div class="login-page">
-     <!-- 简化背景效果 -->
+    <!-- 简化背景效果 -->
     <div class="background-container">
       <div class="background-blur"></div>
       <div class="background-overlay"></div>
@@ -9,7 +9,7 @@
     <div class="login-container">
       <!-- 合并后的登录内容区域 -->
       <div class="login-content">
-        <!-- 左侧信息显示区域 - 风格统一 -->
+        <!-- 左侧信息显示区域 - 优化后 -->
         <div class="info-panel">
           <div class="info-content">
             <div class="logo-area">
@@ -21,60 +21,54 @@
                 <span class="auth-title">厦门大学</span>
               </div>
             </div>
-            
+
             <div class="welcome-content">
               <h1 class="welcome-title">欢迎使用推免加分系统</h1>
               <p class="welcome-subtitle">便捷的在线申请平台</p>
               <p class="welcome-subtitle">助您顺利完成推免加分申请流程</p>
-              
-              <div class="time-info">
-                <div class="time-title">
-                  <font-awesome-icon :icon="['fas', 'calendar-check']" />
-                  <span>推免申请开放时间</span>
+
+              <!-- 优化时间信息卡片 -->
+              <div class="time-card">
+                <div class="time-header">
+                  <div class="time-icon">
+                    <font-awesome-icon :icon="['fas', 'calendar-check']" />
+                  </div>
+                  <div class="time-header-text">
+                    <div class="time-title">推免申请开放时间</div>
+                    <div class="time-subtitle">请在规定时间内完成申请</div>
+                  </div>
                 </div>
                 <div class="time-dates">
                   <div class="time-item">
-                    <span class="time-label">开放时间:</span>
-                    <span class="time-value">
-                      {{ applicationTimeStart }}
-                      <div v-if="settingsLoading" class="loading-spinner-small"></div>
-                    </span>
+                    <div class="time-item-icon">
+                      <font-awesome-icon :icon="['fas', 'hourglass-start']" />
+                    </div>
+                    <div class="time-item-content">
+                      <div class="time-label">开放时间</div>
+                      <div class="time-value">
+                        {{ applicationTimeStart }}
+                        <div v-if="settingsLoading" class="loading-spinner-small"></div>
+                      </div>
+                    </div>
                   </div>
                   <div class="time-item">
-                    <span class="time-label">截止时间:</span>
-                    <span class="time-value">
-                      {{ applicationTimeEnd }}
-                      <div v-if="settingsLoading" class="loading-spinner-small"></div>
-                    </span>
+                    <div class="time-item-icon">
+                      <font-awesome-icon :icon="['fas', 'hourglass-end']" />
+                    </div>
+                    <div class="time-item-content">
+                      <div class="time-label">截止时间</div>
+                      <div class="time-value">
+                        {{ applicationTimeEnd }}
+                        <div v-if="settingsLoading" class="loading-spinner-small"></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-
-              <div class="features-list">
-                <div class="feature-item">
-                  <div class="feature-icon">
-                    <font-awesome-icon :icon="['fas', 'check']" />
-                  </div>
-                  <div class="feature-text">在线提交申请材料</div>
-                </div>
-                <div class="feature-item">
-                  <div class="feature-icon">
-                    <font-awesome-icon :icon="['fas', 'check']" />
-                  </div>
-                  <div class="feature-text">实时查看审核进度</div>
-                </div>
-                <div class="feature-item">
-                  <div class="feature-icon">
-                    <font-awesome-icon :icon="['fas', 'check']" />
-                  </div>
-                  <div class="feature-text">自动计算分数排名</div>
-                </div>
-              </div>
-
             </div>
           </div>
         </div>
-        
+
         <!-- 右侧登录区域 -->
         <div class="login-box">
           <div class="login-header">
@@ -107,13 +101,9 @@
                     <input type="text" v-model="loginForm.captcha" placeholder="请输入验证码" required>
                   </div>
                   <div style="position: relative; display: inline-block;">
-                    <img 
-                      :src="captchaImage" 
-                      alt="验证码" 
-                      style="max-height: 50px;max-width: 90px;width: 100%;height: auto; cursor: pointer; border-radius: 8px;" 
-                      @click="refreshCaptcha"
-                      title="点击刷新"
-                    >
+                    <img :src="captchaImage" alt="验证码"
+                      style="max-height: 50px;max-width: 90px;width: 100%;height: auto; cursor: pointer; border-radius: 8px;"
+                      @click="refreshCaptcha" title="点击刷新">
                     <div v-if="captchaLoading" class="captcha-loading-overlay">
                       <div class="loading-spinner-small" style="width: 20px; height: 20px;"></div>
                     </div>
@@ -200,7 +190,8 @@
 
               <div class="input-group">
                 <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
-                <input type="password" v-model="registerForm.confirmPassword" placeholder="请确认密码" required minlength="6">
+                <input type="password" v-model="registerForm.confirmPassword" placeholder="请确认密码" required
+                  minlength="6">
               </div>
               <div class="input-group captcha-group">
                 <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
@@ -209,13 +200,9 @@
                     <input type="text" v-model="registerForm.captcha" placeholder="请输入验证码" required>
                   </div>
                   <div style="position: relative; display: inline-block;">
-                    <img 
-                      :src="captchaImage" 
-                      alt="验证码" 
-                      style="max-height: 50px;max-width: 90px;width: 100%;height: auto; cursor: pointer; border-radius: 8px;" 
-                      @click="refreshCaptcha"
-                      title="点击刷新"
-                    >
+                    <img :src="captchaImage" alt="验证码"
+                      style="max-height: 50px;max-width: 90px;width: 100%;height: auto; cursor: pointer; border-radius: 8px;"
+                      @click="refreshCaptcha" title="点击刷新">
                     <div v-if="captchaLoading" class="captcha-loading-overlay">
                       <div class="loading-spinner-small" style="width: 20px; height: 20px;"></div>
                     </div>
@@ -261,13 +248,9 @@
                     <input type="text" v-model="resetForm.captcha" placeholder="请输入验证码" required>
                   </div>
                   <div style="position: relative; display: inline-block;">
-                    <img 
-                      :src="captchaImage" 
-                      alt="验证码" 
-                      style="max-height: 50px;max-width: 90px;width: 100%;height: auto; cursor: pointer; border-radius: 8px;" 
-                      @click="refreshCaptcha"
-                      title="点击刷新"
-                    >
+                    <img :src="captchaImage" alt="验证码"
+                      style="max-height: 50px;max-width: 90px;width: 100%;height: auto; cursor: pointer; border-radius: 8px;"
+                      @click="refreshCaptcha" title="点击刷新">
                     <div v-if="captchaLoading" class="captcha-loading-overlay">
                       <div class="loading-spinner-small" style="width: 20px; height: 20px;"></div>
                     </div>
@@ -396,7 +379,7 @@ const refreshCaptcha = async () => {
     clearTimeout(captchaTimer.value)
     captchaTimer.value = null
   }
-  
+
   captchaLoading.value = true
   try {
     // 使用项目已有的api模块获取验证码
@@ -405,7 +388,7 @@ const refreshCaptcha = async () => {
     captchaImage.value = `data:image/png;base64,${response.image}`
     // 保存验证码token
     captchaToken.value = response.token
-    
+
     // 设置验证码过期定时器
     captchaTimer.value = setTimeout(() => {
       refreshCaptcha()
@@ -499,7 +482,7 @@ const loadPublicSystemInfo = async () => {
   try {
     settingsLoading.value = true
     const response = await api.getPublicSystemInfo()
-    
+
     // 格式化申请时间 - 数据在response.data对象中
     if (response.data && response.data.applicationStartTime) {
       applicationTimeStart.value = formatDate(response.data.applicationStartTime)
@@ -526,15 +509,15 @@ const formatDate = (dateString) => {
         const year = dateMatch[1];
         const month = dateMatch[2];
         const day = dateMatch[3];
-        
+
         const result = `${year}年${month}月${day}日`;
         return result;
       }
-      
+
       // 对于带时间的格式，参考SystemSettings.vue中的处理方式
       // 首先确保日期字符串包含有效的时间信息
       let processedDateString = dateString;
-      
+
       // 如果没有时区信息，添加UTC+8时区标记
       if (!dateString.includes('+') && !dateString.includes('Z')) {
         // 如果是空格分隔的格式，转换为T分隔的ISO格式
@@ -544,27 +527,27 @@ const formatDate = (dateString) => {
         // 添加UTC+8时区标记
         processedDateString = processedDateString + '+08:00';
       }
-      
+
       // 创建Date对象处理时间，确保正确解析带时区的时间
       const date = new Date(processedDateString);
-      
+
       // 检查是否为有效日期
       if (isNaN(date.getTime())) {
         console.warn('无效的日期格式:', dateString);
         return dateString;
       }
-      
+
       // 格式化显示为本地时间（UTC+8）
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       const hours = String(date.getHours()).padStart(2, '0');
       const minutes = String(date.getMinutes()).padStart(2, '0');
-      
+
       const result = `${year}年${month}月${day}日 ${hours}:${minutes}`;
       return result;
     }
-    
+
     console.error('无法解析的日期:', dateString);
     return String(dateString);
   } catch (error) {
@@ -666,34 +649,34 @@ const handleLogin = async () => {
     toastStore.error('请输入验证码')
     return
   }
-  
+
   // 验证验证码token是否存在
   if (!captchaToken.value) {
     toastStore.error('验证码已失效，请刷新页面重新获取验证码')
     return
   }
-  
+
   loading.value = true
 
   try {
     // 使用auth store的登录方法，包含验证码和验证码token
     await authStore.login(loginForm.username, loginForm.password, loginForm.captcha, captchaToken.value)
-    
+
     // 学生角色登录时间验证
     if (authStore.role === 'student') {
       const now = new Date()
-      
+
       // 尝试重新获取最新的系统信息，确保时间准确
       try {
         const systemInfoResponse = await api.getPublicSystemInfo()
         const startTimeStr = systemInfoResponse.data?.applicationStartTime
         const endTimeStr = systemInfoResponse.data?.applicationEndTime
-        
+
         // 直接使用API返回的原始时间字符串，确保包含时区信息
         if (!startTimeStr || !endTimeStr) {
           throw new Error('系统时间配置不完整')
         }
-        
+
         // 确保时间字符串包含时区信息
         const processTimeString = (timeStr) => {
           if (typeof timeStr === 'string') {
@@ -705,10 +688,10 @@ const handleLogin = async () => {
           }
           return timeStr
         }
-        
+
         const processedStartTime = processTimeString(startTimeStr)
         const processedEndTime = processTimeString(endTimeStr)
-        
+
         const startTime = new Date(processedStartTime)
         const endTime = new Date(processedEndTime)
 
@@ -716,7 +699,7 @@ const handleLogin = async () => {
         if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
           throw new Error('系统时间格式错误')
         }
-        
+
         // 检查当前时间是否在申请时间范围内
         if (now < startTime) {
           // 退出登录并提示错误
@@ -911,21 +894,21 @@ const handleResetPassword = async () => {
 </script>
 
 <style scoped>
-/* 登录页面整体容器样式*/
+/* 登录页面整体容器样式 */
 .login-page {
   font-family: "Microsoft Yahei", "PingFang SC", "Helvetica Neue", sans-serif;
   line-height: 1.6;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
   position: relative;
   overflow: hidden;
   padding-bottom: 40px;
 }
 
-/* 简化背景容器 */
+/* 背景效果 */
 .background-container {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
@@ -933,7 +916,6 @@ const handleResetPassword = async () => {
   z-index: 0;
 }
 
-/* 背景模糊效果样式 - 与原有保持一致 */
 .background-blur {
   position: absolute;
   top: 0;
@@ -942,19 +924,18 @@ const handleResetPassword = async () => {
   height: 100%;
   background: url('/images/loginBackground.jpg') no-repeat center center;
   background-size: cover;
-  filter: blur(8px) brightness(0.80);
+  filter: blur(5px) brightness(0.85);
   transform: scale(1.05);
   z-index: 0;
 }
 
-/* 简化背景叠加层 */
 .background-overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(40, 103, 186, 0.12);
+  background: linear-gradient(135deg, rgba(30, 85, 157, 0.164) 0%, rgba(11, 42, 88, 0.17) 100%);
   z-index: 1;
 }
 
@@ -971,31 +952,34 @@ const handleResetPassword = async () => {
   flex: 1;
 }
 
-/* 登录内容区域 - 合并左右面板 */
+/* 登录内容区域 */
 .login-content {
   display: flex;
   width: 100%;
   max-width: 1300px;
   border-radius: 16px;
-  background: linear-gradient(135deg,#2b588e6d 20%, #0a2e5d69 100%);
-  box-shadow: 0 5px 20px rgba(4, 10, 31, 0.279);
+  background: rgba(11, 42, 88, 0.6);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 20px 60px rgba(0, 30, 84, 0.4);
   overflow: hidden;
   position: relative;
   z-index: 1;
   min-height: 600px;
-  max-height: 730px; /* 恢复固定高度限制 */
+  max-height: 730px;
 }
 
-/* 左侧信息面板样式*/
+/* 左侧信息面板样式 */
 .info-panel {
-  flex:2;
+  flex: 1.8;
   color: rgba(255, 255, 255, 0.95);
-  padding: 50px 40px;
+  padding: 50px 45px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   position: relative;
   overflow: hidden;
+  background: linear-gradient(135deg,
+      rgba(30, 84, 157, 0.9) 0%,
+      rgba(11, 42, 88, 0.2) 100%);
 }
 
 .info-panel::before {
@@ -1005,15 +989,15 @@ const handleResetPassword = async () => {
   left: 0;
   width: 100%;
   height: 100%;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><circle cx="100" cy="100" r="80" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/></svg>') repeat;
   z-index: 0;
 }
 
-/* Logo区域 */
+/* Logo区域优化 */
 .logo-area {
   display: flex;
   align-items: center;
-  margin-left: 25px;
-  margin-bottom: 30px;
+  margin-bottom: 40px;
   position: relative;
   z-index: 1;
 }
@@ -1023,6 +1007,12 @@ const handleResetPassword = async () => {
   align-items: center;
   justify-content: center;
   margin-right: 50px;
+  margin-left: 25px;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 15px;
+  backdrop-filter: blur(5px);
 }
 
 .logo-text {
@@ -1031,17 +1021,19 @@ const handleResetPassword = async () => {
 }
 
 .logo-text .system-name {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
 }
 
 .logo-text .auth-title {
-  font-size: 16px;
+  font-size: 18px;
   opacity: 0.9;
+  font-weight: 500;
 }
 
-/* 欢迎内容区域 */
+/* 欢迎内容区域优化 */
 .welcome-content {
   position: relative;
   z-index: 1;
@@ -1052,98 +1044,142 @@ const handleResetPassword = async () => {
 }
 
 .welcome-title {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 700;
   margin-bottom: 25px;
   line-height: 1.3;
+  background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.9) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .welcome-subtitle {
-  font-size: 18px;
-  opacity: 0.9;
-  gap: 10px;
-  margin-bottom: 10px;
+  font-size: 19px;
+  opacity: 0.85;
+  margin-bottom: 12px;
   line-height: 1.6;
+  font-weight: 400;
 }
 
-/* 时间信息 */
-.time-info {
+/* 时间卡片优化 */
+.time-card {
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 25px;
+  border-radius: 16px;
+  padding: 30px;
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  margin-bottom: 30px;
-  margin-top: 25px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  margin: 35px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.time-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 100%;
+  background: linear-gradient(to bottom, #4CAF50, #2196F3);
+}
+
+.time-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 25px;
+  gap: 15px;
+}
+
+.time-icon {
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(33, 150, 243, 0.2));
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.time-icon svg {
+  font-size: 24px;
+  color: #ffffff;
+}
+
+.time-header-text {
+  flex: 1;
 }
 
 .time-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 15px;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 600;
+  margin-bottom: 5px;
 }
 
-.time-title svg {
-  color: #ffffff;
+.time-subtitle {
+  font-size: 14px;
+  opacity: 0.8;
 }
 
 .time-dates {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 18px;
 }
 
 .time-item {
   display: flex;
-  justify-content: space-between;
-  font-size: 22px;
-}
-
-.time-label {
-  opacity: 0.9;
-}
-
-.time-value {
-  font-weight: 600;
-}
-
-/* 特性列表 */
-.features-list {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  margin-bottom: 50px;
-}
-
-.feature-item {
-  display: flex;
   align-items: center;
   gap: 15px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.3s ease;
 }
 
-.feature-icon {
+.time-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(5px);
+}
+
+.time-item-icon {
   width: 40px;
   height: 40px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.feature-icon svg {
-  color: #10b981;
+.time-item-icon svg {
   font-size: 18px;
+  color: #ffffff;
 }
 
-.feature-text {
-  font-size: 16px;
+.time-item-content {
+  flex: 1;
 }
 
-/* 右侧登录区域 - 保持原有样式但调整布局 */
+.time-label {
+  font-size: 13px;
+  opacity: 0.8;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.time-value {
+  font-size: 18px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 右侧登录区域 */
 .login-box {
   flex: 1;
   padding: 50px 40px;
@@ -1151,17 +1187,18 @@ const handleResetPassword = async () => {
   flex-direction: column;
   border-radius: 16px;
   box-shadow: -10px 0 20px rgba(1, 7, 26, 0.2);
-  /* 移除justify-content: center，允许内容从顶部开始 */
   background: rgba(255, 255, 255, 0.95);
-  max-height: 730px; /* 保持固定高度 */
-  overflow-y: auto; /* 当内容超出时启用滚动 */
-  scroll-behavior: smooth; /* 平滑滚动效果 */
-  padding-top: 20px; /* 调整顶部内边距 */
-  padding-bottom: 40px; /* 保持底部内边距 */
+  max-height: 730px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding-top: 20px;
+  padding-bottom: 40px;
   margin-left: 0;
   /* 隐藏滚动条 */
-  -ms-overflow-style: none;  /* IE 和 Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE 和 Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 /* 隐藏Webkit浏览器（Chrome、Safari）的滚动条 */
@@ -1188,7 +1225,6 @@ const handleResetPassword = async () => {
   font-size: 16px;
 }
 
-/* 以下保持原有的登录框内部样式 */
 .login-tabs {
   width: 90%;
   margin: 0 auto 25px;
@@ -1213,7 +1249,8 @@ const handleResetPassword = async () => {
   justify-content: center;
 }
 
-.login-form, .register-form {
+.login-form,
+.register-form {
   width: 90%;
 }
 
@@ -1359,68 +1396,111 @@ const handleResetPassword = async () => {
   margin-bottom: 0;
 }
 
-/* 版权信息样式 - 与原有保持一致 */
+/* 版权信息样式 */
 .copyright {
   text-align: center;
   margin-top: 30px;
   margin-bottom: 20px;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 12px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   position: absolute;
   bottom: 40px;
   left: 0;
   right: 0;
   z-index: 10;
+  letter-spacing: 0.5px;
+  font-weight: 400;
 }
 
-/* 响应式设计 */
+/* 响应式设计优化 */
+@media (max-width: 1200px) {
+  .login-content {
+    max-width: 1100px;
+    min-height: 650px;
+  }
+
+  .welcome-title {
+    font-size: 32px;
+  }
+
+  .time-title {
+    font-size: 20px;
+  }
+
+  .features-title {
+    font-size: 20px;
+  }
+}
+
 @media (max-width: 992px) {
+  /* 允许移动端页面滚动 */
+  .login-page {
+    overflow: auto;
+  }
+
   .login-content {
     flex-direction: column;
-    max-width: 600px;
+    max-width: 650px;
+    max-height: none;
   }
-  
-  .info-panel {
-    padding: 40px 30px;
-  }
-  
+
+  .info-panel,
   .login-box {
-    padding: 40px 30px;
+    padding: 30px 25px;
+    border-radius: 20px;
   }
-  
-  .features-list {
-    margin-bottom: 30px;
+
+
+  .welcome-title {
+    font-size: 28px;
+  }
+
+  .copyright {
+    position: relative;
+    bottom: 0px;
   }
 }
 
 @media (max-width: 576px) {
+
+  /* 允许移动端页面滚动 */
+  .login-page {
+    overflow: auto;
+  }
+
   .login-container {
     padding: 20px 15px;
   }
-  
-  .info-panel, .login-box {
-    padding: 30px 20px;
+
+  .info-panel,
+  .login-box {
+    padding: 30px 25px;
+    border-radius: 20px;
   }
-  
+
   .welcome-title {
-    font-size: 26px;
-  }
-  
-  .login-title {
     font-size: 24px;
   }
-  
-  .login-tabs {
-    width: 85%;
+
+  .login-title {
+    font-size: 28px;
   }
 
-  .login-form, .register-form {
-    width: 90%;
+  .time-card,
+  .features-card {
+    padding: 25px;
   }
 
-  .help-area {
-    width: 85%;
+  .time-item-icon,
+  .feature-icon-bg {
+    width: 45px;
+    height: 45px;
+  }
+
+  .copyright {
+    position: relative;
+    bottom: 0px;
   }
 }
 </style>

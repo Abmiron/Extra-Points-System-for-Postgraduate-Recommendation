@@ -1063,43 +1063,6 @@ watch(activeTab, (newTab, oldTab) => {
 /* 引入共享样式 */
 @import '../common/shared-styles.css';
 
-/* 组件特有样式 */
-.tabs {
-  display: flex;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #ddd;
-}
-
-.tab-btn {
-  padding: 12px 24px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.tab-btn.active {
-  border-bottom-color: #003366;
-  color: #003366;
-  font-weight: 500;
-}
-
-.batch-actions {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 15px;
-  flex-wrap: wrap;
-}
-
-/* 覆盖或补充共享样式 */
-.application-table th:last-child,
-.application-table td:last-child {
-  width: 180px;
-  min-width: 180px;
-  text-align: center;
-}
-
 /* 当前登录徽章样式 */
 .current-login-badge {
   background-color: #007bff;

@@ -58,7 +58,7 @@
               </td>
             </tr>
             <tr v-if="academicApplications.length === 0">
-              <td colspan="5" class="no-data">暂无学术专长申请记录</td>
+              <td colspan="5" style="color: #999;">暂无学术专长申请记录</td>
             </tr>
           </tbody>
         </table>
@@ -92,7 +92,7 @@
               </td>
             </tr>
             <tr v-if="comprehensiveApplications.length === 0">
-              <td colspan="5" class="no-data">暂无综合表现申请记录</td>
+              <td colspan="5" style="color: #999;">暂无综合表现申请记录</td>
             </tr>
           </tbody>
         </table>
@@ -273,52 +273,4 @@ onMounted(() => {
 <style scoped>
 /* 引入共享样式 */
 @import '../common/shared-styles.css';
-
-/* 统计卡片特有样式 */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
-}
-
-.stat-card {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  text-align: center;
-  border-left: 4px solid #003366;
-}
-
-.stat-value {
-  font-size: 28px;
-  font-weight: bold;
-  color: #003366;
-  margin: 10px 0;
-}
-
-.stat-label {
-  color: #666;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.stat-note {
-  color: #888;
-  font-size: 12px;
-  margin-top: 5px;
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* 加载状态样式 */
-.page-content {
-  position: relative;
-}
 </style>

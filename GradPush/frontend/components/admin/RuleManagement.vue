@@ -434,33 +434,7 @@ function resetFilters() {
 }
 </script>
 
-<style>
+<style scoped>
 /* 引入共享样式 */
 @import '../common/shared-styles.css';
-</style>
-
-<style scoped>
-/* 表格样式 */
-.application-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.application-table th,
-.application-table td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #dee2e6;
-}
-
-.application-table th:last-child,
-.application-table td:last-child {
-  text-align: center;
-}
-
-.action-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-}
 </style>

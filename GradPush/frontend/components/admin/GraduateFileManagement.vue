@@ -6,9 +6,13 @@
 
     <!-- 上传区域 -->
     <div class="card">
-      <div style="padding: 20px;">
+      <div class="card-body">
+        <div class="card-title">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span>上传文件</span>
+          </div>
+        </div>
         <div class="form-group">
-          <label class="form-label">上传推免相关文件</label>
           <div class="file-upload-area" @click="triggerFileInput">
             <font-awesome-icon class="upload-icon" :icon="['fas', 'cloud-arrow-up']" />
             <div>
@@ -19,17 +23,23 @@
               @change="handleFileChange" style="display: none;">
           </div>
           <!-- 已选文件列表 -->
-          <div v-if="selectedFiles.length > 0" class="selected-files-list" style="margin-top: 15px;">
-            <h4>已选择文件 ({{ selectedFiles.length }})</h4>
-            <div v-for="(file, index) in selectedFiles" :key="index" class="selected-file-item">
-              <div style="flex: 1;">
-                <font-awesome-icon :icon="getFileIcon(file.name)" style="margin-right: 8px;" />
-                <span>{{ file.name }}</span>
-                <span class="file-size">({{ formatFileSize(file.size) }})</span>
+          <div class="file-list" v-if="selectedFiles.length > 0">
+            <div class="file-list-header">
+              <span>已上传文件 ({{ selectedFiles.length }})</span>
+            </div>
+            <div v-for="(file, index) in selectedFiles" :key="index" class="file-item">
+              <div class="file-icon">
+                <font-awesome-icon :icon="getFileIcon(file.name)" />
               </div>
-              <button class="btn-remove" @click="removeFile(index)" title="移除文件">
-                <font-awesome-icon icon="fa-solid fa-times" />
-              </button>
+              <div class="file-info">
+                <div class="file-name">{{ file.name }}</div>
+                <div class="file-meta">{{ formatFileSize(file.size) }}</div>
+              </div>
+              <div class="file-actions">
+                <button type="button" class="file-action-btn" @click="removeFile(index)" title="移除文件">
+                  <font-awesome-icon :icon="['fas', 'times']" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -44,7 +54,7 @@
             </select>
           </div>
 
-          <div class="form-actions" style="margin-top: 10px; border-top: none; justify-content: flex-end;">
+          <div class="form-actions">
             <button class="btn btn-outline" @click="uploadFiles" :disabled="!selectedFacultyId">
               <font-awesome-icon :icon="['fas', 'upload']" /> 上传文件
             </button>
@@ -54,10 +64,10 @@
     </div>
 
     <!-- 表格区域 -->
-    <div class="card" style="margin-top: 20px;">
-      <div style="padding: 20px;">
+    <div class="card">
+      <div class="card-body">
         <!-- 搜索和筛选 -->
-        <div class="filters" style="padding: 0 0 20px;">
+        <div class="filters">
           <div class="filter-group">
             <input type="text" v-model="fileFilter" placeholder="搜索文件..." class="form-control">
           </div>
@@ -129,7 +139,7 @@
         </div>
 
         <!-- 空状态 -->
-        <div v-if="!loading && filteredFiles.length === 0" class="empty-state" style="margin: 20px 0;">
+        <div v-if="!loading && filteredFiles.length === 0" class="no-data">
           暂无上传文件
         </div>
       </div>
@@ -384,84 +394,4 @@ onMounted(async () => {
 <style scoped>
 /* 引入共享样式 */
 @import '../common/shared-styles.css';
-
-.file-upload-area {
-  border: 2px dashed #ddd;
-  border-radius: 8px;
-  padding: 30px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s;
-  background-color: #f9f9f9;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-.file-upload-area:hover {
-  border-color: #0057b1;
-  background-color: #f0f7ff;
-}
-
-.upload-icon {
-  font-size: 32px;
-  color: #0057b1;
-}
-
-.file-upload-area p {
-  margin: 5px 0;
-}
-
-.help-text {
-  font-size: 12px;
-  color: #666;
-  margin-top: 5px;
-}
-
-.selected-files-list h4 {
-  margin: 0 0 10px 0;
-  font-size: 16px;
-  color: #333;
-}
-
-.selected-file-item {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-  border: 1px solid #e9ecef;
-}
-
-.selected-file-item .file-size {
-  font-size: 12px;
-  color: #6c757d;
-  margin-left: 5px;
-}
-
-.selected-file-item .btn-remove {
-  background: none;
-  border: none;
-  color: #dc3545;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.selected-file-item .btn-remove:hover {
-  background-color: #ffebee;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 20px;
-  color: #6c757d;
-  background-color: #f9f9f9;
-  border-radius: 4px;
-}
 </style>

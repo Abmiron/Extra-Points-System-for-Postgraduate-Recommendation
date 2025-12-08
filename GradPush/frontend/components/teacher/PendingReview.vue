@@ -98,7 +98,7 @@
               <td>{{ formatDate(application.appliedAt) }}</td>
               <td>{{ application.selfScore }}</td>
               <td>
-                <button class="btn-outline btn small-btn" @click="reviewApplication(application)">
+                <button class="btn btn-outline small-btn" @click="reviewApplication(application)">
                   <font-awesome-icon :icon="['fas', 'eye']" /> 审核
                 </button>
               </td>
@@ -113,12 +113,12 @@
 
     <!-- 分页控件 -->
     <div class="pagination">
-      <div>显示 {{ startIndex + 1 }}-{{ endIndex }} 条，共 {{ totalApplications }} 条记录</div>
+      <div class="pagination-info">显示 {{ startIndex + 1 }}-{{ endIndex }} 条，共 {{ totalApplications }} 条记录</div>
       <div class="pagination-controls">
-        <button class="btn-outline btn" :disabled="pagination.currentPage === 1" @click="prevPage">
+        <button class="btn btn-outline" :disabled="pagination.currentPage === 1" @click="prevPage">
           <font-awesome-icon :icon="['fas', 'chevron-left']" /> 上一页
         </button>
-        <button class="btn-outline btn" :disabled="pagination.currentPage >= totalPages" @click="nextPage">
+        <button class="btn btn-outline" :disabled="pagination.currentPage >= totalPages" @click="nextPage">
           下一页 <font-awesome-icon :icon="['fas', 'chevron-right']" />
         </button>
       </div>
@@ -129,7 +129,7 @@
       <div class="loading-spinner"></div>
       <div class="loading-text">正在加载中...</div>
     </div>
-      
+
     <!-- 审核详情模态框 -->
     <ApplicationDetailModal v-if="selectedApplication" :application="selectedApplication" @approve="handleApprove"
       @reject="handleReject" @close="closeReviewModal" :is-review-mode="true" />
@@ -446,11 +446,11 @@ const loadDepartments = async (facultyId = null) => {
       response = await api.getDepartmentsAdmin()
     }
     departments.value = response.departments || []
-    
+
     // 重置专业选择和列表
     filters.value.major = 'all'
     majors.value = []
-    
+
     // 如果有系被选中但不在新列表中，重置系选择
     if (filters.value.department !== 'all' && !departments.value.some(dept => dept.id === filters.value.department)) {
       filters.value.department = 'all'
@@ -488,7 +488,7 @@ const loadMajors = async (departmentId = null) => {
       response = await api.getMajors()
     }
     majors.value = response.majors || []
-    
+
     // 如果有专业被选中但不在新列表中，重置专业选择
     if (filters.value.major !== 'all' && !majors.value.some(major => major.id === filters.value.major)) {
       filters.value.major = 'all'
@@ -514,31 +514,6 @@ const fetchRules = async () => {
 </script>
 
 <style scoped>
-/* 组件特有样式 */
-.date-range-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.date-range {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.date-separator {
-  color: #999;
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-.form-control.small {
-  width: 120px;
-}
-</style>
-
-<style>
 /* 引入共享样式 */
 @import '../common/shared-styles.css';
 </style>

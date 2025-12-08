@@ -167,7 +167,7 @@
                         树结构计算支持层级化的计分配置，适用于复杂的评分场景。
                         <br>计算方式：根据树结构的节点组合应用对应分数，绿色标记的节点分数即表示不同组合下的分数。
                         <br>
-                        <br>点击节点进入编辑状态，可修改节点名称和分数。可以使用Enter键保存编辑，或Esc键取消编辑，也可以再次点击节点退出编辑状态。
+                        <br>点击节点可进入编辑状态，修改节点名称和分数。可以使用Enter键保存，或Esc键取消编辑，也可以再次点击节点退出编辑状态并保存。
                       </div>
 
                       <!-- 树结构配置 -->
@@ -615,75 +615,20 @@ const handleSave = () => {
 </script>
 
 <style scoped>
-/* Modal styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
+/* 模态框样式 */
 .modal-content {
-  background-color: white;
-  border-radius: 10px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  width: 90%;
   max-width: 1200px;
   max-height: 85vh;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
 
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #eee;
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: #333;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 18px;
-  cursor: pointer;
-  color: #999;
-  padding: 0;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.close-btn:hover {
-  background-color: #f1f1f1;
-  color: #333;
-}
-
 .modal-body {
-  padding: 20px;
   flex: 1;
   overflow-y: auto;
 }
 
-/* Form layout */
+/* 表单布局 */
 .form-layout {
   display: flex;
   gap: 25px;
@@ -700,7 +645,7 @@ const handleSave = () => {
   width: 50%;
 }
 
-/* Component specific form styles */
+/* 组件特定表单样式 */
 .form-layout-left .form-row,
 .form-layout-right :not(.json-formula-config) .form-row {
   display: flex;
@@ -715,12 +660,12 @@ const handleSave = () => {
   margin-bottom: 0;
 }
 
-/* Formula Configuration */
+/* 公式配置 */
 .json-formula-config {
   margin-top: 15px;
 }
 
-/* Coefficient configuration */
+/* 系数配置 */
 .coefficient-type-group {
   position: relative;
   background-color: #f9f9f9;
@@ -738,7 +683,7 @@ const handleSave = () => {
   border-radius: 4px;
 }
 
-/* Coefficient row layout */
+/* 系数行布局 */
 .coefficient-type-group .grade-config-item {
   margin-bottom: 10px;
 }
@@ -773,25 +718,11 @@ const handleSave = () => {
   flex: 1;
 }
 
-/* Delete button */
+/* 删除按钮 */
 .delete-btn {
   position: absolute;
   top: 10px;
   right: 10px;
-  margin: 0;
-  padding: 4px 8px;
-  font-size: 12px;
-  height: auto;
-  width: auto;
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 25px;
-  padding-top: 20px;
-  border-top: 1px solid #eee;
 }
 
 /* 树结构计算样式 */
@@ -799,7 +730,7 @@ const handleSave = () => {
   margin-top: 15px;
 }
 
-/* Tree Structure Styles */
+/* 树结构容器 */
 .tree-config-container {
   display: flex;
   flex-direction: column;
@@ -862,7 +793,7 @@ const handleSave = () => {
   padding: 8px 12px;
 }
 
-/* Tree Styles */
+/* 树结构行布局 */
 .tree-row {
   display: flex;
   margin-bottom: 5px;
@@ -878,7 +809,7 @@ const handleSave = () => {
   text-align: center;
 }
 
-/* Responsive Design */
+/* 响应式设计 */
 @media (max-width: 992px) {
   .form-layout {
     flex-direction: column;
@@ -892,11 +823,6 @@ const handleSave = () => {
 }
 
 @media (max-width: 768px) {
-  .modal-content {
-    width: 95%;
-    margin: 10px;
-  }
-
   .form-row {
     flex-direction: column;
     gap: 15px;
@@ -913,26 +839,9 @@ const handleSave = () => {
   .radio-card.horizontal {
     min-width: 120px;
   }
-
-  .form-actions {
-    flex-wrap: wrap;
-  }
-
-  .form-actions .btn {
-    flex: 1;
-    min-width: 120px;
-  }
 }
 
 @media (max-width: 576px) {
-  .modal-header {
-    padding: 15px;
-  }
-
-  .modal-body {
-    padding: 15px;
-  }
-
   .radio-card {
     min-width: 100%;
   }

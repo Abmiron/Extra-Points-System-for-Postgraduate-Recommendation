@@ -28,34 +28,23 @@
       </div>
     </div>
 
-
-
     <!-- 文件存储设置 -->
     <div class="card">
       <div class="card-title">文件存储设置</div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">单文件大小限制</label>
-          <div class="input-with-unit">
-            <input type="number" class="form-control small-input" v-model="settings.singleFileSizeLimit">
-            <span class="unit">MB</span>
-          </div>
+          <label class="form-label">单文件大小限制(MB)</label>
+          <input type="number" class="form-control" v-model="settings.singleFileSizeLimit">
           <div class="help-text">单个上传文件的最大大小</div>
         </div>
         <div class="form-group">
-          <label class="form-label">总文件大小限制</label>
-          <div class="input-with-unit">
-            <input type="number" class="form-control small-input" v-model="settings.totalFileSizeLimit">
-            <span class="unit">MB</span>
-          </div>
+          <label class="form-label">总文件大小限制(MB)</label>
+          <input type="number" class="form-control" v-model="settings.totalFileSizeLimit">
           <div class="help-text">一次申请能上传的所有文件的总大小</div>
         </div>
         <div class="form-group">
-          <label class="form-label">头像文件大小限制</label>
-          <div class="input-with-unit">
-            <input type="number" class="form-control small-input" v-model="settings.avatarFileSizeLimit">
-            <span class="unit">MB</span>
-          </div>
+          <label class="form-label">头像文件大小限制(MB)</label>
+          <input type="number" class="form-control" v-model="settings.avatarFileSizeLimit">
           <div class="help-text">用户上传头像的最大大小</div>
         </div>
       </div>
@@ -68,8 +57,6 @@
         <button class="btn btn-outline" @click="saveStorageSettings">保存设置</button>
       </div>
     </div>
-
-
 
     <!-- 系统维护 -->
     <div class="card">
@@ -120,6 +107,7 @@
 </template>
 
 <script setup>
+
 import { ref, reactive, onMounted, computed } from 'vue'
 import api from '../../utils/api'
 import { useToastStore } from '../../stores/toast'
@@ -357,186 +345,6 @@ async function loadSystemSettings() {
 </script>
 
 <style scoped>
-/* 引入共享样式 */
-@import '../common/shared-styles.css';
-
-/* 组件特有样式 */
-.form-row {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  padding: 0 20px;
-}
-
-.form-row .form-group {
-  flex: 1;
-}
-
-.form-group {
-  margin-bottom: 20px;
-  padding: 0 20px;
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #333;
-}
-
-.form-control {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  transition: all 0.2s ease;
-}
-
-/* 优化datetime-local输入框的显示效果 */
-input[type="datetime-local"] {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* 响应式设计下调整datetime-local输入框 */
-@media (max-width: 768px) {
-  input[type="datetime-local"] {
-    min-width: 220px;
-  }
-}
-
-.form-control:focus {
-  outline: none;
-  border-color: #003366;
-  box-shadow: 0 0 0 2px rgba(0, 51, 102, 0.2);
-}
-
-.small-input {
-  width: 100px;
-  display: inline-block;
-}
-
-.input-with-unit {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.unit {
-  color: #666;
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-.form-actions {
-  display: flex;
-  gap: 15px;
-  justify-content: flex-end;
-  margin-top: 10px;
-  border-top: 1px solid #eee;
-  background-color: #ffffff;
-}
-
-.radio-group {
-  display: flex;
-  gap: 20px;
-}
-
-.radio-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-
-.help-text {
-  font-size: 12px;
-  color: #6c757d;
-  margin-top: 5px;
-}
-
-.file-upload-container {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.file-input {
-  flex: 1;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 20px;
-  color: #6c757d;
-  background-color: #f9f9f9;
-  border-radius: 4px;
-}
-
-.system-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.status-indicator {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.status-indicator.online {
-  background-color: #28a745;
-}
-
-.status-indicator.maintenance {
-  background-color: #ffc107;
-}
-
-.text-danger {
-  color: #dc3545;
-  font-weight: 500;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .form-row {
-    flex-direction: column;
-    gap: 0;
-  }
-
-  .radio-group {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .form-actions {
-    flex-direction: column;
-  }
-
-  .form-actions .btn {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-@media (max-width: 480px) {
-
-  .form-row,
-  .form-group {
-    padding: 0 15px;
-  }
-
-  .form-actions {
-    padding: 15px;
-  }
-}
-</style>
-
-<style>
 /* 引入共享样式 */
 @import '../common/shared-styles.css';
 </style>

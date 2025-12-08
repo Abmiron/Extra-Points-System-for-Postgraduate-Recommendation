@@ -270,6 +270,20 @@ def delete_user(user_id):
 
     # 如果是学生用户，同时删除关联的Student记录和申请数据
     if user.role == "student" and user.student:
+        # 获取该学生的所有申请数据
+        applications = Application.query.filter_by(student_id=user.student.student_id).all()
+        # 先删除每个申请关联的文件
+        for application in applications:
+            if application.files:
+                for file in application.files:
+                    try:
+                        if "path" in file and file["path"]:
+                            filename = os.path.basename(file["path"])
+                            file_path = os.path.join(current_app.config["FILE_FOLDER"], filename)
+                            if os.path.exists(file_path):
+                                os.remove(file_path)
+                    except Exception as e:
+                        print(f"删除文件失败: {str(e)}")
         # 删除该学生的所有申请数据
         Application.query.filter_by(student_id=user.student.student_id).delete()
         # 删除Student记录

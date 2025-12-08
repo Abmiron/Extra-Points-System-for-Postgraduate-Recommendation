@@ -12,7 +12,7 @@
 
 import os
 import uuid
-from flask import Blueprint, request, jsonify, make_response, send_from_directory
+from flask import Blueprint, request, jsonify, make_response, send_from_directory, current_app
 from werkzeug.utils import secure_filename
 from models import (
     Faculty,
@@ -142,6 +142,17 @@ def delete_faculty(faculty_id):
     # 1. 先获取所有关联的申请记录
     applications = Application.query.filter_by(faculty_id=faculty.id).all()
     for application in applications:
+        # 删除申请关联的文件
+        if application.files:
+            for file in application.files:
+                try:
+                    if "path" in file and file["path"]:
+                        filename = os.path.basename(file["path"])
+                        file_path = os.path.join(current_app.config["FILE_FOLDER"], filename)
+                        if os.path.exists(file_path):
+                            os.remove(file_path)
+                except Exception as e:
+                    print(f"删除文件失败: {str(e)}")
         db.session.delete(application)
 
     # 2. 再获取所有关联的学生，通过直接关联的方式
@@ -299,6 +310,17 @@ def delete_department(department_id):
     # 1. 先获取所有关联的申请记录
     applications = Application.query.filter_by(department_id=department.id).all()
     for application in applications:
+        # 删除申请关联的文件
+        if application.files:
+            for file in application.files:
+                try:
+                    if "path" in file and file["path"]:
+                        filename = os.path.basename(file["path"])
+                        file_path = os.path.join(current_app.config["FILE_FOLDER"], filename)
+                        if os.path.exists(file_path):
+                            os.remove(file_path)
+                except Exception as e:
+                    print(f"删除文件失败: {str(e)}")
         db.session.delete(application)
 
     # 2. 再获取所有关联的学生
@@ -434,6 +456,17 @@ def delete_major(major_id):
     # 1. 先获取所有关联的申请记录
     applications = Application.query.filter_by(major_id=major.id).all()
     for application in applications:
+        # 删除申请关联的文件
+        if application.files:
+            for file in application.files:
+                try:
+                    if "path" in file and file["path"]:
+                        filename = os.path.basename(file["path"])
+                        file_path = os.path.join(current_app.config["FILE_FOLDER"], filename)
+                        if os.path.exists(file_path):
+                            os.remove(file_path)
+                except Exception as e:
+                    print(f"删除文件失败: {str(e)}")
         db.session.delete(application)
 
     # 2. 再获取所有关联的学生

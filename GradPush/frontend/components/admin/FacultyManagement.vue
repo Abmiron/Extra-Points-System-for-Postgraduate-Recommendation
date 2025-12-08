@@ -853,11 +853,6 @@ export default {
 </script>
 
 <style scoped>
+/* 引入共享样式 */
 @import '../common/shared-styles.css';
-
-/* 加载状态样式 */
-/* 确保加载遮罩正确显示 */
-.card {
-  position: relative;
-}
 </style>

@@ -1,0 +1,887 @@
+<template>
+  <header class="header">
+    <div class="header-container">
+      <!-- 左侧Logo区域 -->
+      <div class="logo-area">
+        <div class="logo-wrapper">
+          <img src="/images/logo(1).png" alt="厦门大学校徽" class="logo">
+          <div class="logo-text">
+            <span class="system-name">{{ title }}</span>
+            <span class="university-name">厦门大学</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 右侧功能区 -->
+      <div class="header-right">
+        <!-- 文件通知 -->
+        <div class="notification-wrapper" @click="showFiles" title="查看推免相关文件">
+          <div class="notification-icon">
+            <font-awesome-icon :icon="['fas', 'file-alt']" />
+            <span class="notification-badge" v-if="fileCount > 0">
+              {{ fileCount }}
+            </span>
+          </div>
+          <span class="notification-label">文件</span>
+        </div>
+        
+        <!-- 用户菜单 -->
+        <div class="user-menu">
+          <div class="user-avatar-wrapper" @click="goToProfile">
+            <img :src="userAvatar" alt="用户头像" class="user-avatar">
+            <div class="avatar-status"></div>
+          </div>
+          <div class="user-info-dropdown">
+            <div class="user-details" @click="goToProfile">
+              <div class="user-name">{{ userName }}</div>
+              <div class="user-role">{{ userRole }}</div>
+            </div>
+            <button class="logout-btn" @click="handleLogout" title="退出登录">
+              <font-awesome-icon :icon="['fas', 'sign-out-alt']" />
+              <span class="logout-text">退出</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 文件列表弹窗 -->
+    <div v-if="isFilesModalVisible" class="overlay" @click="closeFilesModal"></div>
+    <div v-if="isFilesModalVisible" class="files-modal">
+      <div class="modal-header">
+        <div class="modal-header-content">
+          <div class="modal-icon">
+            <font-awesome-icon :icon="['fas', 'file-alt']" />
+          </div>
+          <div class="modal-title">
+            <h4>推免相关文件</h4>
+            <p class="modal-subtitle">共 {{ fileCount }} 个文件</p>
+          </div>
+        </div>
+        <button class="close-btn" @click="closeFilesModal" title="关闭">
+          <font-awesome-icon :icon="['fas', 'times']" />
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="table-container">
+          <table class="application-table">
+            <tbody>
+              <tr v-for="file in filesStore.files" :key="file.id" class="file-row">
+                <td class="file-info">
+                  <div class="file-icon">
+                    <font-awesome-icon :icon="getFileIcon(file.filename)" />
+                  </div>
+                  <div class="file-details">
+                    <div class="file-name">{{ file.filename }}</div>
+                    <div class="file-meta">
+                      <span class="file-size">{{ formatFileSize(file.file_size || 0) }}</span>
+                      <span class="file-date" v-if="file.created_at">· {{ formatDate(file.created_at) }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td class="file-actions">
+                  <div class="action-buttons">
+                    <a :href="file.file_url || ''" class="download-btn" title="下载文件" download>
+                      <font-awesome-icon :icon="['fas', 'download']" />
+                      <span class="download-text">下载</span>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-if="filesStore.files.length === 0" class="empty-state">
+            <font-awesome-icon :icon="['fas', 'folder-open']" class="empty-icon" />
+            <p>暂无文件</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+</template>
+
+<script setup>
+import { computed, ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../../stores/auth'
+import { useToastStore } from '../../stores/toast'
+import { useFilesStore } from '../../stores/files'
+
+const toastStore = useToastStore()
+
+const props = defineProps({
+  userName: String,
+  userAvatar: String,
+  title: {
+    type: String,
+    default: '推免加分系统'
+  }
+})
+
+const emit = defineEmits(['go-to-profile'])
+
+const router = useRouter()
+const authStore = useAuthStore()
+const filesStore = useFilesStore()
+
+// 计算属性，从filesStore获取文件数量
+const fileCount = computed(() => filesStore.fileCount)
+
+// 计算用户角色
+const userRole = computed(() => {
+  const roleMap = {
+    student: '学生',
+    teacher: '教师',
+    admin: '管理员'
+  }
+  return roleMap[authStore.role] || '用户'
+})
+
+const isFilesModalVisible = ref(false)
+
+// 组件挂载时加载文件列表
+onMounted(async () => {
+  const currentUser = authStore.user;
+  const facultyId = currentUser ? currentUser.facultyId : null;
+  await filesStore.loadFiles(facultyId)
+})
+
+// 显示文件列表
+const showFiles = async () => {
+  // 如果文件列表为空，尝试重新加载
+  if (filesStore.files.length === 0) {
+    const currentUser = authStore.user;
+    const facultyId = currentUser ? currentUser.facultyId : null;
+    await filesStore.loadFiles(facultyId)
+  }
+  
+  if (filesStore.files.length === 0) {
+    toastStore.info('暂无推免相关文件')
+    return
+  }
+  
+  // 显示文件列表弹窗
+  isFilesModalVisible.value = true
+}
+
+// 关闭文件列表弹窗
+const closeFilesModal = () => {
+  isFilesModalVisible.value = false
+}
+
+// 获取文件图标
+const getFileIcon = (fileName) => {
+  if (!fileName) return ['fas', 'file'];
+  const ext = fileName.split('.').pop().toLowerCase()
+  switch (ext) {
+    case 'pdf':
+      return ['fas', 'file-pdf']
+    case 'doc':
+    case 'docx':
+      return ['fas', 'file-word']
+    case 'xls':
+    case 'xlsx':
+      return ['fas', 'file-excel']
+    case 'ppt':
+    case 'pptx':
+      return ['fas', 'file-powerpoint']
+    case 'jpg':
+    case 'jpeg':
+    case 'png':
+    case 'gif':
+      return ['fas', 'file-image']
+    case 'zip':
+    case 'rar':
+    case '7z':
+      return ['fas', 'file-archive']
+    default:
+      return ['fas', 'file']
+  }
+}
+
+// 格式化文件大小
+const formatFileSize = (size) => {
+  if (size < 1024) {
+    return `${size} B`
+  } else if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`
+  } else {
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`
+  }
+}
+
+// 格式化日期
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+}
+
+const goToProfile = () => {
+  emit('go-to-profile')
+}
+
+const handleLogout = async () => {
+  if (confirm('确定要退出登录吗？')) {
+    try {
+      await authStore.logout()
+      router.push('/login')
+      toastStore.success('退出登录成功')
+    } catch (error) {
+      console.error('退出登录失败:', error)
+      router.push('/login')
+      toastStore.error('退出登录失败，请重试')
+    }
+  }
+}
+</script>
+
+<style scoped>
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: linear-gradient(135deg, #003d86 0%, #0066cc 100%);
+  color: #fff;
+  height: 70px;
+  box-shadow: 0 4px 20px rgba(0, 45, 110, 0.25);
+  transition: all 0.3s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  padding: 0 30px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* Logo区域样式 */
+.logo-area {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.logo-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 8px 16px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.3s ease;
+}
+
+.logo-wrapper:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.logo {
+  width: 160px;
+  height: auto;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+  transition: all 0.3s ease;
+}
+
+.logo-wrapper:hover .logo {
+  transform: scale(1.05);
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  border-left: 2px solid rgba(255, 255, 255, 0.2);
+  padding-left: 15px;
+  height: 40px;
+  justify-content: center;
+}
+
+.system-name {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.5px;
+}
+
+.university-name {
+  font-size: 14px;
+  opacity: 0.9;
+  font-weight: 400;
+  margin-top: 2px;
+}
+
+/* 右侧功能区 */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+}
+
+/* 通知区域 */
+.notification-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  position: relative;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.notification-wrapper:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.notification-icon {
+  position: relative;
+  font-size: 22px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: linear-gradient(135deg, #ff6b6b, #ff4757);
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  border: 2px solid #003d86;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.notification-label {
+  font-size: 12px;
+  margin-top: 4px;
+  font-weight: 500;
+  opacity: 0.9;
+  letter-spacing: 0.3px;
+}
+
+/* 用户菜单 */
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 6px 6px 6px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.user-menu:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.user-avatar-wrapper {
+  position: relative;
+  cursor: pointer;
+}
+
+.user-avatar {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.user-avatar:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: scale(1.05);
+}
+
+.avatar-status {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  border-radius: 50%;
+  border: 2px solid #003d86;
+}
+
+.user-info-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.user-details {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 100px;
+  padding-right: 15px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-name {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.user-role {
+  font-size: 12px;
+  opacity: 0.8;
+  font-weight: 400;
+  margin-top: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 10px;
+  display: inline-block;
+}
+
+.logout-btn {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.1));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  min-width: 80px;
+  justify-content: center;
+}
+
+.logout-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15));
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.15);
+}
+
+.logout-text {
+  font-size: 14px;
+}
+
+/* 文件列表弹窗样式 */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1999;
+}
+
+.files-modal {
+  position: fixed;
+  top: 85px;
+  right: 30px;
+  background: linear-gradient(135deg, #ffffff, #f8fafc);
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 15px 40px rgba(0, 45, 110, 0.25);
+  z-index: 2000;
+  width: 420px;
+  max-height: 70vh;
+  border: 1px solid rgba(0, 61, 134, 0.1);
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(0, 61, 134, 0.1);
+}
+
+.modal-header-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.modal-icon {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #003d86, #0066cc);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20px;
+}
+
+.modal-title h4 {
+  margin: 0;
+  color: #003d86;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.modal-subtitle {
+  margin: 4px 0 0 0;
+  color: #666;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.close-btn {
+  background: rgba(0, 61, 134, 0.1);
+  border: none;
+  color: #003d86;
+  cursor: pointer;
+  font-size: 20px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: rgba(0, 61, 134, 0.2);
+  transform: rotate(90deg);
+}
+
+.modal-body {
+  max-height: calc(70vh - 100px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #003d86, #0066cc);
+  border-radius: 10px;
+}
+
+.table-container {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 61, 134, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.file-row {
+  transition: all 0.3s ease;
+  border-bottom: 1px solid rgba(0, 61, 134, 0.05);
+}
+
+.file-row:last-child {
+  border-bottom: none;
+}
+
+.file-row:hover {
+  background: rgba(0, 61, 134, 0.03);
+}
+
+.file-info {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.file-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 61, 134, 0.08);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #003d86;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.file-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #666;
+}
+
+.file-actions {
+  padding: 16px;
+  text-align: center;
+  width: 100px;
+}
+
+.download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #003d86, #0066cc);
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.download-btn:hover {
+  background: linear-gradient(135deg, #002a5c, #0052a3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 61, 134, 0.3);
+  text-decoration: none;
+  color: white;
+}
+
+.download-text {
+  font-size: 12px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 15px;
+  color: rgba(0, 61, 134, 0.2);
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .header-container {
+    padding: 0 20px;
+  }
+  
+  .files-modal {
+    right: 20px;
+    width: 380px;
+  }
+}
+
+@media (max-width: 992px) {
+  .system-name {
+    font-size: 18px;
+  }
+  
+  .user-details {
+    min-width: 80px;
+  }
+  
+  .user-name {
+    max-width: 100px;
+  }
+  
+  .logout-text {
+    display: none;
+  }
+  
+  .logout-btn {
+    min-width: 50px;
+    padding: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    height: 65px;
+  }
+  
+  .header-container {
+    padding: 0 15px;
+  }
+  
+  .logo-wrapper {
+    padding: 6px 12px;
+    gap: 12px;
+  }
+  
+  .logo {
+    width: 140px;
+  }
+  
+  .logo-text {
+    padding-left: 12px;
+  }
+  
+  .system-name {
+    font-size: 16px;
+  }
+  
+  .university-name {
+    font-size: 12px;
+  }
+  
+  .header-right {
+    gap: 15px;
+  }
+  
+  .notification-wrapper {
+    padding: 6px 8px;
+  }
+  
+  .notification-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+  }
+  
+  .notification-label {
+    font-size: 11px;
+  }
+  
+  .user-menu {
+    padding: 6px 6px 6px 12px;
+  }
+  
+  .user-avatar {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .user-details {
+    min-width: 70px;
+    padding-right: 10px;
+  }
+  
+  .user-name {
+    font-size: 14px;
+    max-width: 80px;
+  }
+  
+  .user-role {
+    font-size: 11px;
+    padding: 1px 6px;
+  }
+  
+  .files-modal {
+    width: 320px;
+    right: 15px;
+  }
+}
+
+@media (max-width: 576px) {
+  .logo {
+    width: 120px;
+  }
+  
+  .logo-text {
+    display: none;
+  }
+  
+  .notification-wrapper {
+    padding: 5px;
+  }
+  
+  .notification-label {
+    display: none;
+  }
+  
+  .user-details {
+    display: none;
+  }
+  
+  .user-menu {
+    padding: 5px;
+  }
+  
+  .files-modal {
+    width: calc(100vw - 30px);
+    right: 15px;
+    left: 15px;
+  }
+}
+</style>

@@ -57,13 +57,8 @@ export const useToastStore = defineStore('toast', () => {
     const toastIndex = toasts.value.findIndex(toast => toast.id === id)
     
     if (toastIndex !== -1) {
-      // 先设置为不可见，触发离开动画
-      toasts.value[toastIndex].visible = false
-      
-      // 等待动画完成后再从数组中移除
-      setTimeout(() => {
-        toasts.value.splice(toastIndex, 1)
-      }, 300) // 与CSS过渡时间保持一致
+      // 从数组中直接移除，TransitionGroup会自动处理离开动画
+      toasts.value.splice(toastIndex, 1)
     }
 
     // 清除定时器

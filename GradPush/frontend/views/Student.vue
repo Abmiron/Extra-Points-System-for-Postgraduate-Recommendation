@@ -4,8 +4,7 @@
       @go-to-profile="goToProfile" />
 
     <div class="content-wrapper">
-      <Sidebar :active-page="currentPage" @page-change="switchPage" :user-info="userInfo" user-type="student"
-        @sidebar-toggle="handleSidebarToggle" :collapsed="isSidebarCollapsed" />
+      <Sidebar :active-page="currentPage" @page-change="switchPage" @sidebar-toggle="handleSidebarToggle" />
 
       <main :class="['main-content', { 'sidebar-collapsed': isSidebarCollapsed }]">
         <component :is="currentPageComponent" @switch-page="switchPage" @edit-application="handleEditApplication"

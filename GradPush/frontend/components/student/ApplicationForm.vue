@@ -5,7 +5,7 @@
     </div>
 
     <div class="card application-card">
-      <form @submit.prevent="submitForm" class="application-form">
+      <form @submit.prevent="submitForm">
         <!-- 基本信息（通用） -->
         <div class="form-section">
           <div class="section-title">
@@ -372,26 +372,26 @@ const loadEditData = async (applicationId) => {
     resetForm()
     return
   }
-  
+
   // 设置加载标志，避免在加载过程中清空动态系数
   isLoadingEditData.value = true
-  
+
   try {
     const application = await applicationsStore.fetchApplicationById(applicationId)
-    
+
     // 将后端字段转换为前端字段名
     const frontendData = toFrontendFields(application)
-    
+
     // 清空表单
     resetForm()
-    
+
     // 先设置ruleId，确保selectedRule能够正确计算
     if (frontendData.ruleId) {
       formData.ruleId = frontendData.ruleId
     }
     // 这将确保系数选择字段能够正确显示
     await fetchMatchingRules()
-    
+
     // 填充表单基本数据（排除动态系数字段和ruleId，单独处理）
     for (const [key, value] of Object.entries(frontendData)) {
       if (key in formData && key !== 'dynamicCoefficients' && key !== 'ruleId') {
@@ -400,7 +400,7 @@ const loadEditData = async (applicationId) => {
     }
     // 填充动态系数字段
     let dynamicCoefficients = {}
-    
+
     // 优先使用转换后的字段，如果没有则使用原始字段
     const rawDynamicCoefficients = frontendData.dynamicCoefficients || application.dynamic_coefficients
     if (rawDynamicCoefficients) {
@@ -446,12 +446,12 @@ const loadEditData = async (applicationId) => {
             parameters = {};
           }
         }
-        
+
         // 检查是否是树结构计算
         if (currentRule.calculation.calculation_type === 'tree' || parameters.type === 'tree') {
           const treeConfig = parameters.tree || {};
           const tree = treeConfig.root || (treeConfig.structure && treeConfig.structure.root);
-          
+
           if (tree && tree.dimension) {
             // 遍历tree_path数组，为每个元素创建对应的索引字段
             let currentNode = tree;
@@ -459,7 +459,7 @@ const loadEditData = async (applicationId) => {
               // 使用当前节点的dimension.key作为字段名前缀
               const fieldName = `${currentNode.dimension.key}_${index}`;
               stringifiedCoefficients[fieldName] = path;
-              
+
               // 移动到下一个节点
               if (currentNode.children && currentNode.children.length > 0) {
                 const nextNode = currentNode.children.find(child => child.dimension.name === path);
@@ -468,7 +468,7 @@ const loadEditData = async (applicationId) => {
                 }
               }
             });
-            
+
             // 如果有下一层级，创建对应的字段
             if (currentNode.children && currentNode.children.length > 0) {
               const nextLevelIndex = stringifiedCoefficients.tree_path.length;
@@ -490,15 +490,15 @@ const loadEditData = async (applicationId) => {
           stringifiedCoefficients[fieldName] = path;
         });
       }
-      
+
       // 移除tree_path字段，因为前端不再需要它
       delete stringifiedCoefficients.tree_path;
     }
-    
+
     // 检查是否存在直接的tree_字段（如果后端没有返回tree_path数组）
     const hasDirectTreeFields = Object.keys(stringifiedCoefficients)
       .some(key => /tree_(\d+)$/.test(key));
-    
+
     // 如果没有tree_path数组也没有直接的tree_字段，尝试从rule配置中创建默认的tree_字段
     if (!stringifiedCoefficients.tree_path && !hasDirectTreeFields) {
       // 获取当前选中的规则
@@ -515,12 +515,12 @@ const loadEditData = async (applicationId) => {
         }
       }
     }
-    
+
     // 使用reactive创建一个新的dynamicCoefficients对象，确保Vue的响应式系统能够正确跟踪变化
     const newDynamicCoefficients = reactive({});
     Object.assign(newDynamicCoefficients, stringifiedCoefficients);
     formData.dynamicCoefficients = newDynamicCoefficients;
-    
+
     // 手动重建选中的树节点路径，确保表单字段能正确显示之前选择的层级
     rebuildSelectedTreePath();
     // 处理文件（如果有）
@@ -1643,137 +1643,13 @@ const submitForm = async () => {
   color: #ff4d4f;
 }
 
-/* 加载状态样式 */
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(255, 255, 255, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-radius: 4px;
-  z-index: 10;
-}
-
-.loading-overlay.small {
-  background-color: rgba(255, 255, 255, 0.9);
-}
-
-.loading-spinner {
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #3498db;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  animation: spin 1s linear infinite;
-}
-
-.loading-spinner.small {
-  width: 15px;
-  height: 15px;
-  border-width: 2px;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-.loading-container {
-  grid-column: span 2;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 40px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-}
-
-.loading-container .loading-spinner {
-  width: 40px;
-  height: 40px;
-  margin-bottom: 16px;
-}
-
-.loading-text {
-  margin-left: 8px;
-  font-size: 0.85rem;
-  color: #666;
-  font-style: italic;
-}
-
-/* 确保选择框和输入框有相对定位，以便加载覆盖层正确显示 */
-.select-with-icon,
-.input-with-icon {
-  position: relative;
-}
-
-/* 应用表单特有样式 */
-.application-form {
-  padding: 0;
-}
-
-/* 表单部分样式 */
-.form-section {
-  padding: 10px 15px;
-  border-bottom: 1px solid #f0f4f8;
-}
-
-.form-section:last-child {
-  border-bottom: none;
-}
-
-/* 表单组微调 */
-.form-group {
-  margin-bottom: 3px;
-}
-
-/* 表单标签微调 */
-.form-label {
-  margin-bottom: 6px;
-  font-size: 0.95rem;
-}
-
-/* 激活状态的单选卡片样式 */
-
-/* 激活状态的单选卡片样式 */
-.radio-card.active {
-  border-color: #003366;
-  background-color: #f0f7ff;
-  color: #003366;
-}
-
-/* 激活状态的单选卡片图标样式 */
-.radio-card.active .radio-icon {
-  color: #003366;
-}
-
 /* 文件上传文本样式 */
 .upload-text p {
   margin: 0;
   color: #333;
 }
 
-/* 表单操作按钮样式 */
-.form-actions {
-  padding: 15px 20px;
-  background: #ffffff;
-  border-top: 1px solid #ffffff;
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-/* 模态框特有样式（覆盖共享样式） */
+/* 模态框特有样式*/
 .modal-overlay {
   background-color: rgba(0, 0, 0, 0.7);
 }
@@ -1863,49 +1739,5 @@ const submitForm = async () => {
   color: #6c757d;
   white-space: pre-wrap;
   word-break: break-word;
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .form-actions {
-    flex-direction: column;
-    padding: 12px 15px;
-  }
-
-  .btn {
-    justify-content: center;
-  }
-
-  .modal-content {
-    width: 95vw;
-    height: 95vh;
-    max-width: none;
-    max-height: none;
-  }
-
-  .modal-header {
-    padding: 12px 15px;
-  }
-
-  .modal-body {
-    padding: 15px;
-  }
-
-  .file-preview {
-    .rule-description {
-      margin-top: 12px;
-      padding: 12px;
-    }
-
-    .rule-description .description-content {
-      font-size: 13px;
-    }
-
-    padding: 30px 15px;
-  }
-
-  .file-preview h4 {
-    font-size: 1.1rem;
-  }
 }
 </style>

@@ -55,14 +55,9 @@
     <!-- 修改密码 -->
     <div class="card">
       <div class="card-title">安全设置</div>
-      <div class="form-row">
-        <div class="form-group password-group">
-          <label class="form-label">修改密码</label>
-          <button class="btn btn-outline password-btn" @click="showChangePassword = true">
-            <font-awesome-icon :icon="['fas', 'key']" /> 修改密码
-          </button>
-        </div>
-      </div>
+      <button class="btn btn-outline" @click="showChangePassword = true">
+        <font-awesome-icon :icon="['fas', 'key']" /> 修改密码
+      </button>
     </div>
 
     <!-- 修改密码模态框 -->
@@ -91,14 +86,10 @@
               <div v-if="passwordForm.newPassword !== passwordForm.confirmPassword" class="error-text">两次输入的密码不一致</div>
             </div>
           </form>
-        </div>
-        <div class="modal-footer">
-          <div class="modal-actions">
+          <div class="form-actions">
             <button class="btn btn-outline" @click="closePasswordModal">取消</button>
             <button class="btn" @click="changePassword"
-              :disabled="passwordForm.newPassword !== passwordForm.confirmPassword">
-              确认修改
-            </button>
+              :disabled="passwordForm.newPassword !== passwordForm.confirmPassword">确认修改</button>
           </div>
         </div>
       </div>
@@ -402,7 +393,7 @@ onMounted(async () => {
     // 使用默认值
     systemSettings.value = { avatarFileSizeLimit: 2 }
   }
-  
+
   // 从auth store获取当前用户信息
   if (authStore.user) {
     const user = authStore.user
@@ -544,95 +535,10 @@ onMounted(async () => {
   white-space: nowrap;
 }
 
-/* 组件特有样式 */
-/* 模态框底部按钮居中 */
-.modal-footer {
-  display: flex;
-  justify-content: center;
-  padding: 15px;
-  border-top: 1px solid #e8e8e8;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 15px;
-}
-
-.form-row {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  align-items: center;
-}
-
-.form-row .form-group {
-  flex: 1;
-}
-
-/* 修改密码按钮样式 */
-.password-group {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.password-btn {
-  width: auto;
-  white-space: nowrap;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-}
-
-.form-control:disabled {
-  background-color: #f5f5f5;
-  color: #666;
-  cursor: not-allowed;
-}
-
-.form-actions {
-  display: flex;
-  gap: 15px;
-  justify-content: flex-end;
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 1px solid #eee;
-}
-
+/* 错误文本样式 */
 .error-text {
   font-size: 12px;
   color: #e74c3c;
   margin-top: 5px;
-}
-
-.help-text {
-  font-size: 12px;
-  color: #6c757d;
-  margin-top: 5px;
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .form-row {
-    flex-direction: column;
-    gap: 0;
-  }
-
-  .form-actions {
-    flex-direction: column;
-  }
-
-  .modal-content {
-    width: 95%;
-    margin: 20px;
-  }
 }
 </style>
