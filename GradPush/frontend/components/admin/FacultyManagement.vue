@@ -2,6 +2,11 @@
   <div class="page-content">
     <div class="page-title">
       <span>学院、系和专业管理</span>
+      <div class="page-title-actions">
+        <button class="btn btn-outline" @click="importFaculties">
+          <font-awesome-icon :icon="['fas', 'download']" /> 导入学院、系和专业
+        </button>
+      </div>
     </div>
 
     <!-- 标签页切换 -->
@@ -17,9 +22,11 @@
       <div class="card-title">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span>学院管理</span>
-          <button class="btn btn-outline" @click="showAddFacultyModal = true">
-            <font-awesome-icon icon="fa-solid fa-plus" /> 添加学院
-          </button>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-outline" @click="showAddFacultyModal = true">
+              <font-awesome-icon icon="fa-solid fa-plus" /> 添加学院
+            </button>
+          </div>
         </div>
       </div>
 
@@ -30,6 +37,10 @@
         </div>
         <div class="filter-group">
           <button class="btn btn-outline" @click="resetFilters">清空筛选</button>
+          <button class="btn btn-outline delete-btn" @click="batchDeleteFaculties"
+            :disabled="selectedFacultyIds.length === 0">
+            <font-awesome-icon icon="fa-solid fa-trash" /> 批量删除
+          </button>
         </div>
       </div>
 
@@ -44,6 +55,9 @@
         <table class="application-table">
           <thead>
             <tr>
+              <th style="width: 50px;">
+                <input type="checkbox" v-model="selectAll" @change="toggleSelectAllFaculties" />
+              </th>
               <th>学院名称</th>
               <th>描述</th>
               <th style="text-align: center;">操作</th>
@@ -51,6 +65,9 @@
           </thead>
           <tbody>
             <tr v-for="faculty in filteredFaculties" :key="faculty.id">
+              <td>
+                <input type="checkbox" v-model="selectedFacultyIds" :value="faculty.id" />
+              </td>
               <td>{{ faculty.name }}</td>
               <td>{{ faculty.description || '无描述' }}</td>
               <td>
@@ -74,9 +91,11 @@
       <div class="card-title">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span>系管理</span>
-          <button class="btn btn-outline" @click="showAddDepartmentModal = true">
-            <font-awesome-icon icon="fa-solid fa-plus" /> 添加系
-          </button>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-outline" @click="showAddDepartmentModal = true">
+              <font-awesome-icon icon="fa-solid fa-plus" /> 添加系
+            </button>
+          </div>
         </div>
       </div>
 
@@ -97,6 +116,10 @@
         <div class="filter-group">
           <button class="btn btn-outline" @click="resetFilters">清空筛选</button>
         </div>
+        <button class="btn btn-outline delete-btn" @click="batchDeleteDepartments"
+          :disabled="selectedDepartmentIds.length === 0">
+          <font-awesome-icon icon="fa-solid fa-trash" /> 批量删除
+        </button>
       </div>
 
       <!-- 加载状态指示器 -->
@@ -110,6 +133,9 @@
         <table class="application-table">
           <thead>
             <tr>
+              <th style="width: 50px;">
+                <input type="checkbox" v-model="selectAll" @change="toggleSelectAllDepartments" />
+              </th>
               <th>系名称</th>
               <th>所属学院</th>
               <th>描述</th>
@@ -118,6 +144,9 @@
           </thead>
           <tbody>
             <tr v-for="department in filteredDepartments" :key="department.id">
+              <td>
+                <input type="checkbox" v-model="selectedDepartmentIds" :value="department.id" />
+              </td>
               <td>{{ department.name }}</td>
               <td>{{ getFacultyName(department.faculty_id) }}</td>
               <td>{{ department.description || '无描述' }}</td>
@@ -143,9 +172,11 @@
       <div class="card-title">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span>专业管理</span>
-          <button class="btn btn-outline" @click="showAddMajorModal = true">
-            <font-awesome-icon icon="fa-solid fa-plus" /> 添加专业
-          </button>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-outline" @click="showAddMajorModal = true">
+              <font-awesome-icon icon="fa-solid fa-plus" /> 添加专业
+            </button>
+          </div>
         </div>
       </div>
 
@@ -174,6 +205,10 @@
         </div>
         <div class="filter-group">
           <button class="btn btn-outline" @click="resetFilters">清空筛选</button>
+          <button class="btn btn-outline delete-btn" @click="batchDeleteMajors"
+            :disabled="selectedMajorIds.length === 0">
+            <font-awesome-icon icon="fa-solid fa-trash" /> 批量删除
+          </button>
         </div>
       </div>
 
@@ -188,6 +223,9 @@
         <table class="application-table">
           <thead>
             <tr>
+              <th style="width: 50px;">
+                <input type="checkbox" v-model="selectAll" @change="toggleSelectAllMajors" />
+              </th>
               <th>专业名称</th>
               <th>所属学院</th>
               <th>所属系</th>
@@ -197,6 +235,9 @@
           </thead>
           <tbody>
             <tr v-for="major in filteredMajors" :key="major.id">
+              <td>
+                <input type="checkbox" v-model="selectedMajorIds" :value="major.id" />
+              </td>
               <td>{{ major.name }}</td>
               <td>{{ getFacultyName(major.faculty_id) }}</td>
               <td>{{ getDepartmentName(major.department_id) }}</td>
@@ -444,6 +485,116 @@
       </div>
     </div>
   </div>
+
+  <!-- 导入组织对话框 -->
+  <div v-if="importDialogVisible" class="modal-overlay" @click.self="closeImportDialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>导入学院、系和专业</h3>
+        <button class="close-btn" @click="closeImportDialog">
+          <font-awesome-icon icon="fa-times" />
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group" v-if="!importResult">
+          <!-- 文件上传区域 -->
+          <div class="upload-demo">
+            <input type="file" ref="fileUploadRef" accept=".xlsx, .xls" @change="handleFileChange"
+              style="display: none;">
+            <div class="file-upload-area" @click="openFileSelect" @dragover.prevent @dragenter.prevent
+              @drop="handleFileDrop">
+              <font-awesome-icon icon="fa-upload" class="upload-icon" />
+              <div>
+                <div>点击或拖拽文件到此处上传</div>
+                <div style="font-size: 0.8em; color: #999; margin-top: 5px;">支持.xlsx, .xls格式文件</div>
+              </div>
+            </div>
+          </div>
+          <!-- 已上传文件 -->
+          <div class="file-list" v-if="importFile">
+            <div class="file-list-header">
+              <span>已上传文件：</span>
+            </div>
+            <div class="file-info" style="padding: 10px;margin-top: 0px;">
+              <div class="file-name">{{ importFile.name }}</div>
+              <button type="button" class="file-action-btn" @click="closeFileSelect" title="移除文件">
+                <font-awesome-icon :icon="['fas', 'times']" />
+              </button>
+            </div>
+          </div>
+          <!-- 导入注意事项 -->
+          <div style="margin-left: 10px;">
+            <div style=" color: #999;">
+              <font-awesome-icon :icon="['fas', 'exclamation-triangle']" />注意事项
+            </div>
+          </div>
+          <div style="color: #999; margin-left: 10px;">
+            <strong>1. 格式要求：</strong><br>
+            必须包含"学院名称"列<br>
+            可选包含"系名称"、"专业名称"列、"学院描述"、"系描述"、"专业描述"列<br>
+            每一行数据可以完整包含学院、系、专业信息，或仅包含部分信息<br>
+            <br>
+            <strong>2. 数据处理：</strong><br>
+            导入时系统会自动处理重复数据，不会重复创建已存在的组织<br>
+            <br>
+            <strong>3. excel结构示例：</strong><br>
+            <!-- 导入示例图片 -->
+            <div>
+              <img src="/images/导入学院示例.png" alt="导入学院示例"
+                style="max-width: 100%; border: 1px solid #eee; border-radius: 4px;">
+            </div>
+          </div>
+        </div>
+
+        <!-- 导入结果区域 -->
+        <div class="import-result" v-if="importResult">
+          <div class="card">
+            <div class="card-title">
+              <span>导入结果</span>
+            </div>
+            <div class="card-body">
+              <div class="form-group" style="display: flex; justify-content: space-around; flex-direction: row;">
+                <div class="stat-card" style="padding: 20px 60px;">
+                  <div class="stat-label">成功导入学院</div>
+                  <div class="stat-value">{{ importResult.faculty_count }}个</div>
+                </div>
+                <div class="stat-card" style="padding: 20px 60px;">
+                  <div class="stat-label">成功导入系</div>
+                  <div class="stat-value">{{ importResult.department_count }}个</div>
+                </div>
+                <div class="stat-card" style="padding: 20px 60px;">
+                  <div class="stat-label">成功导入专业</div>
+                  <div class="stat-value">{{ importResult.major_count }}个</div>
+                </div>
+              </div>
+
+              <!-- 错误信息列表 -->
+              <div v-if="importErrors.length > 0" class="error-list">
+                <h4>错误信息：</h4>
+                <div class="scrollbar" style="height: 200px; overflow-y: auto;">
+                  <ul class="timeline">
+                    <li v-for="(error, index) in importErrors" :key="index" class="timeline-item">
+                      <font-awesome-icon icon="fa-exclamation-circle" class="timeline-icon danger" />
+                      <span class="timeline-content">{{ error }}</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn-outline" @click="closeImportDialog">关闭</button>
+          <button class="btn btn-primary" @click="confirmImport" :loading="importLoading"
+            :disabled="!importFile || importResult">
+            确认导入
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -465,6 +616,12 @@ export default {
 
     // 当前激活的标签页
     const activeTab = ref('faculties')
+
+    // 批量选择相关数据
+    const selectAll = ref(false)
+    const selectedFacultyIds = ref([])
+    const selectedDepartmentIds = ref([])
+    const selectedMajorIds = ref([])
 
     // 数据存储
     const faculties = ref([])
@@ -781,12 +938,207 @@ export default {
       return department ? department.name : '未找到'
     }
 
+    // 导入相关状态
+    const importDialogVisible = ref(false)
+    const importFile = ref(null)
+    const importLoading = ref(false)
+    const importResult = ref(null)
+    const importErrors = ref([])
+    const fileUploadRef = ref(null)
+
+    // 打开导入对话框
+    const importFaculties = () => {
+      importDialogVisible.value = true
+      importFile.value = null
+      importResult.value = null
+      importErrors.value = []
+    }
+
+    // 打开文件选择对话框
+    const openFileSelect = () => {
+      if (fileUploadRef.value && typeof fileUploadRef.value.click === 'function') {
+        fileUploadRef.value.click()
+      }
+    }
+
+    // 文件选择处理
+    const handleFileChange = (event) => {
+      if (event.target.files.length > 0) {
+        importFile.value = event.target.files[0]
+      }
+    }
+
+    // 文件拖拽处理
+    const handleFileDrop = (event) => {
+      event.preventDefault()
+      if (event.dataTransfer.files.length > 0) {
+        const file = event.dataTransfer.files[0]
+        // 验证文件类型
+        const allowedExtensions = ['.xlsx', '.xls']
+        const fileExtension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'))
+        if (allowedExtensions.includes(fileExtension)) {
+          importFile.value = file
+        } else {
+          toastStore.warning('只支持.xlsx, .xls格式文件')
+        }
+      }
+    }
+
+    // 关闭文件选择
+    const closeFileSelect = () => {
+      importFile.value = null
+    }
+
+    // 确认导入
+    const confirmImport = async () => {
+      if (!importFile.value) {
+        toastStore.warning('请选择要导入的Excel文件')
+        return
+      }
+
+      importLoading.value = true
+
+      try {
+        const formData = new FormData()
+        formData.append('file', importFile.value)
+
+        const response = await fetch('/api/organization/import-organizations', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include'
+        })
+
+        const data = await response.json()
+
+        if (response.ok) {
+          importResult.value = data
+          importErrors.value = data.errors || []
+
+          toastStore.success('组织数据导入完成')
+
+          // 刷新数据
+          await loadFaculties()
+          await loadDepartments()
+          await loadMajors()
+        } else {
+          toastStore.error(data.message || '导入失败')
+          importErrors.value = [data.message || '导入失败']
+        }
+      } catch (error) {
+        console.error('导入组织数据失败:', error)
+        toastStore.error('导入失败，请检查网络连接')
+      } finally {
+        importLoading.value = false
+      }
+    }
+
+    // 关闭导入对话框
+    const closeImportDialog = () => {
+      importDialogVisible.value = false
+      importFile.value = null
+      importResult.value = null
+      importErrors.value = []
+    }
+
     // 初始化
     onMounted(() => {
       loadFaculties()
       loadDepartments()
       loadMajors()
     })
+
+    // 全选/取消全选学院
+    const toggleSelectAllFaculties = () => {
+      if (selectAll.value) {
+        selectedFacultyIds.value = filteredFaculties.value.map(faculty => faculty.id)
+      } else {
+        selectedFacultyIds.value = []
+      }
+    }
+
+    // 全选/取消全选系
+    const toggleSelectAllDepartments = () => {
+      if (selectAll.value) {
+        selectedDepartmentIds.value = filteredDepartments.value.map(department => department.id)
+      } else {
+        selectedDepartmentIds.value = []
+      }
+    }
+
+    // 全选/取消全选专业
+    const toggleSelectAllMajors = () => {
+      if (selectAll.value) {
+        selectedMajorIds.value = filteredMajors.value.map(major => major.id)
+      } else {
+        selectedMajorIds.value = []
+      }
+    }
+
+    // 批量删除学院
+    const batchDeleteFaculties = async () => {
+      if (selectedFacultyIds.value.length === 0) {
+        toastStore.warning('请选择要删除的学院')
+        return
+      }
+
+      if (confirm(`确定要删除选中的 ${selectedFacultyIds.value.length} 个学院吗？删除后相关的系、专业和学生也会被删除。`)) {
+        try {
+          await Promise.all(selectedFacultyIds.value.map(id => api.deleteFacultyAdmin(id)))
+          selectedFacultyIds.value = []
+          selectAll.value = false
+          await loadFaculties()
+          await loadDepartments()
+          await loadMajors()
+          toastStore.success('学院批量删除成功')
+        } catch (error) {
+          console.error('批量删除学院失败:', error)
+          toastStore.error('批量删除学院失败')
+        }
+      }
+    }
+
+    // 批量删除系
+    const batchDeleteDepartments = async () => {
+      if (selectedDepartmentIds.value.length === 0) {
+        toastStore.warning('请选择要删除的系')
+        return
+      }
+
+      if (confirm(`确定要删除选中的 ${selectedDepartmentIds.value.length} 个系吗？删除后相关的专业和学生也会被删除。`)) {
+        try {
+          await Promise.all(selectedDepartmentIds.value.map(id => api.deleteDepartmentAdmin(id)))
+          selectedDepartmentIds.value = []
+          selectAll.value = false
+          await loadDepartments()
+          await loadMajors()
+          toastStore.success('系批量删除成功')
+        } catch (error) {
+          console.error('批量删除系失败:', error)
+          toastStore.error('批量删除系失败')
+        }
+      }
+    }
+
+    // 批量删除专业
+    const batchDeleteMajors = async () => {
+      if (selectedMajorIds.value.length === 0) {
+        toastStore.warning('请选择要删除的专业')
+        return
+      }
+
+      if (confirm(`确定要删除选中的 ${selectedMajorIds.value.length} 个专业吗？删除后相关的学生也会被删除。`)) {
+        try {
+          await Promise.all(selectedMajorIds.value.map(id => api.deleteMajorAdmin(id)))
+          selectedMajorIds.value = []
+          selectAll.value = false
+          await loadMajors()
+          toastStore.success('专业批量删除成功')
+        } catch (error) {
+          console.error('批量删除专业失败:', error)
+          toastStore.error('批量删除专业失败')
+        }
+      }
+    }
 
     // 清理监听器
     onUnmounted(() => {
@@ -846,7 +1198,31 @@ export default {
       resetFilters,
       onNewMajorFacultyChange,
       onEditMajorFacultyChange,
-      toastStore
+      importFaculties,
+      importDialogVisible,
+      importFile,
+      importLoading,
+      importResult,
+      importErrors,
+      handleFileChange,
+      handleFileDrop,
+      openFileSelect,
+      closeFileSelect,
+      confirmImport,
+      closeImportDialog,
+      fileUploadRef,
+      toastStore,
+      // 批量选择相关
+      selectAll,
+      selectedFacultyIds,
+      selectedDepartmentIds,
+      selectedMajorIds,
+      toggleSelectAllFaculties,
+      toggleSelectAllDepartments,
+      toggleSelectAllMajors,
+      batchDeleteFaculties,
+      batchDeleteDepartments,
+      batchDeleteMajors
     }
   }
 }

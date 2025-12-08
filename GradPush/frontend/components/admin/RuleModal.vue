@@ -181,6 +181,7 @@
                               <tree-node :node="treeData.root" :level="0" :selected-node-id="selectedNodeId"
                                 @node-select="handleNodeSelect" @add-child="handleAddChild"
                                 @delete-node="handleDeleteNode" @update-node="handleUpdateNode"
+                                @edit-start="handleEditStart" @edit-end="handleEditEnd"
                                 :get-node-path="getNodePath" />
                             </div>
                             <div v-else class="tree-empty">
@@ -295,6 +296,9 @@ const selectedNode = computed(() => {
   return findNodeById(treeData.value.root, selectedNodeId.value)
 })
 
+// 正在编辑的节点ID数组
+const editingNodeIds = ref([])
+
 // 查找节点函数
 function findNodeById(node, id) {
   if (!node) return null
@@ -304,6 +308,20 @@ function findNodeById(node, id) {
     if (found) return found
   }
   return null
+}
+
+// 处理节点编辑开始事件
+function handleEditStart(nodeId) {
+  // 将节点ID添加到正在编辑的节点数组中
+  if (!editingNodeIds.value.includes(nodeId)) {
+    editingNodeIds.value.push(nodeId)
+  }
+}
+
+// 处理节点编辑结束事件
+function handleEditEnd(nodeId) {
+  // 将节点ID从正在编辑的节点数组中移除
+  editingNodeIds.value = editingNodeIds.value.filter(id => id !== nodeId)
 }
 
 // 处理模态框内容点击事件，点击编辑框外部关闭编辑框
@@ -592,8 +610,52 @@ const prepareCalculationData = () => {
   }
 }
 
+// 强制保存所有正在编辑的节点
+const forceSaveAllNodes = () => {
+  // 简单而有效的方法：取消当前选中状态，触发保存
+  if (selectedNodeId.value) {
+    // 保存当前选中节点
+    const currentNode = findNodeById(treeData.value.root, selectedNodeId.value)
+    if (currentNode) {
+      // 确保节点数据有效
+      if (!currentNode.dimension) {
+        currentNode.dimension = { name: '未命名节点', key: 'unnamed' }
+      }
+      if (currentNode.score === undefined || currentNode.score === null) {
+        currentNode.score = 0
+      }
+    }
+    // 取消选中状态
+    selectedNodeId.value = null
+  }
+  
+  // 如果有正在编辑的节点，触发点击外部事件
+  if (editingNodeIds.value.length > 0) {
+    // 创建一个临时元素来模拟点击，确保event.target是Element对象
+    const tempElement = document.createElement('div')
+    tempElement.style.position = 'absolute'
+    tempElement.style.left = '-9999px'
+    document.body.appendChild(tempElement)
+    
+    // 发送点击事件到临时元素
+    const event = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+      target: tempElement
+    })
+    tempElement.dispatchEvent(event)
+    
+    // 清理临时元素
+    document.body.removeChild(tempElement)
+  }
+}
+
 // 处理表单提交
 const handleSave = () => {
+  // 强制保存所有正在编辑的节点
+  forceSaveAllNodes()
+  
   // 准备规则数据
   const ruleData = {
     ...ruleForm,
@@ -615,6 +677,9 @@ const handleSave = () => {
 </script>
 
 <style scoped>
+/* 引入共享样式 */
+@import '../common/shared-styles.css';
+
 /* 模态框样式 */
 .modal-content {
   max-width: 1200px;

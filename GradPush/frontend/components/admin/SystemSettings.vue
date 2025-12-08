@@ -7,6 +7,11 @@
     <!-- 学术年度设置 -->
     <div class="card">
       <div class="card-title">学术年度设置</div>
+      <!-- 加载遮罩 -->
+      <div v-if="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">加载中...</div>
+      </div>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">当前学术年度</label>
@@ -31,6 +36,11 @@
     <!-- 文件存储设置 -->
     <div class="card">
       <div class="card-title">文件存储设置</div>
+      <!-- 加载遮罩 -->
+      <div v-if="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">加载中...</div>
+      </div>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">单文件大小限制(MB)</label>
@@ -61,6 +71,11 @@
     <!-- 系统维护 -->
     <div class="card">
       <div class="card-title">系统维护</div>
+      <!-- 加载遮罩 -->
+      <div v-if="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">加载中...</div>
+      </div>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">数据库备份</label>
@@ -98,11 +113,7 @@
       </div>
     </div>
 
-    <!-- 加载遮罩 -->
-    <div v-if="loading" class="loading-overlay">
-      <div class="loading-spinner"></div>
-      <div class="loading-text">加载中...</div>
-    </div>
+
   </div>
 </template>
 

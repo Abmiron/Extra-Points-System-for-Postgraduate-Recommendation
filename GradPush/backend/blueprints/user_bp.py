@@ -20,6 +20,8 @@ from PIL import Image
 from io import BytesIO
 from werkzeug.utils import secure_filename
 from extensions import db
+import openpyxl
+from openpyxl.utils import get_column_letter
 # 导入组织信息管理模块，用于获取学院、系、专业信息
 from blueprints.organization_bp import get_all_faculties, get_all_departments, get_all_majors
 
@@ -734,3 +736,331 @@ def change_password():
     db.session.commit()
 
     return jsonify({"message": "密码修改成功"}), 200
+
+
+# 管理员导入用户接口
+@user_bp.route("/admin/import-users", methods=["POST"])
+def import_users():
+    # 检查用户是否为管理员
+    if 'role' not in session or session['role'] != 'admin':
+        return jsonify({"message": "权限不足"}), 403
+
+    # 检查是否有文件上传
+    if "file" not in request.files:
+        return jsonify({"message": "没有文件上传"}), 400
+
+    file = request.files["file"]
+
+    # 检查文件名是否为空
+    if file.filename == "":
+        return jsonify({"message": "请选择一个文件"}), 400
+
+    # 检查文件类型
+    allowed_extensions = {'.xlsx', '.xls'}
+    _, ext = os.path.splitext(file.filename.lower())
+    if ext not in allowed_extensions:
+        return jsonify({"message": "只支持Excel文件(.xlsx, .xls)"}), 400
+
+    try:
+        # 读取Excel文件
+        workbook = openpyxl.load_workbook(file, data_only=True)
+        worksheet = workbook.active
+
+        # 定义必填字段和可选字段
+        required_headers = ["用户名", "姓名", "角色", "状态"]
+        optional_headers = ["学院", "系", "专业", "邮箱", "电话", "性别", "CET4成绩", "CET6成绩", "绩点", "转换分数"]
+        
+        # 读取表头并创建映射
+        header_to_column = {}
+        max_column = worksheet.max_column
+        
+        for col in range(1, max_column + 1):
+            header = worksheet.cell(row=1, column=col).value
+            if header:
+                header_to_column[header.strip()] = col
+        
+        # 验证必填字段是否存在
+        missing_headers = []
+        for header in required_headers:
+            if header not in header_to_column:
+                missing_headers.append(header)
+        
+        if missing_headers:
+            return jsonify({"message": f"缺少必填表头：{','.join(missing_headers)}"}), 400
+        
+        # 导入用户数据
+        success_count = 0
+        error_count = 0
+        errors = []
+        
+        for row in range(2, worksheet.max_row + 1):
+            try:
+                # 根据表头映射获取用户数据
+                username = worksheet.cell(row=row, column=header_to_column["用户名"]).value
+                name = worksheet.cell(row=row, column=header_to_column["姓名"]).value
+                role = worksheet.cell(row=row, column=header_to_column["角色"]).value
+                status = worksheet.cell(row=row, column=header_to_column["状态"]).value
+                
+                # 可选字段
+                faculty_name = worksheet.cell(row=row, column=header_to_column.get("学院")).value if "学院" in header_to_column else None
+                department_name = worksheet.cell(row=row, column=header_to_column.get("系")).value if "系" in header_to_column else None
+                major_name = worksheet.cell(row=row, column=header_to_column.get("专业")).value if "专业" in header_to_column else None
+                email = worksheet.cell(row=row, column=header_to_column.get("邮箱")).value if "邮箱" in header_to_column else None
+                phone = worksheet.cell(row=row, column=header_to_column.get("电话")).value if "电话" in header_to_column else None
+                gender = worksheet.cell(row=row, column=header_to_column.get("性别")).value if "性别" in header_to_column else None
+                
+                # CET4成绩转换为整数
+                cet4_score = worksheet.cell(row=row, column=header_to_column.get("CET4成绩")).value if "CET4成绩" in header_to_column else None
+                if cet4_score is not None and cet4_score != "":
+                    try:
+                        cet4_score = int(cet4_score)
+                    except ValueError:
+                        cet4_score = None
+                else:
+                    cet4_score = None
+                
+                # CET6成绩转换为整数
+                cet6_score = worksheet.cell(row=row, column=header_to_column.get("CET6成绩")).value if "CET6成绩" in header_to_column else None
+                if cet6_score is not None and cet6_score != "":
+                    try:
+                        cet6_score = int(cet6_score)
+                    except ValueError:
+                        cet6_score = None
+                else:
+                    cet6_score = None
+                
+                # 绩点转换为浮点数
+                gpa = worksheet.cell(row=row, column=header_to_column.get("绩点")).value if "绩点" in header_to_column else None
+                if gpa is not None and gpa != "":
+                    try:
+                        gpa = float(gpa)
+                    except ValueError:
+                        gpa = None
+                else:
+                    gpa = None
+                
+                # 转换分数转换为浮点数
+                academic_score = worksheet.cell(row=row, column=header_to_column.get("转换分数")).value if "转换分数" in header_to_column else None
+                if academic_score is not None and academic_score != "":
+                    try:
+                        academic_score = float(academic_score)
+                    except ValueError:
+                        academic_score = None
+                else:
+                    academic_score = None
+
+                # 验证必填字段
+                if not username or not name or not role or not status:
+                    error_count += 1
+                    errors.append(f"第{row}行：用户名、姓名、角色和状态为必填字段")
+                    continue
+
+                # 检查用户名是否已存在
+                existing_user = User.query.filter_by(username=username).first()
+                if existing_user:
+                    # 获取或创建学院、系、专业ID（如果提供了名称）
+                    update_faculty_id = None
+                    update_department_id = None
+                    update_major_id = None
+                    
+                    # 处理学院ID
+                    if faculty_name:
+                        faculty = Faculty.query.filter_by(name=faculty_name).first()
+                        if not faculty:
+                            error_count += 1
+                            errors.append(f"第{row}行：学院 '{faculty_name}' 不存在")
+                            continue
+                        update_faculty_id = faculty.id
+                    elif faculty_name == "":
+                        # 如果明确为空字符串，则清空该字段
+                        update_faculty_id = None
+                    else:
+                        # 保留原有值
+                        update_faculty_id = existing_user.faculty_id
+                    
+                    # 处理系ID
+                    if department_name:
+                        department = Department.query.filter_by(name=department_name).first()
+                        if not department:
+                            error_count += 1
+                            errors.append(f"第{row}行：系 '{department_name}' 不存在")
+                            continue
+                        update_department_id = department.id
+                    elif department_name == "":
+                        # 如果明确为空字符串，则清空该字段
+                        update_department_id = None
+                    else:
+                        # 保留原有值
+                        update_department_id = existing_user.department_id
+                    
+                    # 处理专业ID
+                    if major_name:
+                        major = Major.query.filter_by(name=major_name).first()
+                        if not major:
+                            error_count += 1
+                            errors.append(f"第{row}行：专业 '{major_name}' 不存在")
+                            continue
+                        update_major_id = major.id
+                    elif major_name == "":
+                        # 如果明确为空字符串，则清空该字段
+                        update_major_id = None
+                    else:
+                        # 保留原有值
+                        update_major_id = existing_user.major_id
+                    
+                    # 更新用户基本信息（适用于所有角色）
+                    existing_user.name = name
+                    existing_user.faculty_id = update_faculty_id
+                    existing_user.department_id = update_department_id
+                    existing_user.major_id = update_major_id
+                    existing_user.email = email or ""
+                    existing_user.phone = phone or ""
+                    
+                    # 将enabled转换为active以与数据库模型保持一致
+                    if status == "enabled":
+                        status = "active"
+                    existing_user.status = status
+                    
+                    # 如果是学生用户，还需要更新学生特定信息
+                    if existing_user.role == "student":
+                        # 获取或创建学生记录
+                        existing_student = Student.query.filter_by(student_id=username).first()
+                        if existing_student:
+                            # 更新学生信息
+                            existing_student.gender = gender
+                            existing_student.cet4_score = cet4_score
+                            existing_student.cet6_score = cet6_score
+                            existing_student.gpa = gpa
+                            existing_student.academic_score = academic_score
+                        else:
+                            # 如果学生记录不存在，创建新的学生记录
+                            new_student = Student(
+                                student_id=username,
+                                student_name=name,
+                                faculty_id=update_faculty_id,
+                                department_id=update_department_id,
+                                major_id=update_major_id,
+                                gender=gender,
+                                cet4_score=cet4_score,
+                                cet6_score=cet6_score,
+                                gpa=gpa,
+                                academic_score=academic_score
+                            )
+                            db.session.add(new_student)
+                            existing_user.student_id = username
+                    
+                    success_count += 1
+                    continue
+
+                # 验证角色
+                valid_roles = ["admin", "teacher", "student"]
+                if role not in valid_roles:
+                    error_count += 1
+                    errors.append(f"第{row}行：角色 '{role}' 无效，应为 admin/teacher/student")
+                    continue
+
+                # 验证状态并统一转换为数据库使用的值
+                valid_statuses = ["enabled", "disabled", "active"]
+                if status not in valid_statuses:
+                    error_count += 1
+                    errors.append(f"第{row}行：状态 '{status}' 无效，应为 enabled/disabled/active")
+                    continue
+                
+                # 将enabled转换为active以与数据库模型保持一致
+                if status == "enabled":
+                    status = "active"
+
+                # 获取学院ID
+                faculty_id = None
+                if faculty_name:
+                    faculty = Faculty.query.filter_by(name=faculty_name).first()
+                    if not faculty:
+                        error_count += 1
+                        errors.append(f"第{row}行：学院 '{faculty_name}' 不存在")
+                        continue
+                    faculty_id = faculty.id
+
+                # 获取系ID
+                department_id = None
+                if department_name:
+                    department = Department.query.filter_by(name=department_name).first()
+                    if not department:
+                        error_count += 1
+                        errors.append(f"第{row}行：系 '{department_name}' 不存在")
+                        continue
+                    department_id = department.id
+
+                # 获取专业ID
+                major_id = None
+                if major_name:
+                    major = Major.query.filter_by(name=major_name).first()
+                    if not major:
+                        error_count += 1
+                        errors.append(f"第{row}行：专业 '{major_name}' 不存在")
+                        continue
+                    major_id = major.id
+
+                # 学生角色验证
+                if role == "student":
+                    if not faculty_id or not department_id or not major_id:
+                        error_count += 1
+                        errors.append(f"第{row}行：学生用户必须填写学院、系和专业")
+                        continue
+
+                # 创建用户
+                new_user = User(
+                    username=username,
+                    name=name,
+                    role=role,
+                    faculty_id=faculty_id,
+                    department_id=department_id,
+                    major_id=major_id,
+                    email=email or "",
+                    phone=phone or "",
+                    status=status
+                )
+
+                # 设置默认密码
+                new_user.set_password("123456")
+
+                # 学生角色需要创建学生记录
+                if role == "student":
+                    # 检查是否已存在对应的Student记录
+                    existing_student = Student.query.filter_by(student_id=username).first()
+                    if not existing_student:
+                        new_student = Student(
+                            student_id=username,
+                            student_name=name,
+                            faculty_id=faculty_id,
+                            department_id=department_id,
+                            major_id=major_id,
+                            gender=gender,
+                            cet4_score=cet4_score,
+                            cet6_score=cet6_score,
+                            gpa=gpa,
+                            academic_score=academic_score
+                        )
+                        db.session.add(new_student)
+                        new_user.student_id = username
+
+                # 添加用户到数据库
+                db.session.add(new_user)
+                success_count += 1
+
+            except Exception as e:
+                error_count += 1
+                errors.append(f"第{row}行：导入失败 - {str(e)}")
+
+        # 提交事务
+        db.session.commit()
+
+        return jsonify({
+            "message": "用户导入完成",
+            "success_count": success_count,
+            "error_count": error_count,
+            "errors": errors
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"导入失败：{str(e)}"}), 500

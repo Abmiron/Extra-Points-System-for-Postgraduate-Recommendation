@@ -346,6 +346,32 @@ def delete_rule(rule_id):
         traceback.print_exc()
         return jsonify({"error": "Failed to delete rule"}), 500
 
+# 批量删除规则
+@rule_bp.route("/rules/batch-delete", methods=["POST"])
+def batch_delete_rules():
+    try:
+        data = request.get_json()
+        rule_ids = data.get("ids", [])
+        
+        if not rule_ids or not isinstance(rule_ids, list):
+            return jsonify({"error": "Invalid or empty rule IDs"}), 400
+        
+        # 删除所有引用这些规则的申请记录
+        Application.query.filter(Application.rule_id.in_(rule_ids)).update({"rule_id": None}, synchronize_session=False)
+        
+        # 先删除关联的规则计算记录
+        RuleCalculation.query.filter(RuleCalculation.rule_id.in_(rule_ids)).delete(synchronize_session=False)
+        
+        # 然后删除规则
+        Rule.query.filter(Rule.id.in_(rule_ids)).delete(synchronize_session=False)
+        db.session.commit()
+
+        return jsonify({"message": "Rules deleted successfully"}), 200
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": "Failed to delete rules"}), 500
+
 
 # RuleCalculation API endpoints
 @rule_bp.route("/rules/<int:rule_id>/calculation", methods=["GET"])

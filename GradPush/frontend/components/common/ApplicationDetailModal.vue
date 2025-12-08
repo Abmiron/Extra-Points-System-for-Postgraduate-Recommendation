@@ -100,7 +100,6 @@
 
         <!-- 右侧：申请信息和文件列表/审核操作 -->
         <div class="right-column">
-
           <!-- 学生基本信息 -->
           <div class="card compact-card">
             <div class="card-title">学生信息</div>
@@ -123,7 +122,6 @@
               </div>
             </div>
           </div>
-
           <!-- 申请基本信息 -->
           <div class="card compact-card">
             <div class="card-title">申请信息</div>
@@ -132,27 +130,22 @@
                 <label>申请类型</label>
                 <span>{{ application.applicationType || '未知类型' }}</span>
               </div>
-
               <div class="compact-group">
                 <label>项目全称</label>
                 <span>{{ application.projectName || '未知项目' }}</span>
               </div>
-
               <div class="compact-group">
                 <label>获得时间</label>
                 <span>{{ formatDate(application.awardDate || application.award_date) || '-' }}</span>
               </div>
-
               <div class="compact-group">
                 <label>自评分数</label>
                 <span>{{ application.selfScore || 0 }}</span>
               </div>
-
               <div class="compact-group">
                 <label>申请时间</label>
                 <span>{{ formatDate(application.appliedAt || application.createdAt) }}</span>
               </div>
-
               <div class="compact-group">
                 <label>审核时间</label>
                 <span>{{ formatDate(application.reviewedAt) || '-' }}</span>
@@ -161,19 +154,16 @@
                 <label>审核人</label>
                 <span>{{ application.reviewedBy || '-' }}</span>
               </div>
-
               <div v-if="isReviewMode || application.status !== 'pending'" class="compact-group">
                 <label>最终分数</label>
                 <span>{{ application.status === 'pending' ? '-' : (application.status === 'rejected' ? 0 :
                   application.finalScore || 0) }}</span>
               </div>
-
               <div class="compact-group">
                 <label>申请状态</label>
                 <span class="status-badge" :class="`status-${application.status}`">{{ getStatusText(application.status)
-                }}</span>
+                  }}</span>
               </div>
-
             </div>
             <div class="compact-group full-width">
               <label>加分依据</label>
@@ -219,7 +209,6 @@
               </div>
             </div>
           </div>
-
           <!-- 审核操作区域 -->
           <div v-if="isReviewMode" class="card compact-card">
             <div class="card-title">审核操作</div>
@@ -243,7 +232,7 @@
               <div class="form-group">
                 <label>驳回意见 <span class="required">*</span></label>
                 <textarea class="form-control small-textarea" v-model="reviewData.rejectComment" rows="2"
-                  placeholder="请输入驳回理由（必填）"></textarea>
+                  placeholder="请输入驳回理由（若驳回则必填）"></textarea>
               </div>
             </div>
             <div class="form-actions-compact">
@@ -410,8 +399,6 @@ const getStudentData = () => {
   return data;
 };
 
-
-
 // 获取系数的详细信息，包括级别名称
 const coefficientDetails = computed(() => {
   if (!props.application.rule?.calculation) return {};
@@ -517,7 +504,6 @@ const coefficientDetails = computed(() => {
       }
     }
   }
-
   return details;
 });
 
@@ -557,14 +543,6 @@ const calculateScoreFrontend = (rule) => {
   }
 
   return totalScore;
-};
-
-// 计算系数分数（累加类型）
-const calculateCoefficientsScore = (rule) => {
-  let score = 0;
-  // 这里可以根据规则的配置实现累加计算逻辑
-  // 目前先返回0，后续可以根据实际需求扩展
-  return score;
 };
 
 // 计算树结构分数（参考ApplicationForm.vue的实现）

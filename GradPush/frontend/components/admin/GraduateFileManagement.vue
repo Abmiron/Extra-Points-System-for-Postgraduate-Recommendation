@@ -82,6 +82,9 @@
           </div>
           <div class="filter-group">
             <button class="btn btn-outline" @click="resetFilters">清空筛选</button>
+            <button class="btn btn-outline" @click="batchDelete" :disabled="selectedFileIds.length === 0">
+              <font-awesome-icon :icon="['fas', 'trash']" /> 批量删除
+            </button>
           </div>
         </div>
 
@@ -89,13 +92,6 @@
         <div v-if="loading" class="loading-overlay">
           <div class="loading-spinner"></div>
           <div class="loading-text">加载中...</div>
-        </div>
-
-        <!-- 批量操作工具栏 -->
-        <div class="batch-actions" style="margin-bottom: 20px;">
-          <button class="btn btn-outline" @click="batchDelete" :disabled="selectedFileIds.length === 0">
-            <font-awesome-icon :icon="['fas', 'trash']" /> 批量删除
-          </button>
         </div>
 
         <!-- 文件列表 -->

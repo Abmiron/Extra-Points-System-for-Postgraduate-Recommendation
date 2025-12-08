@@ -277,6 +277,120 @@
         </div>
       </div>
     </div>
+
+    <!-- 导入用户对话框 -->
+    <div v-if="importDialogVisible" class="modal-overlay" @click.self="closeImportDialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>导入用户</h3>
+          <button class="close-btn" @click="closeImportDialog">
+            <font-awesome-icon icon="fa-times" />
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-group" v-if="!importResult">
+            <!-- 文件上传区域 -->
+            <div class="upload-demo">
+              <input type="file" ref="fileUploadRef" accept=".xlsx, .xls" @change="handleFileChange"
+                style="display: none;">
+              <div class="file-upload-area" @click="openFileSelect" @dragover.prevent @dragenter.prevent
+                @drop="handleFileDrop">
+                <font-awesome-icon icon="fa-upload" class="upload-icon" />
+                <div>
+                  <div>点击或拖拽文件到此处上传</div>
+                  <div style="font-size: 0.8em; color: #999; margin-top: 5px;">支持.xlsx, .xls格式文件</div>
+                </div>
+              </div>
+            </div>
+            <!-- 已上传文件 -->
+            <div class="file-list" v-if="importFile">
+              <div class="file-list-header">
+                <span>已上传文件：</span>
+              </div>
+              <div class="file-info" style="padding: 10px;margin-top: 0px;">
+                <div class="file-name">{{ importFile.name }}</div>
+                <button type="button" class="file-action-btn" @click="closeFileSelect" title="移除文件">
+                  <font-awesome-icon :icon="['fas', 'times']" />
+                </button>
+              </div>
+            </div>
+            <!-- 导入注意事项 -->
+            <div style="margin-left: 10px;">
+              <div style="color: #999;">
+                <font-awesome-icon icon="fa-exclamation-triangle" /> 注意事项
+              </div>
+              <div style="color: #999;">
+                <strong>1. 格式要求：</strong><br>
+                必填表头：用户名,姓名,角色,状态<br>
+                可选表头：学院,系,专业,邮箱,电话,性别,CET4成绩,CET6成绩,绩点,转换分数（顺序不限）<br>
+                -角色只能是：admin/teacher/student<br>
+                -状态只能是：active(启用)/disabled(禁用)<br>
+                -性别只能是：男/女<br>
+                默认密码为：123456<br>
+                <br>
+                <strong>2. 学生相关：</strong><br>
+                学生用户必须填写学院、系和专业<br>
+                学生用户可选填写：性别, CET4成绩, CET6成绩, 绩点, 转换分数<br>
+                <br>
+                <strong>3. excel结构示例</strong>
+              </div>
+              <!-- 导入示例图片 -->
+              <div>
+                <img src="/images/导入用户示例.png" alt="导入用户示例" style="max-width: 100%; border: 1px solid #eee; border-radius: 4px;">
+              </div>
+            </div>
+          </div>
+
+          <!-- 导入结果区域 -->
+          <div class="import-result" v-if="importResult">
+            <div class="card">
+              <div class="card-title">
+                <span>导入结果</span>
+              </div>
+              <div class="card-body">
+                <div class="form-group" style="display: flex; justify-content: space-around; flex-direction: row;">
+                  <div class="stat-card" style="padding: 20px 60px;">
+                    <div class="stat-label">成功导入</div>
+                    <div class="stat-value">{{ importResult.success_count }}人</div>
+                  </div>
+                  <div class="stat-card" style="padding: 20px 60px;">
+                    <div class="stat-label">导入失败</div>
+                    <div class="stat-value">{{ importResult.error_count }}人</div>
+                  </div>
+                  <div class="stat-card" style="padding: 20px 60px;">
+                    <div class="stat-label">总记录数</div>
+                    <div class="stat-value">{{ importResult.success_count + importResult.error_count }}人</div>
+                  </div>
+                </div>
+
+                <!-- 错误信息列表 -->
+                <div v-if="importErrors.length > 0" class="error-list">
+                  <h4>错误信息：</h4>
+                  <div class="scrollbar" style="height: 200px; overflow-y: auto;">
+                    <ul class="timeline">
+                      <li v-for="(error, index) in importErrors" :key="index" class="timeline-item">
+                        <font-awesome-icon icon="fa-exclamation-circle" class="timeline-icon danger" />
+                        <span class="timeline-content">{{ error }}</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn-outline" @click="closeImportDialog">关闭</button>
+            <button class="btn btn-primary" @click="confirmImport" :loading="importLoading"
+              :disabled="!importFile || importResult">
+              确认导入
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -287,6 +401,7 @@ import { useToastStore } from '../../stores/toast'
 import api from '../../utils/api'
 
 const activeTab = ref('student')
+const fileUploadRef = ref(null)
 const showAddUserModal = ref(false)
 const editingUser = ref(null)
 const selectAll = ref(false)
@@ -593,9 +708,103 @@ const toggleSelectAll = () => {
   }
 }
 
+// 导入用户相关状态
+const importDialogVisible = ref(false);
+const importFile = ref(null);
+const importLoading = ref(false);
+const importResult = ref(null);
+const importErrors = ref([]);
+
+// 打开导入对话框
 const importUsers = () => {
-  toastStore.info('用户导入功能开发中...')
-}
+  importDialogVisible.value = true;
+  importFile.value = null;
+  importResult.value = null;
+  importErrors.value = [];
+};
+
+// 打开文件选择对话框
+const openFileSelect = () => {
+  if (fileUploadRef.value && typeof fileUploadRef.value.click === 'function') {
+    fileUploadRef.value.click();
+  }
+};
+
+// 文件选择处理
+const handleFileChange = (event) => {
+  if (event.target.files.length > 0) {
+    importFile.value = event.target.files[0];
+  }
+};
+
+// 文件拖拽处理
+const handleFileDrop = (event) => {
+  event.preventDefault();
+  if (event.dataTransfer.files.length > 0) {
+    const file = event.dataTransfer.files[0];
+    // 验证文件类型
+    const allowedExtensions = ['.xlsx', '.xls'];
+    const fileExtension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+    if (allowedExtensions.includes(fileExtension)) {
+      importFile.value = file;
+    } else {
+      toastStore.warning('只支持.xlsx, .xls格式文件');
+    }
+  }
+};
+
+// 关闭文件选择
+const closeFileSelect = () => {
+  importFile.value = null;
+};
+
+// 确认导入
+const confirmImport = async () => {
+  if (!importFile.value) {
+    toastStore.warning('请选择要导入的Excel文件');
+    return;
+  }
+
+  importLoading.value = true;
+
+  try {
+    const formData = new FormData();
+    formData.append('file', importFile.value);
+
+    const response = await fetch('/api/admin/import-users', {
+      method: 'POST',
+      body: formData,
+      credentials: 'include'
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      importResult.value = data;
+      importErrors.value = data.errors || [];
+
+      toastStore.success('用户导入完成');
+
+      // 刷新用户列表
+      await loadUsersFromAPI();
+    } else {
+      toastStore.error(data.message || '导入失败');
+    }
+  } catch (error) {
+    console.error('导入用户失败:', error);
+    toastStore.error('导入失败，请检查网络连接');
+  } finally {
+    importLoading.value = false;
+  }
+};
+
+// 关闭导入对话框
+const closeImportDialog = () => {
+  importDialogVisible.value = false;
+  importFile.value = null;
+  importResult.value = null;
+  importErrors.value = [];
+};
 
 const editUser = (user) => {
   editingUser.value = user

@@ -63,13 +63,16 @@
         <button class="btn btn-outline" @click="clearFilters">清空筛选</button>
       </div>
     </div>
-
     <!-- 申请列表 -->
     <div class="card">
+      <!-- 加载遮罩 -->
+      <div v-if="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在加载中...</div>
+      </div>
       <div v-if="paginatedApplications.length === 0">
         <div style="font-size: 16px; color: #333; text-align: center; color: #999;">暂无申请记录</div>
       </div>
-
       <div v-else class="table-container" :class="{ 'content-loaded': !loading }">
         <table class="application-table">
           <thead>
@@ -133,7 +136,6 @@
         </table>
       </div>
     </div>
-
     <!-- 分页控件 -->
     <div class="pagination">
       <div class="pagination-info">显示 {{ startItemIndex }}-{{ endItemIndex }} 条，共 {{ totalItems }} 条记录</div>
@@ -146,13 +148,6 @@
         </button>
       </div>
     </div>
-
-    <!-- 加载遮罩 -->
-    <div v-if="loading" class="loading-overlay">
-      <div class="loading-spinner"></div>
-      <div class="loading-text">正在加载中...</div>
-    </div>
-
     <!-- 详情模态框 -->
     <Teleport to="body">
       <ApplicationDetailModal v-if="selectedApplication" :application="selectedApplication"

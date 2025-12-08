@@ -129,9 +129,7 @@ export default {
   updateRule: (id, data) => apiRequest(`/rules/${id}`, 'PUT', data),
   deleteRule: (id) => apiRequest(`/rules/${id}`, 'DELETE'),
   toggleRuleStatus: (id) => apiRequest(`/rules/${id}/status`, 'PATCH'),
-  
-  // 规则条件相关API
-
+  batchDeleteRules: (ids) => apiRequest('/rules/batch-delete', 'POST', { ids }),
   
   // 规则计算相关API
   getRuleCalculation: (ruleId) => apiRequest(`/rules/${ruleId}/calculation`),

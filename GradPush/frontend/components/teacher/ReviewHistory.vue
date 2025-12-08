@@ -3,10 +3,8 @@
     <div class="page-title">
       <span>审核记录</span>
     </div>
-
     <!-- 筛选区域 -->
     <div class="filters">
-
       <div class="filter-group">
         <span class="filter-label">姓名:</span>
         <input type="text" class="form-control small" v-model="filters.studentName" placeholder="输入学生姓名"
@@ -17,7 +15,6 @@
         <input type="text" class="form-control small" v-model="filters.studentId" placeholder="输入学生学号"
           @input="filterApplications">
       </div>
-
       <div class="filter-group">
         <span class="filter-label">学院:</span>
         <select v-model="filters.faculty" @change="handleFacultyChange">
@@ -96,9 +93,12 @@
         <button class="btn btn-outline" @click="clearFilters">清空筛选</button>
       </div>
     </div>
-
     <!-- 审核记录表格 -->
     <div class="card">
+      <div v-if="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在加载中...</div>
+      </div>
       <div class="table-container">
         <table class="application-table">
           <thead>
@@ -150,7 +150,6 @@
         </table>
       </div>
     </div>
-
     <!-- 分页控件 -->
     <div class="pagination">
       <div class="pagination-info">显示 {{ startIndex + 1 }}-{{ endIndex }} 条，共 {{ totalApplications }} 条记录</div>
@@ -163,17 +162,9 @@
         </button>
       </div>
     </div>
-
-    <!-- 加载遮罩 -->
-    <div v-if="loading" class="loading-overlay">
-      <div class="loading-spinner"></div>
-      <div class="loading-text">正在加载中...</div>
-    </div>
-
     <!-- 查看申请详情模态框 -->
     <ApplicationDetailModal v-if="selectedApplication" :application="selectedApplication" @close="closeDetailModal"
       :is-review-mode="false" />
-
     <!-- 编辑申请详情模态框 -->
     <ApplicationDetailModal v-if="editingApplication" :application="editingApplication" @close="closeEditDialog"
       @approve="handleApproveApplication" @reject="handleRejectApplication" :is-review-mode="true" />
@@ -237,7 +228,6 @@ const loading = computed(() => applicationsStore.loading)
 const paginatedApplications = computed(() => {
   // 获取当前登录教师姓名
   const currentTeacherName = authStore.user?.name
-
   // 先筛选
   let filtered = applicationsStore.filterApplications({
     faculty: filters.value.faculty !== 'all' ? filters.value.faculty : undefined,
@@ -260,7 +250,6 @@ const paginatedApplications = computed(() => {
   if (filters.value.status !== 'all') {
     filtered = filtered.filter(app => app.status === filters.value.status)
   }
-
   // 如果有审核时间筛选
   if (filters.value.reviewedStartDate) {
     const startDate = new Date(filters.value.reviewedStartDate)
@@ -332,7 +321,6 @@ const totalApplications = computed(() => {
       return new Date(app.reviewedAt) <= endDate
     })
   }
-
   return filtered.length
 })
 

@@ -3,36 +3,43 @@
     <div class="page-title">
       <span>加分统计</span>
     </div>
-
     <!-- 统计卡片 -->
-    <div class="stats-grid" :class="{ 'loading-content': loading }">
-      <div class="stat-card">
-        <div class="stat-label">学业综合成绩</div>
-        <div class="stat-value">{{ statistics.academicScore }}</div>
-        <div class="stat-note">(推免绩点: {{ statistics.gpa }})</div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-label">学术专长成绩</div>
-        <div class="stat-value">{{ statistics.specialtyScore }}</div>
-        <div class="stat-note">(满分: {{ systemSettings.specialtyMaxScore }}分)</div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-label">综合表现成绩</div>
-        <div class="stat-value">{{ statistics.comprehensiveScore }}</div>
-        <div class="stat-note">(满分: {{ systemSettings.performanceMaxScore }}分)</div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-label">推免综合成绩</div>
-        <div class="stat-value">{{ statistics.totalScore }}</div>
-        <div class="stat-note">专业排名: {{ statistics.ranking }}/{{ statistics.majorTotalStudents }}</div>
+    <div class="card">
+      <div class="stats-grid">
+        <!-- 加载遮罩 -->
+        <div v-if="loading" class="loading-overlay">
+          <div class="loading-spinner"></div>
+          <div class="loading-text">正在加载中...</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">学业综合成绩</div>
+          <div class="stat-value">{{ statistics.academicScore }}</div>
+          <div class="stat-note">(推免绩点: {{ statistics.gpa }})</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">学术专长成绩</div>
+          <div class="stat-value">{{ statistics.specialtyScore }}</div>
+          <div class="stat-note">(满分: {{ systemSettings.specialtyMaxScore }}分)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">综合表现成绩</div>
+          <div class="stat-value">{{ statistics.comprehensiveScore }}</div>
+          <div class="stat-note">(满分: {{ systemSettings.performanceMaxScore }}分)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">推免综合成绩</div>
+          <div class="stat-value">{{ statistics.totalScore }}</div>
+          <div class="stat-note">专业排名: {{ statistics.ranking }}/{{ statistics.majorTotalStudents }}</div>
+        </div>
       </div>
     </div>
-
     <!-- 学术专长成绩明细 -->
     <div class="card">
+      <!-- 加载遮罩 -->
+      <div v-if="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在加载中...</div>
+      </div>
       <div class="card-title">学术专长成绩明细</div>
       <div class="table-container">
         <table class="application-table">
@@ -64,9 +71,13 @@
         </table>
       </div>
     </div>
-
     <!-- 综合表现成绩明细 -->
     <div class="card">
+      <!-- 加载遮罩 -->
+      <div v-if="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在加载中...</div>
+      </div>
       <div class="card-title">综合表现成绩明细</div>
       <div class="table-container">
         <table class="application-table">
@@ -97,12 +108,6 @@
           </tbody>
         </table>
       </div>
-    </div>
-
-    <!-- 加载状态指示器 -->
-    <div v-if="loading" class="loading-overlay">
-      <div class="loading-spinner"></div>
-      <div class="loading-text">加载中...</div>
     </div>
   </div>
 </template>
@@ -165,17 +170,6 @@ const comprehensiveApplications = computed(() => {
   )
 })
 
-// 方法
-const getLevelText = (level) => {
-  const levels = {
-    national: '国家级',
-    provincial: '省级',
-    municipal: '市级',
-    school: '校级'
-  }
-  return levels[level] || level
-}
-
 const getStatusText = (status) => {
   const statusText = {
     draft: '草稿',
@@ -188,10 +182,7 @@ const getStatusText = (status) => {
 
 const formatDate = (dateString) => {
   if (!dateString) return '-'
-
-  // 直接使用本地时间显示，因为后端返回的已经是上海时间
   const date = new Date(dateString)
-
   return date.toLocaleDateString('zh-CN')
 }
 
@@ -228,7 +219,7 @@ const loadStatistics = async () => {
       return
     }
 
-    // 使用正确的学生学号字段（studentId）而不是用户ID（id）
+    // 使用正确的学生学号字段（studentId）
     const studentId = authStore.user.studentId || 'student'
 
     // 获取学生的所有申请
@@ -255,7 +246,6 @@ const loadStatistics = async () => {
     statistics.totalScore = statsData.total_score || statsData.comprehensive_score || 0
     statistics.ranking = statsData.ranking || '-'
     statistics.majorTotalStudents = statsData.major_total_students || 0
-
   } catch (err) {
     console.error('加载统计数据失败:', err)
     error.value = '加载统计数据失败，请刷新页面重试'

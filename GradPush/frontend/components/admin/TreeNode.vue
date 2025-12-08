@@ -106,6 +106,8 @@
         @add-child="$emit('add-child', $event)"
         @delete-node="$emit('delete-node', $event)"
         @update-node="$emit('update-node', $event)"
+        @edit-start="$emit('edit-start', $event)"
+        @edit-end="$emit('edit-end', $event)"
       />
     </div>
   </div>
@@ -133,7 +135,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['node-select', 'add-child', 'delete-node', 'update-node'])
+const emit = defineEmits(['node-select', 'add-child', 'delete-node', 'update-node', 'edit-start', 'edit-end'])
 
 // 编辑状态
 const isEditing = ref(false)
@@ -171,6 +173,9 @@ function enterEditMode() {
     editName.value = props.node.dimension?.name || ''
     editScore.value = props.node.score || 0
     
+    // 向父组件发送编辑开始事件
+    emit('edit-start', props.node.id)
+    
     // 延迟聚焦到名称输入框
     setTimeout(() => {
       if (nameInputRef.value) {
@@ -207,7 +212,13 @@ function handleClickOutside(event) {
   if (isEditing.value && nodeContentRef.value) {
     // 检查点击是否在节点内容区域之外
     if (!nodeContentRef.value.contains(event.target)) {
-      // 点击在外部区域，保存并退出编辑
+      // 检查点击是否是保存按钮（确保event.target是Element对象）
+      let saveButton = null
+      if (event.target instanceof Element) {
+        saveButton = event.target.closest('button[type="submit"]') || event.target.closest('.btn-primary')
+      }
+      
+      // 无论是点击外部区域还是保存按钮，都保存并退出编辑
       saveEdit()
     }
   }
@@ -238,6 +249,8 @@ function saveEdit() {
   // 移除全局点击监听器
   document.removeEventListener('click', handleClickOutside)
   emit('update-node', props.node)
+  // 向父组件发送编辑结束事件
+  emit('edit-end', props.node.id)
 }
 
 // 取消编辑并恢复原始值
@@ -251,6 +264,8 @@ function cancelEdit() {
   isEditing.value = false
   // 移除全局点击监听器
   document.removeEventListener('click', handleClickOutside)
+  // 向父组件发送编辑结束事件
+  emit('edit-end', props.node.id)
 }
 
 // 处理Esc键

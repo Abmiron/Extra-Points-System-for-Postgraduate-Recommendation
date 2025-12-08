@@ -103,9 +103,6 @@
 
     <!-- 批量操作工具栏 -->
     <div class="batch-actions">
-      <button class="btn btn-outline" @click="exportData">
-        <font-awesome-icon :icon="['fas', 'download']" /> 导出数据
-      </button>
       <button class="btn btn-outline" @click="batchDelete" :disabled="selectedApplications.length === 0">
         <font-awesome-icon :icon="['fas', 'trash']" /> 删除选中
       </button>
@@ -534,10 +531,6 @@ const toggleSelectAll = () => {
   } else {
     selectedApplications.value = []
   }
-}
-
-const exportData = () => {
-  toastStore.info('数据导出功能开发中...')
 }
 
 const batchDelete = async () => {

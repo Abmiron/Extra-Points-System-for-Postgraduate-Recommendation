@@ -3,7 +3,6 @@
     <div class="page-title">
       <span>加分申请</span>
     </div>
-
     <div class="card application-card">
       <form @submit.prevent="submitForm">
         <!-- 基本信息（通用） -->
@@ -30,7 +29,6 @@
             </div>
           </div>
         </div>
-
         <!-- 规则选择 -->
         <div class="form-section">
           <div class="section-title">
@@ -60,20 +58,16 @@
                   <span v-else>刷新</span>
                 </button>
               </div>
-
               <!-- 规则说明显示区域 -->
               <div v-if="formData.ruleId" class="rule-description">
                 <label class="form-label">规则说明</label>
                 <div class="description-content">
                   {{availableRules.find(rule => rule.id === formData.ruleId)?.description || '暂无规则说明'}}
                 </div>
-
               </div>
             </div>
-
           </div>
         </div>
-
         <!-- 规则系数填写区域 -->
         <div class="form-section" v-if="formData.ruleId">
           <div class="section-title">
@@ -87,11 +81,9 @@
               <div class="loading-spinner"></div>
               <p>正在加载规则系数配置...</p>
             </div>
-
             <!-- 动态生成的表单字段 -->
             <div v-else v-for="field in dynamicFormFields" :key="field.name" class="form-group">
               <label class="form-label">{{ field.label }}</label>
-
               <!-- 数字输入类型 -->
               <div v-if="field.type === 'number'" class="input-with-icon">
                 <font-awesome-icon :icon="['fas', 'hashtag']" />
@@ -99,14 +91,12 @@
                   :min="field.min" :step="field.step || '1'" :placeholder="'请输入' + field.label"
                   @input="debouncedCalculateEstimatedScore">
               </div>
-
               <!-- 文本输入类型 -->
               <div v-else-if="field.type === 'text'" class="input-with-icon">
                 <font-awesome-icon :icon="['fas', 'font']" />
                 <input type="text" class="form-control" v-model="formData.dynamicCoefficients[field.name]"
                   :placeholder="'请输入' + field.label" @input="debouncedCalculateEstimatedScore">
               </div>
-
               <!-- 单选按钮类型 -->
               <div v-else-if="field.type === 'radio'" class="radio-cards">
                 <div v-for="option in field.options" :key="option.value" class="radio-card horizontal"
@@ -118,11 +108,9 @@
                   </div>
                   <span>
                     {{ option.label }}
-
                   </span>
                 </div>
               </div>
-
               <!-- 下拉选择类型 -->
               <div v-else-if="field.type === 'select'" class="input-with-icon">
                 <font-awesome-icon :icon="['fas', 'list']" />
@@ -137,18 +125,16 @@
             </div>
           </div>
         </div>
-
         <!-- 没有选择规则时的提示 -->
         <div class="form-section" v-else>
           <div class="section-title">
             <font-awesome-icon :icon="['fas', 'info-circle']" />
             <span>请选择规则</span>
           </div>
-          <div class="info-message">
+          <div class="info-message" style="margin-bottom: 20px; color: #999;">
             <p>请先选择适用的规则，系统将根据规则显示需要填写的系数字段。</p>
           </div>
         </div>
-
         <!-- 加分详情（通用） -->
         <div class="form-section">
           <div class="section-title">
@@ -183,7 +169,6 @@
             <div class="char-counter">{{ formData.description.length }}/300</div>
           </div>
         </div>
-
         <!-- 证明材料（通用） -->
         <div class="form-section">
           <div class="section-title">
@@ -199,12 +184,10 @@
               <p>点击或拖拽文件到此处上传</p>
               <p class="help-text">支持 {{ fileUploadSettings.allowedFileTypesString }} 格式，单个文件不超过{{
                 fileUploadSettings.singleFileSizeLimit }}MB，总文件大小不超过{{ fileUploadSettings.totalFileSizeLimit }}MB</p>
-
             </div>
           </div>
           <input type="file" ref="fileInput" style="display: none;"
             :accept="fileUploadSettings.allowedFileTypes.join(',')" @change="handleFileSelect" multiple>
-
           <div class="file-list" v-if="formData.files.length > 0">
             <div class="file-list-header">
               <span>已上传文件 ({{ formData.files.length }})</span>
@@ -228,7 +211,6 @@
             </div>
           </div>
         </div>
-
         <!-- 操作按钮 -->
         <div class="form-actions">
           <button type="button" class="btn btn-outline" @click="saveDraft">
@@ -242,7 +224,6 @@
         </div>
       </form>
     </div>
-
     <!-- 文件预览模态框 -->
     <div v-if="previewFileData" class="modal-overlay" @click="closePreview">
       <div class="modal-content" @click.stop>
@@ -296,7 +277,6 @@ const formData = reactive({
   departmentId: authStore.user?.departmentId || '',
   majorId: authStore.user?.majorId || '',
   facultyId: authStore.user?.facultyId || authStore.user?.faculty_id || '',
-
   // 基本信息
   projectName: '',
   awardDate: '',
@@ -319,7 +299,6 @@ const loading = reactive({
 })
 
 // 监听规则变化，清空旧规则的动态系数字段
-// 添加一个标志，避免在加载编辑数据时清空动态系数
 const isLoadingEditData = ref(false)
 
 // 重置表单的通用函数
@@ -920,7 +899,6 @@ const calculateEstimatedScore = async () => {
         processedCoefficients[key] = value;
       }
     }
-
 
     // 将处理后的动态系数字段添加到学生数据中
     for (const [key, value] of Object.entries(processedCoefficients)) {

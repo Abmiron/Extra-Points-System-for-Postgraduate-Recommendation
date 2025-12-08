@@ -3,10 +3,8 @@
     <div class="page-title">
       <span>待审核申请</span>
     </div>
-
     <!-- 筛选区域 -->
     <div class="filters">
-
       <div class="filter-group">
         <span class="filter-label">姓名:</span>
         <input type="text" class="form-control small" v-model="filters.studentName" placeholder="请输入姓名"
@@ -17,7 +15,6 @@
         <input type="text" class="form-control small" v-model="filters.studentId" placeholder="请输入学号"
           @input="filterApplications">
       </div>
-
       <div class="filter-group">
         <span class="filter-label">学院:</span>
         <select v-model="filters.faculty" @change="handleFacultyChange">
@@ -69,9 +66,12 @@
       </div>
       <button class="btn btn-outline" @click="clearFilters">清空筛选</button>
     </div>
-
     <!-- 待审核申请表格 -->
     <div class="card">
+      <div v-if="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在加载中...</div>
+      </div>
       <div class="table-container">
         <table class="application-table">
           <thead>
@@ -110,7 +110,6 @@
         </table>
       </div>
     </div>
-
     <!-- 分页控件 -->
     <div class="pagination">
       <div class="pagination-info">显示 {{ startIndex + 1 }}-{{ endIndex }} 条，共 {{ totalApplications }} 条记录</div>
@@ -123,13 +122,6 @@
         </button>
       </div>
     </div>
-
-    <!-- 加载遮罩 -->
-    <div v-if="loading" class="loading-overlay">
-      <div class="loading-spinner"></div>
-      <div class="loading-text">正在加载中...</div>
-    </div>
-
     <!-- 审核详情模态框 -->
     <ApplicationDetailModal v-if="selectedApplication" :application="selectedApplication" @approve="handleApprove"
       @reject="handleReject" @close="closeReviewModal" :is-review-mode="true" />
@@ -238,30 +230,10 @@ const paginatedApplications = computed(() => {
 
 // 方法
 const getDepartmentText = (department) => {
-  // 如果已经是完整名称，则直接返回
-  if (department === '计算机科学系' || department === '软件工程系' || department === '人工智能系') {
-    return department
-  }
-  // 否则尝试映射缩写
-  const departments = {
-    cs: '计算机科学系',
-    se: '软件工程系',
-    ai: '人工智能系'
-  }
   return departments[department] || department
 }
 
 const getMajorText = (major) => {
-  // 如果已经是完整名称，则直接返回
-  if (major === '计算机科学与技术' || major === '软件工程' || major === '人工智能') {
-    return major
-  }
-  // 否则尝试映射缩写
-  const majors = {
-    cs: '计算机科学与技术',
-    se: '软件工程',
-    ai: '人工智能'
-  }
   return majors[major] || major
 }
 
@@ -314,10 +286,6 @@ const filterApplications = () => {
   pagination.value.currentPage = 1
   // 重新加载申请数据以应用新的筛选条件
   applicationsStore.fetchApplications()
-}
-
-const applyFilters = () => {
-  pagination.value.currentPage = 1
 }
 
 const prevPage = () => {
@@ -379,28 +347,6 @@ const handleReject = async (rejectData) => {
 
 const closeReviewModal = () => {
   selectedApplication.value = null
-}
-
-// 重置筛选条件
-const resetFilters = () => {
-  filters.value = {
-    faculty: 'all',
-    department: 'all',
-    major: 'all',
-    type: 'all',
-    rule: 'all',
-    studentId: '',
-    studentName: '',
-    startDate: '',
-    endDate: ''
-  }
-  pagination.value.currentPage = 1
-}
-
-// 重新加载数据
-const refreshData = async () => {
-  // 老师页面只需要获取待审核申请
-  await applicationsStore.fetchPendingApplications()
 }
 
 // 生命周期

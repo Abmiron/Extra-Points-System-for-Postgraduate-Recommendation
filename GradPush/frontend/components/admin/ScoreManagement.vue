@@ -1,11 +1,5 @@
 <template>
   <div class="page-content">
-    <!-- 全局加载指示器 -->
-    <div v-if="loading" class="loading-overlay">
-      <div class="loading-spinner"></div>
-      <div class="loading-text">加载中...</div>
-    </div>
-
     <!-- 页面标题 -->
     <div class="page-title">
       <span>成绩管理</span>
@@ -13,6 +7,11 @@
 
     <!-- 模块一：学院综合成绩比例设置 -->
     <div class="card">
+      <!-- 加载状态指示器 -->
+      <div v-if="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">加载中...</div>
+      </div>
       <div class="card-title">
         <h3>学院综合成绩比例设置</h3>
       </div>
@@ -60,6 +59,11 @@
 
     <!-- 模块二：成绩管理与筛选 -->
     <div class="card">
+      <!-- 加载状态指示器 -->
+      <div v-if="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">加载中...</div>
+      </div>
       <div class="card-title">
         <h3>学生成绩管理</h3>
       </div>

@@ -61,21 +61,27 @@
           <option value="disabled">禁用</option>
         </select>
       </div>
-      
+
       <button class="btn btn-outline" @click="resetFilters">清空筛选</button>
+      <button class="btn btn-outline delete-btn" @click="batchDeleteRules" :disabled="selectedRuleIds.length === 0">
+        <font-awesome-icon :icon="['fas', 'trash']" /> 批量删除
+      </button>
     </div>
 
     <!-- 规则表格 -->
     <div class="card">
+      <!-- 加载状态指示器 -->
+      <div v-if="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">加载中...</div>
+      </div>
       <div class="table-container">
-        <!-- 加载状态指示器 -->
-        <div v-if="loading" class="loading-overlay">
-          <div class="loading-spinner"></div>
-          <div class="loading-text">加载中...</div>
-        </div>
         <table class="application-table">
           <thead>
             <tr>
+              <th>
+                <input type="checkbox" v-model="selectAll" @change="toggleSelectAll">
+              </th>
               <th>学院</th>
               <th>规则名称</th>
               <th>类型</th>
@@ -90,6 +96,9 @@
           </thead>
           <tbody>
             <tr v-for="rule in paginatedRules" :key="rule.id">
+              <td>
+                <input type="checkbox" v-model="selectedRuleIds" :value="rule.id">
+              </td>
               <td>{{ getFacultyName(rule.faculty_id) }}</td>
               <td>{{ rule.name }}</td>
               <td>{{ getTypeText(rule.type) }}</td>
@@ -162,6 +171,10 @@ const editingRule = ref(null)
 const currentPage = ref(1)
 const pageSize = 10
 const loading = ref(false)
+
+// 批量选择相关变量
+const selectAll = ref(false)
+const selectedRuleIds = ref([])
 
 const filters = reactive({
   name: '',
@@ -420,6 +433,46 @@ function getFacultyName(facultyId) {
   if (!facultyId) return '-'
   const faculty = faculties.value.find(f => f.id === facultyId)
   return faculty ? faculty.name : '-'
+}
+
+// 全选/取消全选功能
+function toggleSelectAll() {
+  if (selectAll.value) {
+    // 全选：将当前页所有规则的ID添加到selectedRuleIds中
+    selectedRuleIds.value = paginatedRules.value.map(rule => rule.id)
+  } else {
+    // 取消全选：清空selectedRuleIds
+    selectedRuleIds.value = []
+  }
+}
+
+// 批量删除功能
+async function batchDeleteRules() {
+  if (selectedRuleIds.value.length === 0) {
+    toastStore.addToast({ message: '请先选择要删除的规则', type: 'warning' })
+    return
+  }
+
+  if (confirm(`确定要删除选中的 ${selectedRuleIds.value.length} 条规则吗？此操作不可恢复。`)) {
+    try {
+      loading.value = true
+      // 调用API批量删除规则
+      await api.batchDeleteRules(selectedRuleIds.value)
+      toastStore.addToast({ message: '批量删除规则成功', type: 'success' })
+
+      // 重置选择状态
+      selectAll.value = false
+      selectedRuleIds.value = []
+
+      // 刷新规则列表
+      await fetchRules()
+    } catch (error) {
+      console.error('批量删除规则失败:', error)
+      toastStore.addToast({ message: '批量删除规则失败', type: 'error' })
+    } finally {
+      loading.value = false
+    }
+  }
 }
 
 // 重置筛选
