@@ -51,7 +51,9 @@ def get_rules():
         query = query.filter(Rule.name.like(f"%{name}%"))
 
     if faculty_id:
-        query = query.filter((Rule.faculty_id == faculty_id) | (Rule.faculty_id.is_(None)))
+        query = query.filter(
+            (Rule.faculty_id == faculty_id) | (Rule.faculty_id.is_(None))
+        )
 
     rules = query.all()
     rule_list = []
@@ -181,10 +183,16 @@ def create_rule():
                     try:
                         parameters = json.loads(parameters)
                     except json.JSONDecodeError:
-                        return jsonify({"error": "Invalid JSON format for parameters"}), 400
+                        return (
+                            jsonify({"error": "Invalid JSON format for parameters"}),
+                            400,
+                        )
                 elif not isinstance(parameters, dict):
-                    return jsonify({"error": "Parameters must be a valid JSON object"}), 400
-            
+                    return (
+                        jsonify({"error": "Parameters must be a valid JSON object"}),
+                        400,
+                    )
+
             new_calculation = RuleCalculation(
                 rule_id=new_rule.id,
                 calculation_type=calculation_data.get("calculation_type"),
@@ -284,10 +292,20 @@ def update_rule(rule_id):
                         try:
                             parameters = json.loads(parameters)
                         except json.JSONDecodeError:
-                            return jsonify({"error": "Invalid JSON format for parameters"}), 400
+                            return (
+                                jsonify(
+                                    {"error": "Invalid JSON format for parameters"}
+                                ),
+                                400,
+                            )
                     elif not isinstance(parameters, dict):
-                        return jsonify({"error": "Parameters must be a valid JSON object"}), 400
-                
+                        return (
+                            jsonify(
+                                {"error": "Parameters must be a valid JSON object"}
+                            ),
+                            400,
+                        )
+
                 new_calculation = RuleCalculation(
                     rule_id=rule_id,
                     calculation_type=calculation_data.get("calculation_type"),
@@ -336,10 +354,10 @@ def update_rule(rule_id):
 def delete_rule(rule_id):
     try:
         rule = Rule.query.get_or_404(rule_id)
-        
+
         # 删除所有引用该规则的申请记录
         Application.query.filter_by(rule_id=rule_id).update({"rule_id": None})
-        
+
         # 删除规则
         db.session.delete(rule)
         db.session.commit()
@@ -350,22 +368,27 @@ def delete_rule(rule_id):
         traceback.print_exc()
         return jsonify({"error": "Failed to delete rule"}), 500
 
+
 # 批量删除规则
 @rule_bp.route("/rules/batch-delete", methods=["POST"])
 def batch_delete_rules():
     try:
         data = request.get_json()
         rule_ids = data.get("ids", [])
-        
+
         if not rule_ids or not isinstance(rule_ids, list):
             return jsonify({"error": "Invalid or empty rule IDs"}), 400
-        
+
         # 删除所有引用这些规则的申请记录
-        Application.query.filter(Application.rule_id.in_(rule_ids)).update({"rule_id": None}, synchronize_session=False)
-        
+        Application.query.filter(Application.rule_id.in_(rule_ids)).update(
+            {"rule_id": None}, synchronize_session=False
+        )
+
         # 先删除关联的规则计算记录
-        RuleCalculation.query.filter(RuleCalculation.rule_id.in_(rule_ids)).delete(synchronize_session=False)
-        
+        RuleCalculation.query.filter(RuleCalculation.rule_id.in_(rule_ids)).delete(
+            synchronize_session=False
+        )
+
         # 然后删除规则
         Rule.query.filter(Rule.id.in_(rule_ids)).delete(synchronize_session=False)
         db.session.commit()
@@ -558,19 +581,20 @@ def calculate_rule_score(rule_id):
         # 调试信息
         print(f"[DEBUG] API调用: rule_id={rule_id}, student_data={student_data}")
         print(f"[DEBUG] Rule对象: id={rule.id}, name={rule.name}")
-        
+
         # 初始化规则引擎
         rule_engine = RuleEngine()
 
         # 计算单个规则的分数
         # 注意：这里直接传递字典而不是对象，因为calculate_score方法已经支持处理字典
         score = rule_engine.calculate_score(rule, student_data)
-        
+
         # 调试信息
         print(f"[DEBUG] 计算结果: score={score}")
-        
+
         # 获取RuleCalculation对象以获取max_score
         from models import RuleCalculation
+
         calculation = RuleCalculation.query.filter_by(rule_id=rule.id).first()
         max_score = calculation.max_score if calculation else None
 

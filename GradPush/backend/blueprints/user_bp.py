@@ -22,8 +22,13 @@ from werkzeug.utils import secure_filename
 from extensions import db
 import openpyxl
 from openpyxl.utils import get_column_letter
+
 # 导入组织信息管理模块，用于获取学院、系、专业信息
-from blueprints.organization_bp import get_all_faculties, get_all_departments, get_all_majors
+from blueprints.organization_bp import (
+    get_all_faculties,
+    get_all_departments,
+    get_all_majors,
+)
 
 # 创建蓝图实例
 user_bp = Blueprint("user", __name__, url_prefix="/api")
@@ -44,10 +49,14 @@ def get_user(username):
 @user_bp.route("/user/current", methods=["GET"])
 def get_current_user():
     # 从session获取用户名，提高安全性
-    if 'username' not in session or 'logged_in' not in session or not session['logged_in']:
+    if (
+        "username" not in session
+        or "logged_in" not in session
+        or not session["logged_in"]
+    ):
         return jsonify({"message": "未登录或会话已过期"}), 401
 
-    username = session['username']
+    username = session["username"]
     user = User.query.filter_by(username=username).first()
 
     if not user:
@@ -60,10 +69,14 @@ def get_current_user():
 @user_bp.route("/user/student", methods=["GET"])
 def get_student_user():
     # 从session获取用户名，提高安全性
-    if 'username' not in session or 'logged_in' not in session or not session['logged_in']:
+    if (
+        "username" not in session
+        or "logged_in" not in session
+        or not session["logged_in"]
+    ):
         return jsonify({"message": "未登录或会话已过期"}), 401
 
-    username = session['username']
+    username = session["username"]
     user = User.query.filter_by(username=username, role="student").first()
 
     if not user:
@@ -76,28 +89,29 @@ def get_student_user():
 def _get_organization_info(user):
     """
     获取用户的学院、系和专业信息
-    
+
     Args:
         user: 用户对象
-        
+
     Returns:
         包含学院、系和专业名称的字典
     """
     # 预加载所有组织信息，避免重复查询
-    all_faculties = {f['id']: f['name'] for f in get_all_faculties()}
-    all_departments = {d['id']: d['name'] for d in get_all_departments()}
-    all_majors = {m['id']: m['name'] for m in get_all_majors()}
-    
+    all_faculties = {f["id"]: f["name"] for f in get_all_faculties()}
+    all_departments = {d["id"]: d["name"] for d in get_all_departments()}
+    all_majors = {m["id"]: m["name"] for m in get_all_majors()}
+
     # 安全获取学院、系和专业名称
     faculty_name = all_faculties.get(user.faculty_id, "")
     department_name = all_departments.get(user.department_id, "")
     major_name = all_majors.get(user.major_id, "")
-    
+
     return {
         "faculty_name": faculty_name,
         "department_name": department_name,
-        "major_name": major_name
+        "major_name": major_name,
     }
+
 
 # 辅助函数：获取用户数据
 def _get_user_data(user):
@@ -210,10 +224,10 @@ def get_all_users():
     # 获取所有用户列表
     user_list = []
     # 一次性获取所有组织信息，避免循环中的重复查询
-    all_faculties = {f['id']: f['name'] for f in get_all_faculties()}
-    all_departments = {d['id']: d['name'] for d in get_all_departments()}
-    all_majors = {m['id']: m['name'] for m in get_all_majors()}
-    
+    all_faculties = {f["id"]: f["name"] for f in get_all_faculties()}
+    all_departments = {d["id"]: d["name"] for d in get_all_departments()}
+    all_majors = {m["id"]: m["name"] for m in get_all_majors()}
+
     for user in users:
         # 从预加载的数据中获取组织信息
         faculty_name = all_faculties.get(user.faculty_id, "")
@@ -273,7 +287,9 @@ def delete_user(user_id):
     # 如果是学生用户，同时删除关联的Student记录和申请数据
     if user.role == "student" and user.student:
         # 获取该学生的所有申请数据
-        applications = Application.query.filter_by(student_id=user.student.student_id).all()
+        applications = Application.query.filter_by(
+            student_id=user.student.student_id
+        ).all()
         # 先删除每个申请关联的文件
         for application in applications:
             if application.files:
@@ -281,7 +297,9 @@ def delete_user(user_id):
                     try:
                         if "path" in file and file["path"]:
                             filename = os.path.basename(file["path"])
-                            file_path = os.path.join(current_app.config["FILE_FOLDER"], filename)
+                            file_path = os.path.join(
+                                current_app.config["FILE_FOLDER"], filename
+                            )
                             if os.path.exists(file_path):
                                 os.remove(file_path)
                     except Exception as e:
@@ -347,50 +365,50 @@ def create_user():
         return jsonify({}), 200
     # 获取当前登录用户的ID
     current_user_id = request.args.get("currentUserId", type=int)
-    
+
     # 验证请求数据
     data = request.get_json()
     if not data:
         return jsonify({"message": "请求数据不能为空"}), 400
-    
+
     # 显式删除可能存在的student_id字段，避免使用前端传递的值
     if "student_id" in data:
         del data["student_id"]
-    
+
     # 验证必填字段
     required_fields = ["username", "name", "role", "status"]
     for field in required_fields:
         if field not in data or not data[field]:
             return jsonify({"message": f"{field}是必填字段"}), 400
-    
+
     # 检查用户名是否已存在
     existing_user = User.query.filter_by(username=data["username"]).first()
     if existing_user:
         return jsonify({"message": "用户名已存在"}), 400
-    
+
     # 获取关联ID
     faculty_id = data.get("facultyId")
     department_id = data.get("departmentId")
     major_id = data.get("majorId")
-    
+
     # 学生角色验证
     if data["role"] == "student":
         # 验证学生必填的关联字段
         if not faculty_id or not department_id or not major_id:
             return jsonify({"message": "学生用户必须选择学院、系和专业"}), 400
-        
+
         # 验证关联ID是否存在
         faculty = Faculty.query.get(faculty_id)
         department = Department.query.get(department_id)
         major = Major.query.get(major_id)
-        
+
         if not faculty:
             return jsonify({"message": "学院不存在"}), 400
         if not department:
             return jsonify({"message": "系不存在"}), 400
         if not major:
             return jsonify({"message": "专业不存在"}), 400
-    
+
     try:
         # 学生角色需要先处理Student记录
         student_id = None
@@ -406,12 +424,14 @@ def create_user():
                     student_name=data["name"],  # 使用用户姓名作为学生姓名
                     faculty_id=faculty_id,
                     department_id=department_id,
-                    major_id=major_id
+                    major_id=major_id,
                 )
                 db.session.add(new_student)
                 db.session.flush()  # 确保学生记录已创建
-            student_id = data["username"]  # 使用username作为student_id，与注册接口保持一致
-        
+            student_id = data[
+                "username"
+            ]  # 使用username作为student_id，与注册接口保持一致
+
         # 创建用户记录，确保不使用前端传递的student_id
         new_user = User(
             username=data["username"],
@@ -421,19 +441,21 @@ def create_user():
             department_id=department_id,
             major_id=major_id,
             student_id=student_id,  # 只使用后端生成的student ID
-            role_name=data.get("roleName", "审核员" if data["role"] == "teacher" else "系统管理员"),
+            role_name=data.get(
+                "roleName", "审核员" if data["role"] == "teacher" else "系统管理员"
+            ),
             status=data["status"],
             email=data.get("email", ""),
-            phone=data.get("phone", "")
+            phone=data.get("phone", ""),
         )
-        
+
         # 设置密码
         password = data.get("password", "123456")
         new_user.set_password(password)
-        
+
         db.session.add(new_user)
         db.session.commit()
-        
+
         return jsonify({"message": "用户创建成功"}), 200
     except Exception as e:
         db.session.rollback()
@@ -473,10 +495,14 @@ def admin_reset_password(user_id):
 @user_bp.route("/user/profile", methods=["PUT"])
 def update_profile():
     # 从session获取用户名，提高安全性
-    if 'username' not in session or 'logged_in' not in session or not session['logged_in']:
+    if (
+        "username" not in session
+        or "logged_in" not in session
+        or not session["logged_in"]
+    ):
         return jsonify({"message": "未登录或会话已过期"}), 401
 
-    username = session['username']
+    username = session["username"]
     user = User.query.filter_by(username=username).first()
 
     if not user:
@@ -535,10 +561,14 @@ def update_profile():
 @user_bp.route("/user/avatar/reset", methods=["POST"])
 def reset_avatar():
     # 从session获取用户名，提高安全性
-    if 'username' not in session or 'logged_in' not in session or not session['logged_in']:
+    if (
+        "username" not in session
+        or "logged_in" not in session
+        or not session["logged_in"]
+    ):
         return jsonify({"message": "未登录或会话已过期"}), 401
 
-    username = session['username']
+    username = session["username"]
     user = User.query.filter_by(username=username).first()
 
     if not user:
@@ -588,10 +618,14 @@ def reset_avatar():
 @user_bp.route("/user/avatar", methods=["POST"])
 def upload_avatar():
     # 从session获取用户名，提高安全性
-    if 'username' not in session or 'logged_in' not in session or not session['logged_in']:
+    if (
+        "username" not in session
+        or "logged_in" not in session
+        or not session["logged_in"]
+    ):
         return jsonify({"message": "未登录或会话已过期"}), 401
 
-    username = session['username']
+    username = session["username"]
     user = User.query.filter_by(username=username).first()
 
     if not user:
@@ -609,21 +643,24 @@ def upload_avatar():
 
     # 从系统设置中获取头像文件大小限制
     from models import SystemSettings
+
     settings = SystemSettings.query.first()
-    avatar_file_size_limit = settings.avatar_file_size_limit if settings else 2  # 默认2MB
+    avatar_file_size_limit = (
+        settings.avatar_file_size_limit if settings else 2
+    )  # 默认2MB
     max_size = avatar_file_size_limit * 1024 * 1024
     if request.content_length > max_size:
         return jsonify({"message": f"文件大小不能超过{avatar_file_size_limit}MB"}), 400
 
     # 增强文件类型验证
     # 检查文件扩展名
-    allowed_extensions = {'.png', '.jpg', '.jpeg', '.gif'}
+    allowed_extensions = {".png", ".jpg", ".jpeg", ".gif"}
     _, ext = os.path.splitext(file.filename.lower())
     if ext not in allowed_extensions:
         return jsonify({"message": "只支持PNG、JPG、JPEG和GIF格式的图片"}), 400
 
     # 检查MIME类型
-    if not file.mimetype.startswith('image/'):
+    if not file.mimetype.startswith("image/"):
         return jsonify({"message": "上传的文件不是有效的图片"}), 400
 
     if not user:
@@ -710,10 +747,14 @@ def upload_avatar():
 @user_bp.route("/user/change-password", methods=["POST"])
 def change_password():
     # 从session获取用户名，提高安全性
-    if 'username' not in session or 'logged_in' not in session or not session['logged_in']:
+    if (
+        "username" not in session
+        or "logged_in" not in session
+        or not session["logged_in"]
+    ):
         return jsonify({"message": "未登录或会话已过期"}), 401
 
-    username = session['username']
+    username = session["username"]
     user = User.query.filter_by(username=username).first()
 
     data = request.get_json()
@@ -742,7 +783,7 @@ def change_password():
 @user_bp.route("/admin/import-users", methods=["POST"])
 def import_users():
     # 检查用户是否为管理员
-    if 'role' not in session or session['role'] != 'admin':
+    if "role" not in session or session["role"] != "admin":
         return jsonify({"message": "权限不足"}), 403
 
     # 检查是否有文件上传
@@ -756,7 +797,7 @@ def import_users():
         return jsonify({"message": "请选择一个文件"}), 400
 
     # 检查文件类型
-    allowed_extensions = {'.xlsx', '.xls'}
+    allowed_extensions = {".xlsx", ".xls"}
     _, ext = os.path.splitext(file.filename.lower())
     if ext not in allowed_extensions:
         return jsonify({"message": "只支持Excel文件(.xlsx, .xls)"}), 400
@@ -768,49 +809,95 @@ def import_users():
 
         # 定义必填字段和可选字段
         required_headers = ["用户名", "姓名", "角色", "状态"]
-        optional_headers = ["学院", "系", "专业", "邮箱", "电话", "性别", "CET4成绩", "CET6成绩", "绩点", "转换分数"]
-        
+        optional_headers = [
+            "学院",
+            "系",
+            "专业",
+            "邮箱",
+            "电话",
+            "性别",
+            "CET4成绩",
+            "CET6成绩",
+            "绩点",
+            "转换分数",
+        ]
+
         # 读取表头并创建映射
         header_to_column = {}
         max_column = worksheet.max_column
-        
+
         for col in range(1, max_column + 1):
             header = worksheet.cell(row=1, column=col).value
             if header:
                 header_to_column[header.strip()] = col
-        
+
         # 验证必填字段是否存在
         missing_headers = []
         for header in required_headers:
             if header not in header_to_column:
                 missing_headers.append(header)
-        
+
         if missing_headers:
-            return jsonify({"message": f"缺少必填表头：{','.join(missing_headers)}"}), 400
-        
+            return (
+                jsonify({"message": f"缺少必填表头：{','.join(missing_headers)}"}),
+                400,
+            )
+
         # 导入用户数据
         success_count = 0
         error_count = 0
         errors = []
-        
+
         for row in range(2, worksheet.max_row + 1):
             try:
                 # 根据表头映射获取用户数据
-                username = worksheet.cell(row=row, column=header_to_column["用户名"]).value
+                username = worksheet.cell(
+                    row=row, column=header_to_column["用户名"]
+                ).value
                 name = worksheet.cell(row=row, column=header_to_column["姓名"]).value
                 role = worksheet.cell(row=row, column=header_to_column["角色"]).value
                 status = worksheet.cell(row=row, column=header_to_column["状态"]).value
-                
+
                 # 可选字段
-                faculty_name = worksheet.cell(row=row, column=header_to_column.get("学院")).value if "学院" in header_to_column else None
-                department_name = worksheet.cell(row=row, column=header_to_column.get("系")).value if "系" in header_to_column else None
-                major_name = worksheet.cell(row=row, column=header_to_column.get("专业")).value if "专业" in header_to_column else None
-                email = worksheet.cell(row=row, column=header_to_column.get("邮箱")).value if "邮箱" in header_to_column else None
-                phone = worksheet.cell(row=row, column=header_to_column.get("电话")).value if "电话" in header_to_column else None
-                gender = worksheet.cell(row=row, column=header_to_column.get("性别")).value if "性别" in header_to_column else None
-                
+                faculty_name = (
+                    worksheet.cell(row=row, column=header_to_column.get("学院")).value
+                    if "学院" in header_to_column
+                    else None
+                )
+                department_name = (
+                    worksheet.cell(row=row, column=header_to_column.get("系")).value
+                    if "系" in header_to_column
+                    else None
+                )
+                major_name = (
+                    worksheet.cell(row=row, column=header_to_column.get("专业")).value
+                    if "专业" in header_to_column
+                    else None
+                )
+                email = (
+                    worksheet.cell(row=row, column=header_to_column.get("邮箱")).value
+                    if "邮箱" in header_to_column
+                    else None
+                )
+                phone = (
+                    worksheet.cell(row=row, column=header_to_column.get("电话")).value
+                    if "电话" in header_to_column
+                    else None
+                )
+                gender = (
+                    worksheet.cell(row=row, column=header_to_column.get("性别")).value
+                    if "性别" in header_to_column
+                    else None
+                )
+
                 # CET4成绩转换为整数
-                cet4_score = worksheet.cell(row=row, column=header_to_column.get("CET4成绩")).value if "CET4成绩" in header_to_column else None
+                cet4_score = (
+                    worksheet.cell(
+                        row=row, column=header_to_column.get("CET4成绩")
+                    ).value
+                    if "CET4成绩" in header_to_column
+                    else None
+                )
                 if cet4_score is not None and cet4_score != "":
                     try:
                         cet4_score = int(cet4_score)
@@ -818,9 +905,15 @@ def import_users():
                         cet4_score = None
                 else:
                     cet4_score = None
-                
+
                 # CET6成绩转换为整数
-                cet6_score = worksheet.cell(row=row, column=header_to_column.get("CET6成绩")).value if "CET6成绩" in header_to_column else None
+                cet6_score = (
+                    worksheet.cell(
+                        row=row, column=header_to_column.get("CET6成绩")
+                    ).value
+                    if "CET6成绩" in header_to_column
+                    else None
+                )
                 if cet6_score is not None and cet6_score != "":
                     try:
                         cet6_score = int(cet6_score)
@@ -828,9 +921,13 @@ def import_users():
                         cet6_score = None
                 else:
                     cet6_score = None
-                
+
                 # 绩点转换为浮点数
-                gpa = worksheet.cell(row=row, column=header_to_column.get("绩点")).value if "绩点" in header_to_column else None
+                gpa = (
+                    worksheet.cell(row=row, column=header_to_column.get("绩点")).value
+                    if "绩点" in header_to_column
+                    else None
+                )
                 if gpa is not None and gpa != "":
                     try:
                         gpa = float(gpa)
@@ -838,9 +935,15 @@ def import_users():
                         gpa = None
                 else:
                     gpa = None
-                
+
                 # 转换分数转换为浮点数
-                academic_score = worksheet.cell(row=row, column=header_to_column.get("转换分数")).value if "转换分数" in header_to_column else None
+                academic_score = (
+                    worksheet.cell(
+                        row=row, column=header_to_column.get("转换分数")
+                    ).value
+                    if "转换分数" in header_to_column
+                    else None
+                )
                 if academic_score is not None and academic_score != "":
                     try:
                         academic_score = float(academic_score)
@@ -862,7 +965,7 @@ def import_users():
                     update_faculty_id = None
                     update_department_id = None
                     update_major_id = None
-                    
+
                     # 处理学院ID
                     if faculty_name:
                         faculty = Faculty.query.filter_by(name=faculty_name).first()
@@ -877,10 +980,12 @@ def import_users():
                     else:
                         # 保留原有值
                         update_faculty_id = existing_user.faculty_id
-                    
+
                     # 处理系ID
                     if department_name:
-                        department = Department.query.filter_by(name=department_name).first()
+                        department = Department.query.filter_by(
+                            name=department_name
+                        ).first()
                         if not department:
                             error_count += 1
                             errors.append(f"第{row}行：系 '{department_name}' 不存在")
@@ -892,7 +997,7 @@ def import_users():
                     else:
                         # 保留原有值
                         update_department_id = existing_user.department_id
-                    
+
                     # 处理专业ID
                     if major_name:
                         major = Major.query.filter_by(name=major_name).first()
@@ -907,7 +1012,7 @@ def import_users():
                     else:
                         # 保留原有值
                         update_major_id = existing_user.major_id
-                    
+
                     # 更新用户基本信息（适用于所有角色）
                     existing_user.name = name
                     existing_user.faculty_id = update_faculty_id
@@ -915,16 +1020,18 @@ def import_users():
                     existing_user.major_id = update_major_id
                     existing_user.email = email or ""
                     existing_user.phone = phone or ""
-                    
+
                     # 将enabled转换为active以与数据库模型保持一致
                     if status == "enabled":
                         status = "active"
                     existing_user.status = status
-                    
+
                     # 如果是学生用户，还需要更新学生特定信息
                     if existing_user.role == "student":
                         # 获取或创建学生记录
-                        existing_student = Student.query.filter_by(student_id=username).first()
+                        existing_student = Student.query.filter_by(
+                            student_id=username
+                        ).first()
                         if existing_student:
                             # 更新学生信息
                             existing_student.gender = gender
@@ -944,11 +1051,11 @@ def import_users():
                                 cet4_score=cet4_score,
                                 cet6_score=cet6_score,
                                 gpa=gpa,
-                                academic_score=academic_score
+                                academic_score=academic_score,
                             )
                             db.session.add(new_student)
                             existing_user.student_id = username
-                    
+
                     success_count += 1
                     continue
 
@@ -956,16 +1063,20 @@ def import_users():
                 valid_roles = ["admin", "teacher", "student"]
                 if role not in valid_roles:
                     error_count += 1
-                    errors.append(f"第{row}行：角色 '{role}' 无效，应为 admin/teacher/student")
+                    errors.append(
+                        f"第{row}行：角色 '{role}' 无效，应为 admin/teacher/student"
+                    )
                     continue
 
                 # 验证状态并统一转换为数据库使用的值
                 valid_statuses = ["enabled", "disabled", "active"]
                 if status not in valid_statuses:
                     error_count += 1
-                    errors.append(f"第{row}行：状态 '{status}' 无效，应为 enabled/disabled/active")
+                    errors.append(
+                        f"第{row}行：状态 '{status}' 无效，应为 enabled/disabled/active"
+                    )
                     continue
-                
+
                 # 将enabled转换为active以与数据库模型保持一致
                 if status == "enabled":
                     status = "active"
@@ -983,7 +1094,9 @@ def import_users():
                 # 获取系ID
                 department_id = None
                 if department_name:
-                    department = Department.query.filter_by(name=department_name).first()
+                    department = Department.query.filter_by(
+                        name=department_name
+                    ).first()
                     if not department:
                         error_count += 1
                         errors.append(f"第{row}行：系 '{department_name}' 不存在")
@@ -1017,7 +1130,7 @@ def import_users():
                     major_id=major_id,
                     email=email or "",
                     phone=phone or "",
-                    status=status
+                    status=status,
                 )
 
                 # 设置默认密码
@@ -1026,7 +1139,9 @@ def import_users():
                 # 学生角色需要创建学生记录
                 if role == "student":
                     # 检查是否已存在对应的Student记录
-                    existing_student = Student.query.filter_by(student_id=username).first()
+                    existing_student = Student.query.filter_by(
+                        student_id=username
+                    ).first()
                     if not existing_student:
                         new_student = Student(
                             student_id=username,
@@ -1038,7 +1153,7 @@ def import_users():
                             cet4_score=cet4_score,
                             cet6_score=cet6_score,
                             gpa=gpa,
-                            academic_score=academic_score
+                            academic_score=academic_score,
                         )
                         db.session.add(new_student)
                         new_user.student_id = username
@@ -1054,12 +1169,17 @@ def import_users():
         # 提交事务
         db.session.commit()
 
-        return jsonify({
-            "message": "用户导入完成",
-            "success_count": success_count,
-            "error_count": error_count,
-            "errors": errors
-        }), 200
+        return (
+            jsonify(
+                {
+                    "message": "用户导入完成",
+                    "success_count": success_count,
+                    "error_count": error_count,
+                    "errors": errors,
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         db.session.rollback()

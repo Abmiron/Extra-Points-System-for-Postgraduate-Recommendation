@@ -662,6 +662,22 @@ const handleLogin = async () => {
     // 使用auth store的登录方法，包含验证码和验证码token
     await authStore.login(loginForm.username, loginForm.password, loginForm.captcha, captchaToken.value)
 
+    // 检查系统维护状态
+    try {
+      const systemInfoResponse = await api.getPublicSystemInfo()
+      const systemStatus = systemInfoResponse.data?.status
+
+      // 如果系统处于维护模式且用户不是管理员，则阻止登录
+      if (systemStatus === '维护中' && authStore.role !== 'admin') {
+        await authStore.logout()
+        toastStore.error('系统正在维护中，暂时无法登录，请稍后再试')
+        return
+      }
+    } catch (systemStatusError) {
+      console.error('系统状态检查失败:', systemStatusError)
+      // 如果获取系统状态失败，继续登录流程
+    }
+
     // 学生角色登录时间验证
     if (authStore.role === 'student') {
       const now = new Date()

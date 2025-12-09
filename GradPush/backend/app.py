@@ -10,6 +10,8 @@ from flask import Flask, request, jsonify, send_from_directory, make_response
 from flask_cors import CORS
 from flask_migrate import Migrate
 import os
+import logging
+from logging.handlers import RotatingFileHandler
 from werkzeug.utils import safe_join
 from urllib.parse import quote
 from extensions import db, session
@@ -35,6 +37,38 @@ app.config.from_object("config.Config")
 app.config["JSON_AS_ASCII"] = False  # 支持中文输出
 app.config["JSONIFY_MIMETYPE"] = "application/json; charset=utf-8"  # 设置响应头 charset
 
+# 配置日志
+LOG_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+os.makedirs(LOG_FOLDER, exist_ok=True)
+
+# 设置日志格式
+log_formatter = logging.Formatter(
+    '%(asctime)s [%(levelname)s] [%(module)s:%(funcName)s:%(lineno)d] - %(message)s'
+)
+
+# 配置文件日志
+file_handler = RotatingFileHandler(
+    os.path.join(LOG_FOLDER, 'app.log'),
+    maxBytes=10 * 1024 * 1024,  # 10MB
+    backupCount=5,
+    encoding='utf-8'  # 设置文件编码为UTF-8，解决中文乱码问题
+)
+file_handler.setFormatter(log_formatter)
+file_handler.setLevel(logging.INFO)
+
+# 配置控制台日志
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(log_formatter)
+console_handler.setLevel(logging.DEBUG)
+
+# 添加日志处理器
+app.logger.addHandler(file_handler)
+app.logger.addHandler(console_handler)
+app.logger.setLevel(logging.DEBUG)
+
+# 记录应用启动信息
+app.logger.info("应用启动，日志系统已配置")
+
 # 初始化数据库
 db.init_app(app)
 migrate = Migrate(app, db)
@@ -54,6 +88,7 @@ from blueprints.admin_bp import admin_bp
 from blueprints.public_bp import public_bp
 from blueprints.organization_bp import organization_bp
 from blueprints.score_bp import score_bp
+from blueprints.system_bp import system_bp
 from routes import main_bp
 
 
@@ -202,6 +237,7 @@ app.register_blueprint(rule_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(score_bp)
 app.register_blueprint(organization_bp)  # 组织信息管理蓝图
+app.register_blueprint(system_bp)  # 系统维护蓝图
 app.register_blueprint(main_bp)
 
 

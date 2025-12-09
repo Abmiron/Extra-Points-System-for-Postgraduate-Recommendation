@@ -900,7 +900,7 @@ def delete_application(id):
 
     # 获取学生ID，用于后续更新统计数据
     student_id = application.student_id
-    
+
     # 删除相关物理文件
     if application.files:
         for file in application.files:
@@ -910,7 +910,9 @@ def delete_application(id):
                     # 获取文件名（从URL中提取）
                     filename = os.path.basename(file["path"])
                     # 构建完整的文件路径
-                    file_path = os.path.join(current_app.config["FILE_FOLDER"], filename)
+                    file_path = os.path.join(
+                        current_app.config["FILE_FOLDER"], filename
+                    )
                     # 检查文件是否存在并删除
                     if os.path.exists(file_path):
                         os.remove(file_path)

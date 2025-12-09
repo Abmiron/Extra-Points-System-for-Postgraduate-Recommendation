@@ -62,13 +62,21 @@ def get_system_info():
             "version": "1.0.0",
             "status": (
                 "正常运行"
-                if system_status == "online"
+                if system_status in ["online", "正常"]
                 else ("维护中" if system_status else None)
             ),
             # 添加文件上传相关设置
-            "singleFileSizeLimit": system_settings.single_file_size_limit if system_settings else 10,
-            "totalFileSizeLimit": system_settings.total_file_size_limit if system_settings else 50,
-            "allowedFileTypes": system_settings.allowed_file_types if system_settings else ".pdf, .jpg, .jpeg, .png"
+            "singleFileSizeLimit": (
+                system_settings.single_file_size_limit if system_settings else 10
+            ),
+            "totalFileSizeLimit": (
+                system_settings.total_file_size_limit if system_settings else 50
+            ),
+            "allowedFileTypes": (
+                system_settings.allowed_file_types
+                if system_settings
+                else ".pdf, .jpg, .jpeg, .png"
+            ),
         }
 
         return jsonify(
@@ -81,6 +89,3 @@ def get_system_info():
         return jsonify(
             {"code": 500, "message": f"获取系统信息失败: {str(e)}", "data": None}
         )
-
-
-

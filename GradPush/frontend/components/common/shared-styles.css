@@ -163,6 +163,16 @@
   background-color: #003366;
 }
 
+.btn.danger {
+  color: #dc3545;
+  border-color: #dc3545;
+}
+
+.btn.danger:hover {
+  background-color: #dc3545;
+  color: #fff;
+}
+
 .small-btn {
   padding: 5px 8px;
   font-size: 12px;

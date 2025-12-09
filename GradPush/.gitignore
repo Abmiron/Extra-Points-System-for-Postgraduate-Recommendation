@@ -36,6 +36,7 @@ backend/uploads/avatars/*
 backend/uploads/files/*
 backend/uploads/graduate-files/*
 backend/cache/*
+backend/backup/*
 
 # 不忽略.gitkeep文件，这样目录会被Git跟踪
 !backend/uploads/avatars/.gitkeep

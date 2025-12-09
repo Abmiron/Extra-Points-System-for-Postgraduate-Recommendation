@@ -308,165 +308,271 @@ def get_majors_by_department(department_id):
 
 
 # 导入组织数据
-@organization_bp.route('/import-organizations', methods=['POST'])
+@organization_bp.route("/import-organizations", methods=["POST"])
 def import_organizations():
     try:
         # 检查是否有文件上传
-        if 'file' not in request.files:
+        if "file" not in request.files:
             return jsonify({"message": "没有文件上传"}), 400
 
-        file = request.files['file']
+        file = request.files["file"]
 
         # 检查文件名是否为空
-        if file.filename == '':
+        if file.filename == "":
             return jsonify({"message": "请选择一个文件"}), 400
 
         # 检查文件类型
-        allowed_extensions = {'.xlsx', '.xls'}
+        allowed_extensions = {".xlsx", ".xls"}
         _, ext = os.path.splitext(file.filename.lower())
         if ext not in allowed_extensions:
             return jsonify({"message": "只支持Excel文件(.xlsx, .xls)"}), 400
 
         # 读取Excel文件
         workbook = openpyxl.load_workbook(file, data_only=True)
-        
+
         # 定义各表的数据
         faculty_data = []
         department_data = []
         major_data = []
-        
+
         # 单表导入模式
         target_sheet = workbook[workbook.sheetnames[0]]
-        
+
         # 解析表头
         headers = {}
         for col in range(1, target_sheet.max_column + 1):
             header = target_sheet.cell(row=1, column=col).value
             if header:
                 headers[header.strip()] = col
-        
+
         # 验证必填表头（至少需要学院名称）
-        required_headers = ['学院名称']
+        required_headers = ["学院名称"]
         missing_headers = [h for h in required_headers if h not in headers]
         if missing_headers:
-            return jsonify({"message": f"工作表缺少必填表头：{','.join(missing_headers)}"}), 400
-        
+            return (
+                jsonify(
+                    {"message": f"工作表缺少必填表头：{','.join(missing_headers)}"}
+                ),
+                400,
+            )
+
         # 读取数据行
         for row in range(2, target_sheet.max_row + 1):
             # 学院信息
-            faculty_name = target_sheet.cell(row=row, column=headers['学院名称']).value
-            faculty_description = target_sheet.cell(row=row, column=headers.get('学院描述')).value if '学院描述' in headers else None
-            
+            faculty_name = target_sheet.cell(row=row, column=headers["学院名称"]).value
+            faculty_description = (
+                target_sheet.cell(row=row, column=headers.get("学院描述")).value
+                if "学院描述" in headers
+                else None
+            )
+
             # 系信息
-            department_name = target_sheet.cell(row=row, column=headers.get('系名称')).value if '系名称' in headers else None
-            department_description = target_sheet.cell(row=row, column=headers.get('系描述')).value if '系描述' in headers else None
-            
+            department_name = (
+                target_sheet.cell(row=row, column=headers.get("系名称")).value
+                if "系名称" in headers
+                else None
+            )
+            department_description = (
+                target_sheet.cell(row=row, column=headers.get("系描述")).value
+                if "系描述" in headers
+                else None
+            )
+
             # 专业信息
-            major_name = target_sheet.cell(row=row, column=headers.get('专业名称')).value if '专业名称' in headers else None
-            major_description = target_sheet.cell(row=row, column=headers.get('专业描述')).value if '专业描述' in headers else None
-            
+            major_name = (
+                target_sheet.cell(row=row, column=headers.get("专业名称")).value
+                if "专业名称" in headers
+                else None
+            )
+            major_description = (
+                target_sheet.cell(row=row, column=headers.get("专业描述")).value
+                if "专业描述" in headers
+                else None
+            )
+
             # 处理学院
             if faculty_name:
-                faculty_data.append({"name": faculty_name.strip(), "description": faculty_description.strip() if faculty_description else None})
-            
+                faculty_data.append(
+                    {
+                        "name": faculty_name.strip(),
+                        "description": (
+                            faculty_description.strip() if faculty_description else None
+                        ),
+                    }
+                )
+
             # 处理系
             if faculty_name and department_name:
-                department_data.append({"name": department_name.strip(), "faculty_name": faculty_name.strip(), "description": department_description.strip() if department_description else None})
-            
+                department_data.append(
+                    {
+                        "name": department_name.strip(),
+                        "faculty_name": faculty_name.strip(),
+                        "description": (
+                            department_description.strip()
+                            if department_description
+                            else None
+                        ),
+                    }
+                )
+
             # 处理专业
             if faculty_name and department_name and major_name:
-                major_data.append({"name": major_name.strip(), "faculty_name": faculty_name.strip(), "department_name": department_name.strip(), "description": major_description.strip() if major_description else None})
-        
+                major_data.append(
+                    {
+                        "name": major_name.strip(),
+                        "faculty_name": faculty_name.strip(),
+                        "department_name": department_name.strip(),
+                        "description": (
+                            major_description.strip() if major_description else None
+                        ),
+                    }
+                )
+
         # 去重数据
         # 学院去重
         unique_faculties = {}
         for data in faculty_data:
-            unique_faculties[data['name']] = data
+            unique_faculties[data["name"]] = data
         faculty_data = list(unique_faculties.values())
-        
+
         # 系去重
         unique_departments = {}
         for data in department_data:
-            key = (data['faculty_name'], data['name'])
+            key = (data["faculty_name"], data["name"])
             unique_departments[key] = data
         department_data = list(unique_departments.values())
-        
+
         # 专业去重
         unique_majors = {}
         for data in major_data:
-            key = (data['faculty_name'], data['department_name'], data['name'])
+            key = (data["faculty_name"], data["department_name"], data["name"])
             unique_majors[key] = data
         major_data = list(unique_majors.values())
-        
+
         # 导入数据到数据库
         from extensions import db
-        
+
         errors = []
-        
+
         # 导入学院
         faculty_map = {}
         for data in faculty_data:
             # 检查学院是否已存在
-            existing_faculty = Faculty.query.filter_by(name=data['name']).first()
+            existing_faculty = Faculty.query.filter_by(name=data["name"]).first()
             if not existing_faculty:
-                faculty = Faculty(name=data['name'], description=data['description'])
+                faculty = Faculty(name=data["name"], description=data["description"])
                 db.session.add(faculty)
                 db.session.flush()  # 获取新插入的ID
-                faculty_map[data['name']] = faculty.id
+                faculty_map[data["name"]] = faculty.id
             else:
                 # 更新已存在学院的描述信息
-                if data['description'] and existing_faculty.description != data['description']:
-                    existing_faculty.description = data['description']
+                if (
+                    data["description"]
+                    and existing_faculty.description != data["description"]
+                ):
+                    existing_faculty.description = data["description"]
                     errors.append(f"学院 '{data['name']}' 的描述已更新")
-                faculty_map[data['name']] = existing_faculty.id
-                if not data['description'] or existing_faculty.description == data['description']:
+                faculty_map[data["name"]] = existing_faculty.id
+                if (
+                    not data["description"]
+                    or existing_faculty.description == data["description"]
+                ):
                     errors.append(f"学院 '{data['name']}' 已存在，未重复导入")
-        
+
         # 导入系
         department_map = {}
         for data in department_data:
-            if data['faculty_name'] in faculty_map:
+            if data["faculty_name"] in faculty_map:
                 # 检查系是否已存在
-                existing_department = Department.query.filter_by(name=data['name'], faculty_id=faculty_map[data['faculty_name']]).first()
+                existing_department = Department.query.filter_by(
+                    name=data["name"], faculty_id=faculty_map[data["faculty_name"]]
+                ).first()
                 if not existing_department:
-                    department = Department(name=data['name'], faculty_id=faculty_map[data['faculty_name']], description=data['description'])
+                    department = Department(
+                        name=data["name"],
+                        faculty_id=faculty_map[data["faculty_name"]],
+                        description=data["description"],
+                    )
                     db.session.add(department)
                     db.session.flush()  # 获取新插入的ID
-                    department_map[(data['faculty_name'], data['name'])] = department.id
+                    department_map[(data["faculty_name"], data["name"])] = department.id
                 else:
                     # 更新已存在系的描述信息
-                    if data['description'] and existing_department.description != data['description']:
-                        existing_department.description = data['description']
-                        errors.append(f"系 '{data['name']}' 在学院 '{data['faculty_name']}' 下的描述已更新")
-                    department_map[(data['faculty_name'], data['name'])] = existing_department.id
-                    if not data['description'] or existing_department.description == data['description']:
-                        errors.append(f"系 '{data['name']}' 在学院 '{data['faculty_name']}' 下已存在，未重复导入")
+                    if (
+                        data["description"]
+                        and existing_department.description != data["description"]
+                    ):
+                        existing_department.description = data["description"]
+                        errors.append(
+                            f"系 '{data['name']}' 在学院 '{data['faculty_name']}' 下的描述已更新"
+                        )
+                    department_map[(data["faculty_name"], data["name"])] = (
+                        existing_department.id
+                    )
+                    if (
+                        not data["description"]
+                        or existing_department.description == data["description"]
+                    ):
+                        errors.append(
+                            f"系 '{data['name']}' 在学院 '{data['faculty_name']}' 下已存在，未重复导入"
+                        )
             else:
-                errors.append(f"系 '{data['name']}' 的所属学院 '{data['faculty_name']}' 不存在，未导入")
-        
+                errors.append(
+                    f"系 '{data['name']}' 的所属学院 '{data['faculty_name']}' 不存在，未导入"
+                )
+
         # 导入专业
         for data in major_data:
-            key = (data['faculty_name'], data['department_name'])
-            if data['faculty_name'] in faculty_map and key in department_map:
+            key = (data["faculty_name"], data["department_name"])
+            if data["faculty_name"] in faculty_map and key in department_map:
                 # 检查专业是否已存在
-                existing_major = Major.query.filter_by(name=data['name'], department_id=department_map[key]).first()
+                existing_major = Major.query.filter_by(
+                    name=data["name"], department_id=department_map[key]
+                ).first()
                 if not existing_major:
-                    major = Major(name=data['name'], department_id=department_map[key], description=data['description'])
+                    major = Major(
+                        name=data["name"],
+                        department_id=department_map[key],
+                        description=data["description"],
+                    )
                     db.session.add(major)
                 else:
                     # 更新已存在专业的描述信息
-                    if data['description'] and existing_major.description != data['description']:
-                        existing_major.description = data['description']
-                        errors.append(f"专业 '{data['name']}' 在学院 '{data['faculty_name']}'、系 '{data['department_name']}' 下的描述已更新")
-                    if not data['description'] or existing_major.description == data['description']:
-                        errors.append(f"专业 '{data['name']}' 在学院 '{data['faculty_name']}'、系 '{data['department_name']}' 下已存在，未重复导入")
+                    if (
+                        data["description"]
+                        and existing_major.description != data["description"]
+                    ):
+                        existing_major.description = data["description"]
+                        errors.append(
+                            f"专业 '{data['name']}' 在学院 '{data['faculty_name']}'、系 '{data['department_name']}' 下的描述已更新"
+                        )
+                    if (
+                        not data["description"]
+                        or existing_major.description == data["description"]
+                    ):
+                        errors.append(
+                            f"专业 '{data['name']}' 在学院 '{data['faculty_name']}'、系 '{data['department_name']}' 下已存在，未重复导入"
+                        )
             else:
-                errors.append(f"专业 '{data['name']}' 的所属学院 '{data['faculty_name']}' 或系 '{data['department_name']}' 不存在，未导入")
-        
+                errors.append(
+                    f"专业 '{data['name']}' 的所属学院 '{data['faculty_name']}' 或系 '{data['department_name']}' 不存在，未导入"
+                )
+
         # 提交事务
         db.session.commit()
-        
-        return jsonify({"message": "导入成功", "faculty_count": len(faculty_data), "department_count": len(department_data), "major_count": len(major_data), "errors": errors}), 200
-        
+
+        return (
+            jsonify(
+                {
+                    "message": "导入成功",
+                    "faculty_count": len(faculty_data),
+                    "department_count": len(department_data),
+                    "major_count": len(major_data),
+                    "errors": errors,
+                }
+            ),
+            200,
+        )
+
     except Exception as e:
         return jsonify({"message": str(e)}), 500
