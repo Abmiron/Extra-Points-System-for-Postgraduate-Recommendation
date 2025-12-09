@@ -7,8 +7,8 @@
     <!-- 筛选区域 -->
     <div class="filters">
       <div class="filter-group">
-        <span class="filter-label">所在学院:</span>
-        <select class="form-control" v-model="filters.faculty" @change="handleFacultyChange">
+        <span class="filter-label">当前学院:</span>
+        <select class="form-control" v-model="filters.faculty" @change="handleFacultyChange" >
           <option value="">请选择学院</option>
           <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">{{ faculty.name }}</option>
         </select>
@@ -229,12 +229,14 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useApplicationsStore } from '../../stores/applications'
 import { useToastStore } from '../../stores/toast'
+import { useAuthStore } from '../../stores/auth'
 import * as XLSX from 'xlsx'
 import api from '../../utils/api'
 
 
 const applicationsStore = useApplicationsStore()
 const toastStore = useToastStore()
+const authStore = useAuthStore()
 const filters = reactive({
   faculty: '',
   department: '',
@@ -263,8 +265,15 @@ const loadFaculties = async () => {
   loading.value = true
   try {
     const response = await api.getFacultiesAdmin()
-
     faculties.value = response.faculties || []
+    
+    // 将老师所在的学院设置为默认选中值
+    const teacherFacultyId = authStore.user?.faculty_id || authStore.user?.facultyId
+    if (teacherFacultyId) {
+      filters.faculty = teacherFacultyId.toString()
+      // 根据默认学院加载系
+      await handleFacultyChange()
+    }
   } catch (error) {
     console.error('加载学院数据失败:', error)
     // 添加默认学院数据作为备选
@@ -549,7 +558,8 @@ const handleMajorChange = () => {
 
 // 清空所有筛选条件
 const clearFilters = () => {
-  filters.faculty = ''
+  // 保留学院选择不变（如果是用户自己的学院）
+  // filters.faculty = ''
   filters.department = ''
   filters.major = ''
   // 保持当前学年不变

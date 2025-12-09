@@ -26,7 +26,7 @@
           @keyup.enter="searchUsers">
       </div>
       <div class="filter-group">
-        <span class="filter-label">学院:</span>
+        <span class="filter-label">当前学院:</span>
         <select class="form-control" v-model="filters.faculty">
           <option value="all">全部</option>
           <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
@@ -447,17 +447,14 @@ const totalPages = ref(0)
 onMounted(async () => {
   await loadFaculties()
   // 如果当前选中的是学生选项卡，并且已经选择了学院，加载对应的系列表
-  if (activeTab.value === 'student' && filters.faculty && filters.faculty !== 'all') {
+  if (activeTab.value === 'student') {
     await loadDepartments(filters.faculty)
     // 如果已经选择了系，加载对应的专业列表
     if (filters.department && filters.department !== 'all') {
-      const department = departments.value.find(d => d.name === filters.department)
-      if (department) {
-        await loadMajors(department.id)
-      }
+      await loadMajors(filters.department)
     }
   }
-  // 加载用户数据
+  // 立即开始加载用户数据，不需要等待系和专业数据加载完成
   loadUsersFromAPI()
 })
 
@@ -468,6 +465,17 @@ const loadFaculties = async () => {
     // 使用管理员API端点获取学院数据
     const response = await api.getFacultiesAdmin()
     faculties.value = response.faculties
+    
+    // 将管理员所在的学院设置为默认选中值
+    const adminFacultyId = authStore.user?.faculty_id || authStore.user?.facultyId
+    if (adminFacultyId) {
+      filters.faculty = adminFacultyId
+      // 根据默认学院加载系
+      await loadDepartments(filters.faculty)
+    } else {
+      // 如果没有默认学院，加载所有系
+      await loadDepartments()
+    }
   } catch (error) {
     console.error('加载学院列表失败:', error)
     toastStore.error('加载学院列表失败，请刷新页面重试')
@@ -480,36 +488,33 @@ const loadFaculties = async () => {
 const loadDepartments = async (facultyId = null) => {
   try {
     loadingOptions.value = true
-    if (facultyId) {
-      // 使用管理员API端点获取指定学院的系数据
+    // 强制使用管理员所在的学院ID，确保只显示当前学院的系
+    const adminFacultyId = authStore.user?.faculty_id || authStore.user?.facultyId
+    if (adminFacultyId && adminFacultyId !== 'all') {
+      // 根据管理员学院ID获取系
+      const response = await api.getDepartmentsAdmin(adminFacultyId)
+      departments.value = response.departments || []
+    } else if (facultyId && facultyId !== 'all') {
+      // 作为备选，使用传入的学院ID获取系
       const response = await api.getDepartmentsAdmin(facultyId)
-      departments.value = response.departments
-      // 保留当前的系和专业选择
-      // 如果当前选择的系不在新加载的列表中，则重置
-      const departmentExists = departments.value.some(dept => dept.name === filters.department)
-      if (!departmentExists) {
-        filters.department = 'all'
-        filters.major = 'all'
-        majors.value = []
-      }
+      departments.value = response.departments || []
     } else {
-      // 加载所有系（类似审核记录组件的实现）
-      try {
-        const response = await api.getDepartmentsAdmin()
-        departments.value = response.departments || []
-      } catch (error) {
-        console.error('获取所有系列表失败:', error)
-        // 尝试使用默认学院的系
-        const defaultFaculty = faculties.value[0]
-        if (defaultFaculty) {
-          const response = await api.getDepartmentsAdmin(defaultFaculty.id)
-          departments.value = response.departments || []
-        }
-      }
+      // 获取所有系（仅当管理员没有学院ID时）
+      const response = await api.getDepartmentsAdmin()
+      departments.value = response.departments || []
+    }
+
+    // 重置专业选择和列表
+    filters.major = 'all'
+    majors.value = []
+
+    // 如果有系被选中但不在新列表中，重置系选择
+    if (filters.department !== 'all' && !departments.value.some(dept => dept.id === filters.department)) {
+      filters.department = 'all'
     }
   } catch (error) {
-    console.error('加载系列表失败:', error)
-    toastStore.error('加载系列表失败，请重试')
+    console.error('获取系列表失败:', error)
+    departments.value = []
   } finally {
     loadingOptions.value = false
   }
@@ -519,44 +524,38 @@ const loadDepartments = async (facultyId = null) => {
 const loadMajors = async (departmentId = null) => {
   try {
     loadingOptions.value = true
-    if (departmentId) {
-      // 使用管理员API端点获取指定系的专业数据
-      const response = await api.getMajorsAdmin(departmentId)
-      majors.value = response.majors
-      // 保留当前的专业选择
-      // 如果当前选择的专业不在新加载的列表中，则重置
-      const majorExists = majors.value.some(major => major.name === filters.major)
-      if (!majorExists) {
-        filters.major = 'all'
-      }
+    let response
+    if (departmentId && departmentId !== 'all') {
+      // 根据系ID获取专业
+      response = await api.getMajorsAdmin(departmentId)
     } else {
-      // 优化：使用并行请求加载所有专业
-      try {
-        if (departments.value.length > 0) {
-          // 并行获取所有系的专业数据
-          const promises = departments.value.map(dept =>
-            api.getMajorsAdmin(dept.id).catch(error => {
-              console.warn(`获取系 ${dept.name} 的专业数据失败:`, error)
-              return { majors: [] }
-            })
-          )
-
-          const results = await Promise.all(promises)
-          // 合并所有专业数据
-          const allMajors = results.flatMap(result => result.majors || [])
-          majors.value = allMajors
-        } else {
-          majors.value = []
-        }
-      } catch (error) {
-        console.error('获取所有专业列表失败:', error)
-        // 如果都失败，使用空数组
-        majors.value = []
+      // 强制使用管理员所在的学院ID，确保只显示当前学院的专业
+      const adminFacultyId = authStore.user?.faculty_id || authStore.user?.facultyId
+      if (adminFacultyId && adminFacultyId !== 'all') {
+        // 根据管理员学院ID获取所有该学院下的专业
+        // 遍历当前系列表，获取所有系的专业
+        const allDepartmentIds = departments.value.map(dept => dept.id)
+        const promises = allDepartmentIds.map(deptId => api.getMajorsAdmin(deptId).catch(() => ({ majors: [] })))
+        const results = await Promise.all(promises)
+        // 合并所有专业数据
+        const allMajors = results.flatMap(result => result.majors || [])
+        // 去重
+        const uniqueMajors = Array.from(new Map(allMajors.map(major => [major.id, major])).values())
+        majors.value = uniqueMajors
+      } else {
+        // 获取所有专业（仅当管理员没有学院ID时）
+        response = await api.getMajorsAdmin()
+        majors.value = response.majors || []
       }
     }
+
+    // 如果有专业被选中但不在新列表中，重置专业选择
+    if (filters.major !== 'all' && !majors.value.some(major => major.id === filters.major)) {
+      filters.major = 'all'
+    }
   } catch (error) {
-    console.error('加载专业列表失败:', error)
-    toastStore.error('加载专业列表失败，请重试')
+    console.error('获取专业列表失败:', error)
+    majors.value = []
   } finally {
     loadingOptions.value = false
   }
@@ -854,8 +853,7 @@ const saveUser = async () => {
       username: username,
       name: userForm.name,
       status: userForm.status,
-      // 仅当角色不是管理员时包含学院ID
-      ...(userForm.role !== 'admin' ? { facultyId: userForm.facultyId } : {}),
+      facultyId: userForm.facultyId,
       ...(userForm.role === 'student' ? {
         departmentId: userForm.departmentId,
         majorId: userForm.majorId
@@ -1168,32 +1166,27 @@ const nextPage = () => {
 
 // 切换选项卡
 const activeTabChanged = async () => {
-  filters.faculty = 'all'
+  // 保存当前学院选择
+  const currentFaculty = filters.faculty
+  
+  filters.faculty = currentFaculty // 保持当前学院选择不变
   filters.department = 'all'
   filters.major = 'all'
   filters.keyword = ''
   filters.status = 'all'
   currentPage.value = 1
 
-  // 如果是学生选项卡，并行加载系和专业数据，然后立即开始加载用户数据
+  // 如果是学生选项卡，加载系和专业数据
   if (activeTab.value === 'student') {
-    // 并行加载系和专业数据
-    Promise.all([
-      loadDepartments().catch(error => {
-        console.error('加载系列表失败:', error)
-      })
-    ]).then(() => {
-      // 系加载完成后再加载专业数据
-      loadMajors().catch(error => {
-        console.error('加载专业列表失败:', error)
-      })
-    })
+    await loadDepartments(currentFaculty)
+    // 系加载完成后再加载专业数据
+    await loadMajors()
   } else {
     departments.value = []
     majors.value = []
   }
 
-  // 立即开始加载用户数据，不需要等待系和专业数据加载完成
+  // 立即开始加载用户数据
   loadUsersFromAPI()
 }
 
@@ -1201,18 +1194,11 @@ const activeTabChanged = async () => {
 watch(
   () => filters.faculty,
   async (newFacultyId) => {
-    if (activeTab.value === 'student' && newFacultyId && newFacultyId !== 'all') {
+    if (activeTab.value === 'student') {
       await loadDepartments(newFacultyId)
-    } else {
-      // 重置系和专业筛选
-      filters.department = 'all'
-      filters.major = 'all'
-      departments.value = []
-      majors.value = []
+      await loadMajors()
+      loadUsersFromAPI()
     }
-    // 重新加载用户数据
-    currentPage.value = 1
-    loadUsersFromAPI()
   }
 )
 
@@ -1220,16 +1206,10 @@ watch(
 watch(
   () => filters.department,
   async (newDepartmentId) => {
-    if (activeTab.value === 'student' && newDepartmentId && newDepartmentId !== 'all') {
+    if (activeTab.value === 'student') {
       await loadMajors(newDepartmentId)
-    } else {
-      // 重置专业筛选
-      filters.major = 'all'
-      majors.value = []
+      loadUsersFromAPI()
     }
-    // 重新加载用户数据
-    currentPage.value = 1
-    loadUsersFromAPI()
   }
 )
 

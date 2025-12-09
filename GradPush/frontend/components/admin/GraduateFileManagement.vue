@@ -147,10 +147,12 @@
 import { ref, onMounted, computed } from 'vue'
 import { useToastStore } from '../../stores/toast'
 import { useFilesStore } from '../../stores/files'
+import { useAuthStore } from '../../stores/auth'
 import api from '../../utils/api'
 
 const toastStore = useToastStore()
 const filesStore = useFilesStore()
+const authStore = useAuthStore()
 
 // 文件相关状态
 const fileInput = ref(null)
@@ -384,6 +386,13 @@ const loadFaculties = async () => {
 onMounted(async () => {
   await loadFaculties()
   await loadFiles()
+  
+  // 设置默认学院为当前用户的学院
+  const adminFacultyId = authStore.user?.faculty_id || authStore.user?.facultyId
+  if (adminFacultyId) {
+    selectedFacultyId.value = adminFacultyId
+    selectedFacultyFilter.value = adminFacultyId
+  }
 })
 </script>
 

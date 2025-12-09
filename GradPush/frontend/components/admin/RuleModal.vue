@@ -212,6 +212,7 @@
 <script setup>
 import { ref, computed, reactive, watch, onMounted, onUnmounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { useAuthStore } from '../../stores/auth'
 
 // 属性
 const props = defineProps({
@@ -236,6 +237,9 @@ const props = defineProps({
 
 // 事件
 const emit = defineEmits(['close', 'save'])
+
+// 认证存储
+const authStore = useAuthStore()
 
 // 表单数据
 const ruleForm = reactive({
@@ -505,6 +509,9 @@ watch(() => props.editingRule, (newRule) => {
     }
   } else {
     // 重置表单
+    // 获取管理员所在学院ID
+    const adminFacultyId = authStore.user?.faculty_id || authStore.user?.facultyId
+    
     Object.assign(ruleForm, {
       name: '',
       type: '',
@@ -512,7 +519,7 @@ watch(() => props.editingRule, (newRule) => {
       research_type: '',
       max_score: null,
       max_count: null,
-      faculty_id: '',
+      faculty_id: adminFacultyId || '',
       score: 0,
       calculation_formula: null,
       status: 'active',

@@ -17,7 +17,7 @@
       </div>
       <div class="filter-group">
         <span class="filter-label">学院:</span>
-        <select v-model="filters.faculty" @change="handleFacultyChange">
+        <select v-model="filters.faculty" @change="handleFacultyChange" :disabled="authStore.user?.faculty_id||authStore.user?.facultyId">
           <option value="all">全部</option>
           <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
             {{ faculty.name }}
@@ -51,7 +51,7 @@
         </select>
       </div>
       <div class="filter-group">
-        <span class="filter-label">规则:</span>
+        <span class="filter-label">学院规则:</span>
         <select v-model="filters.rule" @change="filterApplications">
           <option value="all">全部规则</option>
           <option v-for="rule in availableRules" :key="rule.id" :value="rule.id">
@@ -260,8 +260,11 @@ const handleDepartmentChange = async () => {
 
 // 清空筛选条件
 const clearFilters = async () => {
+  // 保存当前学院选择
+  const currentFaculty = filters.value.faculty
+  
   filters.value = {
-    faculty: 'all',
+    faculty: currentFaculty, // 保持当前学院选择不变
     department: 'all',
     major: 'all',
     type: 'all',
@@ -275,8 +278,8 @@ const clearFilters = async () => {
   pagination.value.currentPage = 1
   // 重新加载所有数据
   await Promise.all([
-    loadDepartments(),
-    loadMajors()
+    loadDepartments(filters.value.faculty), // 根据当前学院加载系
+    loadMajors(filters.value.department) // 根据当前系加载专业
   ])
   // 重新加载申请数据
   await applicationsStore.fetchApplications()
@@ -352,12 +355,10 @@ const closeReviewModal = () => {
 // 生命周期
 onMounted(async () => {
   try {
-    // 先获取学院
+    // 先获取学院，学院加载完成后会自动加载对应系
     await loadFaculties()
-    // 然后根据默认学院加载系（默认显示所有系）
-    await loadDepartments()
-    // 最后根据默认系加载专业（默认显示所有专业）
-    await loadMajors()
+    // 根据当前系加载专业
+    await loadMajors(filters.value.department)
     // 并行获取其他数据
     await Promise.all([
       loadPendingApplications(),
@@ -415,13 +416,24 @@ const loadFaculties = async () => {
     // 获取所有学院
     const response = await api.getFaculties()
     faculties.value = response.faculties || []
+    
+    // 将老师所在的学院设置为默认选中值
+    const teacherFacultyId = authStore.user?.faculty_id || authStore.user?.facultyId
+    if (teacherFacultyId) {
+      filters.value.faculty = teacherFacultyId
+      // 根据默认学院加载系
+      await loadDepartments(filters.value.faculty)
+    } else {
+      // 如果没有默认学院，加载所有系
+      await loadDepartments()
+    }
   } catch (error) {
     console.error('获取学院列表失败:', error)
     faculties.value = []
   }
 }
 
-// 从后端获取专业（根据系ID）
+// 从后端获取专业（根据系ID或学院ID）
 const loadMajors = async (departmentId = null) => {
   try {
     loadingMajors.value = true
@@ -429,6 +441,9 @@ const loadMajors = async (departmentId = null) => {
     if (departmentId && departmentId !== 'all') {
       // 根据系ID获取专业
       response = await api.getMajorsByDepartment(departmentId)
+    } else if (filters.value.faculty && filters.value.faculty !== 'all') {
+      // 根据学院ID获取专业
+      response = await api.getMajorsAdmin('', filters.value.faculty)
     } else {
       // 获取所有专业
       response = await api.getMajors()
@@ -450,7 +465,10 @@ const loadMajors = async (departmentId = null) => {
 // 从后端获取规则列表
 const fetchRules = async () => {
   try {
-    const response = await api.getRules()
+    // 获取教师所在学院ID
+    const teacherFacultyId = authStore.user?.faculty_id || authStore.user?.facultyId
+    // 使用正确的API方法获取规则，传递学院ID
+    const response = await api.getRules({ faculty_id: teacherFacultyId })
     availableRules.value = response.rules.filter(rule => rule.status === 'active')
   } catch (error) {
     console.error('获取规则列表失败:', error)

@@ -196,7 +196,10 @@ const availableRules = ref([])
 // 从后端获取规则列表
 const fetchRules = async () => {
   try {
-    const response = await api.getRules()
+    // 获取学生所在学院ID
+    const studentFacultyId = authStore.user?.faculty_id || authStore.user?.facultyId
+    // 使用正确的API方法获取规则，传递学院ID
+    const response = await api.getRules({ faculty_id: studentFacultyId })
     availableRules.value = response.rules.filter(rule => rule.status === 'active')
   } catch (error) {
     console.error('获取规则列表失败:', error)

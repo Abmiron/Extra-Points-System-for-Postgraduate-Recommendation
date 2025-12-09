@@ -12,7 +12,7 @@
     <!-- 筛选区域 -->
     <div class="filters">
       <div class="filter-group">
-        <span class="filter-label">学院:</span>
+        <span class="filter-label">当前学院:</span>
         <select class="form-control" v-model="filters.facultyId">
           <option value="all">全部</option>
           <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
@@ -162,9 +162,11 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import api from '../../utils/api'
 import { useToastStore } from '../../stores/toast'
+import { useAuthStore } from '../../stores/auth'
 import RuleModal from './RuleModal.vue'
 
 const toastStore = useToastStore()
+const authStore = useAuthStore()
 
 const showAddRuleModal = ref(false)
 const editingRule = ref(null)
@@ -223,9 +225,9 @@ const paginatedRules = computed(() => {
 })
 
 // 初始化数据
-onMounted(() => {
+onMounted(async () => {
+  await fetchFaculties()
   fetchRules()
-  fetchFaculties()
 })
 
 // 获取规则列表
@@ -250,6 +252,12 @@ async function fetchFaculties() {
   try {
     const response = await api.getFacultiesAdmin()
     faculties.value = Array.isArray(response.faculties) ? response.faculties : []
+    
+    // 将管理员所在的学院设置为默认选中值
+    const adminFacultyId = authStore.user?.faculty_id || authStore.user?.facultyId
+    if (adminFacultyId) {
+      filters.facultyId = adminFacultyId
+    }
   } catch (error) {
     console.error('获取学院列表失败:', error)
     toastStore.addToast({ message: '获取学院列表失败', type: 'error' })
@@ -477,12 +485,14 @@ async function batchDeleteRules() {
 
 // 重置筛选
 function resetFilters() {
+  // 保存当前学院选择
+  const currentFaculty = filters.facultyId
   Object.assign(filters, {
     name: '',
     type: 'all',
     subType: 'all',
     status: 'all',
-    facultyId: 'all'
+    facultyId: currentFaculty
   })
 }
 </script>

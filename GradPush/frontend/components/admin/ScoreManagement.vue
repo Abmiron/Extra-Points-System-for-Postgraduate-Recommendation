@@ -79,10 +79,10 @@
             <input type="text" class="form-control small" v-model="filters.studentId" placeholder="输入学生学号">
           </div>
           <div class="filter-group">
-            <span class="filter-label">学院:</span>
+            <span class="filter-label">当前学院:</span>
             <select class="form-control small" v-model="filters.faculty" @change="onFacultyChange">
-              <option value="">全部学院</option>
-              <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.name">
+              <option value="all">全部学院</option>
+              <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
                 {{ faculty.name }}
               </option>
             </select>
@@ -90,8 +90,8 @@
           <div class="filter-group">
             <span class="filter-label">系:</span>
             <select class="form-control small" v-model="filters.department" @change="onDepartmentChange">
-              <option value="">全部系</option>
-              <option v-for="dept in departments" :key="dept.id" :value="dept.name">
+              <option value="all">全部系</option>
+              <option v-for="dept in departments" :key="dept.id" :value="dept.id">
                 {{ dept.name }}
               </option>
             </select>
@@ -99,8 +99,8 @@
           <div class="filter-group">
             <span class="filter-label">专业:</span>
             <select class="form-control small" v-model="filters.major">
-              <option value="">全部专业</option>
-              <option v-for="major in majors" :key="major.id" :value="major.name">
+              <option value="all">全部专业</option>
+              <option v-for="major in majors" :key="major.id" :value="major.id">
                 {{ major.name }}
               </option>
             </select>
@@ -346,6 +346,7 @@
 import api from '../../utils/api'
 import { useApplicationsStore } from '../../stores/applications'
 import { useToastStore } from '../../stores/toast'
+import { useAuthStore } from '../../stores/auth'
 
 export default {
   name: 'ScoreManagement',
@@ -353,7 +354,8 @@ export default {
   },
   setup() {
     return {
-      toastStore: useToastStore()
+      toastStore: useToastStore(),
+      authStore: useAuthStore()
     }
   },
   data() {
@@ -369,9 +371,9 @@ export default {
       filters: {
         studentId: '',
         studentName: '',
-        faculty: '',
-        department: '',
-        major: ''
+        faculty: 'all',
+        department: 'all',
+        major: 'all'
       },
       // 下拉选项数据
       faculties: [],
@@ -429,11 +431,29 @@ export default {
       let filtered = this.scores.filter(student => {
         const idMatch = !this.filters.studentId || student.student_id.includes(this.filters.studentId)
         const nameMatch = !this.filters.studentName || student.student_name.includes(this.filters.studentName)
-        const facultyMatch = !this.filters.faculty || student.faculty.includes(this.filters.faculty)
-        const departmentMatch = !this.filters.department || student.department.includes(this.filters.department)
-        const majorMatch = !this.filters.major || student.major.includes(this.filters.major)
+        
+        // 学院筛选：如果选择了"全部学院"或没有选择，匹配所有；否则根据学院ID查找对应的名称进行匹配
+        const facultyMatch = () => {
+          if (this.filters.faculty === 'all' || !this.filters.faculty) return true
+          const selectedFaculty = this.faculties.find(f => f.id === this.filters.faculty)
+          return selectedFaculty ? student.faculty === selectedFaculty.name : true
+        }
+        
+        // 系筛选：如果选择了"全部系"或没有选择，匹配所有；否则根据系ID查找对应的名称进行匹配
+        const departmentMatch = () => {
+          if (this.filters.department === 'all' || !this.filters.department) return true
+          const selectedDepartment = this.departments.find(d => d.id === this.filters.department)
+          return selectedDepartment ? student.department === selectedDepartment.name : true
+        }
+        
+        // 专业筛选：如果选择了"全部专业"或没有选择，匹配所有；否则根据专业ID查找对应的名称进行匹配
+        const majorMatch = () => {
+          if (this.filters.major === 'all' || !this.filters.major) return true
+          const selectedMajor = this.majors.find(m => m.id === this.filters.major)
+          return selectedMajor ? student.major === selectedMajor.name : true
+        }
 
-        return idMatch && nameMatch && facultyMatch && departmentMatch && majorMatch
+        return idMatch && nameMatch && facultyMatch() && departmentMatch() && majorMatch()
       })
 
       return filtered
@@ -528,23 +548,118 @@ export default {
       }
     },
 
+    // 加载学院数据
+    async loadFaculties() {
+      try {
+        // 使用管理员版本的API获取学院列表
+        const response = await api.getFacultiesAdmin()
+        // 从response.faculties字段提取数组
+        this.faculties = response.faculties || []
+        
+        // 将管理员所在的学院设置为默认选中值
+        const adminFacultyId = this.authStore.user?.faculty_id || this.authStore.user?.facultyId
+        if (adminFacultyId) {
+          this.filters.faculty = adminFacultyId
+          // 根据默认学院加载系
+          await this.loadDepartments(adminFacultyId)
+        } else {
+          // 如果没有默认学院，加载所有系
+          await this.loadDepartments()
+        }
+      } catch (error) {
+        console.error('获取学院列表失败:', error)
+        this.faculties = []
+      }
+    },
+
+    // 加载系数据
+    async loadDepartments(facultyId = '') {
+      try {
+        // 获取管理员所在学院ID（用于权限控制）
+        const adminFacultyId = this.authStore.user?.faculty_id || this.authStore.user?.facultyId
+        let response
+        
+        // 优先使用传入的学院ID（用户选择），但确保在管理员权限范围内
+        if (facultyId && facultyId !== 'all') {
+          // 根据选择的学院ID获取系
+          response = await api.getDepartmentsAdmin(facultyId)
+        } else if (adminFacultyId && adminFacultyId !== 'all') {
+          // 如果用户没有选择学院，但管理员有学院权限，使用管理员学院ID
+          response = await api.getDepartmentsAdmin(adminFacultyId)
+        } else {
+          // 获取所有系（仅当管理员没有学院ID时）
+          response = await api.getDepartmentsAdmin()
+        }
+        
+        // 设置系数据
+        this.departments = response.departments || []
+        
+        // 重置专业选择和列表
+        this.filters.major = 'all'
+        
+        // 如果有系被选中但不在新列表中，重置系选择
+        if (this.filters.department !== 'all' && !this.departments.some(dept => dept.id === this.filters.department)) {
+          this.filters.department = 'all'
+        }
+        
+        // 根据当前选择的系加载专业
+        if (this.filters.department !== 'all') {
+          await this.loadMajors(this.filters.department)
+        } else {
+          // 加载当前学院下所有系的专业
+          await this.loadMajors()
+        }
+      } catch (error) {
+        console.error('获取系列表失败:', error)
+        this.departments = []
+        this.majors = []
+      }
+    },
+
+    // 加载专业数据
+    async loadMajors(departmentId = '') {
+      try {
+        // 获取管理员所在学院ID（用于权限控制）
+        const adminFacultyId = this.authStore.user?.faculty_id || this.authStore.user?.facultyId
+        let response
+        
+        // 如果指定了系ID，获取该系下的专业
+        if (departmentId && departmentId !== 'all') {
+          response = await api.getMajorsAdmin(departmentId)
+        } else {
+          // 获取所有专业（考虑管理员学院权限）
+          if (this.filters.faculty && this.filters.faculty !== 'all') {
+            // 如果选择了学院但没有选择系，获取该学院下的所有专业
+            response = await api.getMajorsAdmin('', this.filters.faculty)
+          } else if (adminFacultyId && adminFacultyId !== 'all') {
+            // 如果没有选择学院，但管理员有学院权限，获取该学院下的所有专业
+            response = await api.getMajorsAdmin('', adminFacultyId)
+          } else {
+            // 没有学院限制，获取所有专业
+            response = await api.getMajorsAdmin()
+          }
+        }
+        
+        // 设置专业数据
+        this.majors = response.majors || []
+        
+        // 如果有专业被选中但不在新列表中，重置专业选择
+        if (this.filters.major !== 'all' && !this.majors.some(major => major.id === this.filters.major)) {
+          this.filters.major = 'all'
+        }
+      } catch (error) {
+        console.error('获取专业列表失败:', error)
+        this.majors = []
+      }
+    },
+
     // 加载下拉选项数据
     async loadDropdownData() {
       try {
-        // 加载学院列表
-        const facultiesResponse = await api.getFacultiesAdmin()
-        this.faculties = facultiesResponse.faculties || []
-
-        // 加载所有系列表（后续可以优化为按学院筛选）
-        const departmentsResponse = await api.getDepartmentsAdmin()
-        this.departments = departmentsResponse.departments || []
-
-        // 加载所有专业列表（后续可以优化为按系筛选）
-        const majorsResponse = await api.getMajorsAdmin()
-        this.majors = majorsResponse.majors || []
-
-        // 加载所有学院的成绩设置
-        await this.loadAllFacultyScoreSettings()
+        await Promise.all([
+          this.loadFaculties(),
+          this.loadAllFacultyScoreSettings()
+        ])
       } catch (error) {
         console.error('加载下拉数据失败:', error)
       }
@@ -581,44 +696,49 @@ export default {
     },
 
     // 学院选择变化时的处理
-    onFacultyChange() {
-      this.filters.department = ''
-      this.filters.major = ''
+    async onFacultyChange() {
+      this.filters.department = 'all'
+      this.filters.major = 'all'
 
-      // 如果选择了学院，根据学院筛选系列表
-      if (this.filters.faculty) {
-        const selectedFaculty = this.faculties.find(f => f.name === this.filters.faculty)
-        if (selectedFaculty) {
-          // 可以在这里添加根据学院筛选系的逻辑
-          // 目前暂时显示所有系
-        }
+      // 根据选择的学院加载系
+      if (this.filters.faculty && this.filters.faculty !== 'all') {
+        await this.loadDepartments(this.filters.faculty)
+      } else {
+        await this.loadDepartments()
       }
 
       this.currentPage = 1
     },
 
     // 系选择变化时的处理
-    onDepartmentChange() {
-      this.filters.major = ''
+    async onDepartmentChange() {
+      this.filters.major = 'all'
 
-      // 如果选择了系，根据系筛选专业列表
-      if (this.filters.department) {
-        // 可以在这里添加根据系筛选专业的逻辑
-        // 目前暂时显示所有专业
+      // 根据选择的系加载专业
+      if (this.filters.department && this.filters.department !== 'all') {
+        await this.loadMajors(this.filters.department)
+      } else {
+        await this.loadMajors()
       }
 
       this.currentPage = 1
     },
 
     // 重置筛选条件
-    resetFilter() {
+    async resetFilter() {
+      // 保存当前学院选择
+      const currentFaculty = this.filters.faculty
+      
       Object.assign(this.filters, {
         studentId: '',
         studentName: '',
-        faculty: '',
-        department: '',
-        major: ''
+        faculty: currentFaculty, // 保持当前学院选择不变
+        department: 'all',
+        major: 'all'
       })
+      
+      // 重置后重新加载数据
+      await this.loadDepartments(currentFaculty)
       this.currentPage = 1
     },
 

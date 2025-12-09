@@ -36,6 +36,7 @@ def get_rules():
     status = request.args.get("status")
     level = request.args.get("level")
     name = request.args.get("name")
+    faculty_id = request.args.get("faculty_id")
 
     # 构建查询
     query = Rule.query
@@ -48,6 +49,9 @@ def get_rules():
 
     if name:
         query = query.filter(Rule.name.like(f"%{name}%"))
+
+    if faculty_id:
+        query = query.filter((Rule.faculty_id == faculty_id) | (Rule.faculty_id.is_(None)))
 
     rules = query.all()
     rule_list = []
