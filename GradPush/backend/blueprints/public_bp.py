@@ -10,7 +10,7 @@ from extensions import db
 from urllib.parse import quote
 
 # 创建公开接口蓝图
-public_bp = Blueprint("public", __name__, url_prefix="/public")
+public_bp = Blueprint("public", __name__)
 
 
 # 公开接口：获取系统信息

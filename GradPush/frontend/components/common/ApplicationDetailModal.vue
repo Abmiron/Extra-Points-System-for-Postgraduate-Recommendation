@@ -276,6 +276,7 @@
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
 import { useToastStore } from '../../stores/toast'
+import { getFileFullUrl } from '../../utils/api'
 
 const toastStore = useToastStore()
 
@@ -853,19 +854,14 @@ const getFileUrl = (file) => {
   let fileUrl = null
 
   if (file.path) {
-    // 检查path是否已经是完整URL
-    if (file.path.startsWith('http://') || file.path.startsWith('https://')) {
-      fileUrl = file.path
-    } else {
-      // 添加服务器地址前缀
-      fileUrl = `${file.path}`
-    }
+    // 使用getFileFullUrl函数确保路径正确
+    fileUrl = getFileFullUrl(file.path)
   } else if (file.id) {
     // 如果没有path字段，使用文件ID构建URL
-    fileUrl = `/uploads/files/${file.id}`
+    fileUrl = getFileFullUrl(`/uploads/files/${file.id}`)
   } else if (file.name) {
     // 作为最后的回退，使用文件名构建URL
-    fileUrl = `/uploads/files/${file.name}`
+    fileUrl = getFileFullUrl(`/uploads/files/${file.name}`)
   }
 
   return fileUrl || ''
@@ -981,15 +977,11 @@ const downloadFile = async (file) => {
 
     // 构建完整的下载URL
     if (file.id) {
-      downloadUrl = `/uploads/files/${file.id}`
+      downloadUrl = getFileFullUrl(`/uploads/files/${file.id}`)
     } else if (file.path) {
-      if (file.path.startsWith('http://') || file.path.startsWith('https://')) {
-        downloadUrl = file.path
-      } else {
-        downloadUrl = `${file.path}`
-      }
+      downloadUrl = getFileFullUrl(file.path)
     } else if (file.name) {
-      downloadUrl = `/uploads/files/${file.name}`
+      downloadUrl = getFileFullUrl(`/uploads/files/${file.name}`)
     }
 
     if (!downloadUrl) {

@@ -199,9 +199,9 @@ def uploaded_file(filename):
 @app.route("/uploads/avatars/<path:filename>")
 def uploaded_avatar(filename):
     response = send_from_directory(app.config["AVATAR_FOLDER"], filename)
-    # 使用安全的方式处理中文文件名
+    # 头像图片直接显示在浏览器中
     response.headers["Content-Disposition"] = (
-        f"attachment; filename*=UTF-8" "={quote(filename)}"
+        f"inline; filename*=UTF-8" "={quote(filename)}"
     )
     return response
 
@@ -209,12 +209,13 @@ def uploaded_avatar(filename):
 # 配置普通文件的静态服务
 @app.route("/uploads/files/<path:filename>")
 def uploaded_app_file(filename):
-    # 检查文件是否是PDF
+    # 检查文件是否是图片或PDF
+    is_image = filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp'))
     is_pdf = filename.lower().endswith(".pdf")
     response = send_from_directory(app.config["FILE_FOLDER"], filename)
 
-    if is_pdf:
-        # PDF文件设置为内联显示
+    if is_image or is_pdf:
+        # 图片和PDF文件设置为内联显示
         response.headers["Content-Disposition"] = (
             f"inline; filename*=UTF-8" "={quote(filename)}"
         )
@@ -229,17 +230,21 @@ def uploaded_app_file(filename):
 
 
 # 注册蓝图
-app.register_blueprint(public_bp)  # 公开接口蓝图，无需认证
-app.register_blueprint(auth_bp)
-app.register_blueprint(user_bp)
-app.register_blueprint(application_bp)
-app.register_blueprint(rule_bp)
+app.register_blueprint(public_bp, url_prefix='/api/public')  # 公开接口蓝图，无需认证
+app.register_blueprint(auth_bp, url_prefix='/api')
+app.register_blueprint(user_bp, url_prefix='/api')
+app.register_blueprint(application_bp)  # application_bp 已经在定义时设置了 url_prefix='/api'
+app.register_blueprint(rule_bp, url_prefix='/api')
 app.register_blueprint(admin_bp)
-app.register_blueprint(score_bp)
-app.register_blueprint(organization_bp)  # 组织信息管理蓝图
-app.register_blueprint(system_bp)  # 系统维护蓝图
-app.register_blueprint(main_bp)
+app.register_blueprint(score_bp)  # score_bp 已经在定义时设置了 url_prefix='/api'
+app.register_blueprint(organization_bp)  # organization_bp 已经在定义时设置了 url_prefix='/api/organization'
+app.register_blueprint(system_bp)  # system_bp 已经在定义时设置了 url_prefix='/api/system'
+app.register_blueprint(main_bp, url_prefix='/api')
 
+# 根路径路由，解决直接访问/返回404的问题
+@app.route("/", methods=["GET"])
+def root_index():
+    return jsonify({"status": "ok", "message": "Server is running", "api_base_url": "/api"}), 200
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001, use_reloader=False)
+    app.run(debug=False, port=5001, use_reloader=False)

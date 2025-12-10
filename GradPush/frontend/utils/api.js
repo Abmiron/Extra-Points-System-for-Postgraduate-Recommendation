@@ -1,13 +1,60 @@
 // API请求工具
 import { useAuthStore } from '../stores/auth';
 
-// 使用相对路径或根据当前环境自动获取API地址
-// 生产环境会自动使用当前域名
-const API_BASE_URL = '/api';
+// 配置API基础URL和文件服务URL
+// 如果部署在不同服务器上，需要修改为实际的后端服务器地址
+const API_BASE_URL = '/api'; // 使用相对路径，确保与前端部署在同一个域名下
+const FILE_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001'; // 从环境变量获取后端URL，默认使用localhost:5001
+
+// 辅助函数：构建URL，确保不会出现双斜杠
+function buildUrl(baseUrl, endpoint) {
+  // 确保baseUrl末尾没有斜杠
+  const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+  // 确保endpoint开头没有斜杠
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+  // 如果baseUrl为空，直接返回endpoint，否则拼接
+  return cleanBaseUrl ? `${cleanBaseUrl}/${cleanEndpoint}` : `/${cleanEndpoint}`;
+}
+
+// 获取文件完整URL
+export function getFileFullUrl(fileUrl) {
+  if (!fileUrl) return '';
+  
+  // 移除URL中可能包含的完整前端服务器地址（包括协议、域名/IP和端口）
+  // 例如：http://112.124.59.110:5173/uploads/... -> /uploads/...
+  // 或者：http://localhost:5173/uploads/... -> /uploads/...
+  // 或者：http://example.com:5173/uploads/... -> /uploads/...
+  let cleanedUrl = fileUrl
+    .replace(/^https?:\/\/[^\/]+/, '')
+    .trim();
+  
+  // 如果已经是完整URL，则直接返回
+  if (cleanedUrl.startsWith('http://') || cleanedUrl.startsWith('https://')) {
+    return cleanedUrl;
+  }
+  
+  // 如果URL以/uploads/开头，添加FILE_BASE_URL前缀
+  if (cleanedUrl.startsWith('/uploads/')) {
+    return `${FILE_BASE_URL}${cleanedUrl}`;
+  }
+  
+  // 如果以uploads/开头（缺少前导斜杠），添加FILE_BASE_URL和斜杠
+  if (cleanedUrl.startsWith('uploads/')) {
+    return `${FILE_BASE_URL}/${cleanedUrl}`;
+  }
+  
+  // 如果URL以/开头，添加FILE_BASE_URL前缀
+  if (cleanedUrl.startsWith('/')) {
+    return `${FILE_BASE_URL}${cleanedUrl}`;
+  }
+  
+  // 其他情况，添加FILE_BASE_URL前缀和斜杠
+  return `${FILE_BASE_URL}/${cleanedUrl}`;
+}
 
 // 封装API请求（支持JSON和文件上传）
 async function apiRequest(endpoint, method = 'GET', data = null, token = null, timeout = 10000) {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const url = buildUrl(API_BASE_URL, endpoint);
   
   const options = {
     method,
@@ -171,39 +218,8 @@ export default {
   
   // 公开的系统信息接口（无需登录权限）
   getPublicSystemInfo: async () => {
-    // 使用相对路径，避免硬编码URL
-    const url = '/public/system-info';
-    
-    // 添加超时控制
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
-    
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        signal: controller.signal // 添加信号
-      });
-      clearTimeout(timeoutId); // 请求成功，清除超时定时器
-      
-      const responseData = await response.json();
-      if (!response.ok) {
-        throw new Error(responseData.message || '请求失败');
-      }
-      return responseData;
-    } catch (error) {
-      clearTimeout(timeoutId); // 清除超时定时器
-      
-      // 处理超时错误
-      if (error.name === 'AbortError') {
-        throw new Error('请求超时，请检查网络连接或稍后重试');
-      }
-      
-      console.error('获取系统信息失败:', error);
-      throw error;
-    }
+    // 使用apiRequest工具函数，自动添加/api前缀
+    return apiRequest('/public/system-info', 'GET');
   },
   
   // 学院管理相关API

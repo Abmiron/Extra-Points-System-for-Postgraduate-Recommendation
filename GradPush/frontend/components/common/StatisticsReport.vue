@@ -559,7 +559,7 @@ const handleMajorChange = () => {
 // 清空所有筛选条件
 const clearFilters = () => {
   // 保留学院选择不变（如果是用户自己的学院）
-  // filters.faculty = ''
+   filters.faculty = ''
   filters.department = ''
   filters.major = ''
   // 保持当前学年不变

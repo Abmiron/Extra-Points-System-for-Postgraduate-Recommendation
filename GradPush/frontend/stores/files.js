@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import api from '../utils/api'
+import api, { getFileFullUrl } from '../utils/api'
 
 export const useFilesStore = defineStore('files', () => {
   // 文件列表状态
@@ -53,7 +53,7 @@ export const useFilesStore = defineStore('files', () => {
 
   // 下载文件
   const downloadFile = (file) => {
-    window.location.href = `${file.file_url}`
+    window.location.href = getFileFullUrl(file.file_url)
   }
 
   // 删除文件

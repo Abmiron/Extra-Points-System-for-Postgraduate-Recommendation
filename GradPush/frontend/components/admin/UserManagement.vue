@@ -226,7 +226,7 @@
                 <label class="form-label">系</label>
                 <select class="form-control" v-model="userForm.departmentId" required @change="handleDepartmentChange">
                   <option value="">请选择系</option>
-                  <option v-for="department in departments" :key="department.id" :value="department.id">
+                  <option v-for="department in formDepartments" :key="department.id" :value="department.id">
                     {{ department.name }}
                   </option>
                 </select>
@@ -235,7 +235,7 @@
                 <label class="form-label">专业</label>
                 <select class="form-control" v-model="userForm.majorId" required>
                   <option value="">请选择专业</option>
-                  <option v-for="major in majors" :key="major.id" :value="major.id">
+                  <option v-for="major in formMajors" :key="major.id" :value="major.id">
                     {{ major.name }}
                   </option>
                 </select>
@@ -434,8 +434,10 @@ const userForm = reactive({
 
 // 下拉选项数据
 const faculties = ref([])
-const departments = ref([])
-const majors = ref([])
+const departments = ref([]) // 用于筛选区域
+const formDepartments = ref([]) // 用于表单
+const majors = ref([]) // 用于筛选区域的专业数组
+const formMajors = ref([]) // 用于添加/编辑表单的专业数组
 const loadingOptions = ref(false)
 
 // 从后端API获取用户数据
@@ -484,7 +486,7 @@ const loadFaculties = async () => {
   }
 }
 
-// 加载系列表
+// 加载筛选区域的系列表
 const loadDepartments = async (facultyId = null) => {
   try {
     loadingOptions.value = true
@@ -520,15 +522,48 @@ const loadDepartments = async (facultyId = null) => {
   }
 }
 
-// 加载专业列表
-const loadMajors = async (departmentId = null) => {
+// 加载表单的系列表
+const loadFormDepartments = async (facultyId = null) => {
   try {
     loadingOptions.value = true
-    let response
-    if (departmentId && departmentId !== 'all') {
-      // 根据系ID获取专业
-      response = await api.getMajorsAdmin(departmentId)
+    // 强制使用管理员所在的学院ID，确保只显示当前学院的系
+    const adminFacultyId = authStore.user?.faculty_id || authStore.user?.facultyId
+    if (adminFacultyId && adminFacultyId !== 'all') {
+      // 根据管理员学院ID获取系
+      const response = await api.getDepartmentsAdmin(adminFacultyId)
+      formDepartments.value = response.departments || []
+    } else if (facultyId && facultyId !== 'all') {
+      // 作为备选，使用传入的学院ID获取系
+      const response = await api.getDepartmentsAdmin(facultyId)
+      formDepartments.value = response.departments || []
     } else {
+      // 获取所有系（仅当管理员没有学院ID时）
+      const response = await api.getDepartmentsAdmin()
+      formDepartments.value = response.departments || []
+    }
+
+    // 如果有系被选中但不在新列表中，重置系选择
+    if (userForm.departmentId && !formDepartments.value.some(dept => dept.id === userForm.departmentId)) {
+      userForm.departmentId = ''
+    }
+  } catch (error) {
+    console.error('获取表单系列表失败:', error)
+    formDepartments.value = []
+  } finally {
+    loadingOptions.value = false
+  }
+}
+
+// 加载专业列表（用于筛选区域）
+const loadMajors = async (departmentId = null) => {
+    try {
+      loadingOptions.value = true
+      let response
+      if (departmentId && departmentId !== 'all') {
+        // 根据系ID获取专业
+        response = await api.getMajorsAdmin(departmentId)
+        majors.value = response.majors || []
+      } else {
       // 强制使用管理员所在的学院ID，确保只显示当前学院的专业
       const adminFacultyId = authStore.user?.faculty_id || authStore.user?.facultyId
       if (adminFacultyId && adminFacultyId !== 'all') {
@@ -553,6 +588,7 @@ const loadMajors = async (departmentId = null) => {
     if (filters.major !== 'all' && !majors.value.some(major => major.id === filters.major)) {
       filters.major = 'all'
     }
+
   } catch (error) {
     console.error('获取专业列表失败:', error)
     majors.value = []
@@ -575,24 +611,69 @@ const handleRoleChange = () => {
 const handleFacultyChange = () => {
   // 只有当角色不是管理员时才加载系和专业
   if (userForm.role !== 'admin' && userForm.facultyId) {
-    loadDepartments(userForm.facultyId)
+    loadFormDepartments(userForm.facultyId)
   } else if (userForm.role !== 'admin') {
     // 重置系和专业选择（仅非管理员角色）
     userForm.departmentId = ''
     userForm.majorId = ''
-    departments.value = []
-    majors.value = []
+    formDepartments.value = []
+    formMajors.value = []
   }
 }
 
-// 系变化处理
+// 表单系变化处理
 const handleDepartmentChange = () => {
   if (userForm.departmentId) {
-    loadMajors(userForm.departmentId)
+    loadFormMajors(userForm.departmentId)
   } else {
     // 重置专业选择
     userForm.majorId = ''
-    majors.value = []
+    formMajors.value = []
+  }
+}
+
+// 加载表单专业列表
+const loadFormMajors = async (departmentId = null) => {
+  try {
+    loadingOptions.value = true
+    let response
+    if (departmentId && departmentId !== 'all') {
+      // 根据系ID获取专业
+      response = await api.getMajorsAdmin(departmentId)
+      formMajors.value = response.majors || []
+      // 检查表单中的专业选择是否有效
+      if (userForm.majorId && !formMajors.value.some(major => major.id === userForm.majorId)) {
+        userForm.majorId = ''
+      }
+    } else {
+      // 强制使用管理员所在的学院ID，确保只显示当前学院的专业
+      const adminFacultyId = authStore.user?.faculty_id || authStore.user?.facultyId
+      if (adminFacultyId && adminFacultyId !== 'all') {
+        // 根据管理员学院ID获取所有该学院下的专业
+        // 遍历当前系列表，获取所有系的专业
+        const allDepartmentIds = departments.value.map(dept => dept.id)
+        const promises = allDepartmentIds.map(deptId => api.getMajorsAdmin(deptId).catch(() => ({ majors: [] })))
+        const results = await Promise.all(promises)
+        // 合并所有专业数据
+        const allMajors = results.flatMap(result => result.majors || [])
+        // 去重
+        const uniqueMajors = Array.from(new Map(allMajors.map(major => [major.id, major])).values())
+        formMajors.value = uniqueMajors
+      } else {
+        // 获取所有专业（仅当管理员没有学院ID时）
+        response = await api.getMajorsAdmin()
+        formMajors.value = response.majors || []
+      }
+      // 检查表单中的专业选择是否有效
+      if (userForm.majorId && !formMajors.value.some(major => major.id === userForm.majorId)) {
+        userForm.majorId = ''
+      }
+    }
+  } catch (error) {
+    console.error('获取表单专业列表失败:', error)
+    formMajors.value = []
+  } finally {
+    loadingOptions.value = false
   }
 }
 
@@ -826,19 +907,19 @@ const editUser = (user) => {
   showAddUserModal.value = true
 
   // 如果是学生用户，异步加载对应的系和专业列表
-  if (userForm.role === 'student' && userForm.facultyId) {
-    // 使用异步函数加载数据，不阻塞模态框显示
-    const loadUserRelatedData = async () => {
-      try {
-        await loadDepartments(userForm.facultyId)
-        if (userForm.departmentId) {
-          await loadMajors(userForm.departmentId)
+      if (userForm.role === 'student' && userForm.facultyId) {
+        // 使用异步函数加载数据，不阻塞模态框显示
+        const loadUserRelatedData = async () => {
+          try {
+            await loadFormDepartments(userForm.facultyId)
+            if (userForm.departmentId) {
+              await loadFormMajors(userForm.departmentId)
+            }
+          } catch (error) {
+            console.error('加载用户相关数据失败:', error)
+          }
         }
-      } catch (error) {
-        console.error('加载用户相关数据失败:', error)
-      }
-    }
-    loadUserRelatedData()
+        loadUserRelatedData()
   }
 }
 

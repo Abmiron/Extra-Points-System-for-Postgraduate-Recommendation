@@ -12,15 +12,15 @@
 """
 
 from flask import Blueprint, request, jsonify, make_response, session
-from models import User, Faculty, Department, Major, Student
-from datetime import datetime
+from models import User, Faculty, Department, Major, Student, Captcha
+from datetime import datetime, timedelta
 import pytz
 from extensions import db
 from utils.captcha import generate_captcha
 import base64
 from io import BytesIO
 import uuid
-import threading
+import hashlib
 
 # 引入组织信息管理模块
 from .organization_bp import (
@@ -31,28 +31,15 @@ from .organization_bp import (
     get_majors_by_faculty_id,
 )
 
-# 用于存储验证码的临时字典
-# 使用token作为键，值为(验证码文本, 生成时间)的元组
-captcha_store = {}
-# 用于线程安全的锁
-captcha_lock = threading.Lock()
-
 
 # 清理过期验证码的函数
 def cleanup_expired_captchas():
-    current_time = datetime.now()
-    with captcha_lock:
-        # 找出所有过期的验证码（超过5分钟）
-        expired_tokens = [
-            token
-            for token, (_, timestamp) in captcha_store.items()
-            if (current_time - timestamp).total_seconds() > 300
-        ]
-        # 删除过期的验证码
-        for token in expired_tokens:
-            del captcha_store[token]
-        if expired_tokens:
-            print(f"清理了{len(expired_tokens)}个过期验证码")
+    current_time = datetime.now(pytz.timezone("Asia/Shanghai"))
+    # 从数据库中删除所有过期的验证码
+    expired_count = Captcha.query.filter(Captcha.expired_at < current_time).delete()
+    db.session.commit()
+    if expired_count:
+        print(f"清理了{expired_count}个过期验证码")
 
 
 # 验证码验证函数
@@ -70,36 +57,35 @@ def validate_captcha(captcha_input, captcha_token):
     # 验证验证码
     print(f"验证验证码: 输入={captcha_input.lower()}, token={captcha_token}")
 
+    # 从数据库中获取验证码
+    captcha = Captcha.query.filter_by(token=captcha_token).first()
+    
     # 检查验证码是否存在
-    with captcha_lock:
-        if captcha_token not in captcha_store:
-            print("验证码验证失败：未找到对应的验证码")
-            return False, "验证码不存在，请刷新页面获取验证码"
+    if not captcha:
+        print("验证码验证失败：未找到对应的验证码")
+        return False, "验证码不存在，请刷新页面获取验证码"
 
-        # 获取存储的验证码和时间
-        stored_captcha, captcha_timestamp = captcha_store[captcha_token]
-
-    # 检查验证码是否过期（5分钟过期）
-    current_time = datetime.now()
-    time_diff = (current_time - captcha_timestamp).total_seconds()
-    print(f"验证码时间差: {time_diff}秒")
-
-    # 设置5分钟（300秒）的过期时间
-    if time_diff > 300:
+    # 检查验证码是否过期
+    current_time = datetime.now(pytz.timezone("Asia/Shanghai"))
+    # 确保比较的是同类型的datetime对象（带时区的）
+    # 如果expired_at不带时区，将其转换为带上海时区的datetime
+    if captcha.expired_at.tzinfo is None:
+        captcha.expired_at = pytz.timezone("Asia/Shanghai").localize(captcha.expired_at)
+    if current_time > captcha.expired_at:
         print("验证码已过期")
         # 清除过期的验证码
-        with captcha_lock:
-            captcha_store.pop(captcha_token, None)
+        db.session.delete(captcha)
+        db.session.commit()
         return False, "验证码已过期，请刷新页面获取新验证码"
 
     # 验证验证码内容
-    if captcha_input.lower() != stored_captcha:
-        print(f"验证码不匹配：输入={captcha_input.lower()}, 存储={stored_captcha}")
+    if captcha_input.lower() != captcha.text:
+        print(f"验证码不匹配：输入={captcha_input.lower()}, 存储={captcha.text}")
         return False, "验证码错误"
 
     # 验证成功后删除验证码
-    with captcha_lock:
-        captcha_store.pop(captcha_token, None)
+    db.session.delete(captcha)
+    db.session.commit()
 
     print("验证码验证成功")
     return True, None
@@ -115,6 +101,46 @@ def get_captcha():
     try:
         # 先清理过期的验证码
         cleanup_expired_captchas()
+        
+        # 生成用户标识符（IP地址 + User-Agent的哈希值）
+        ip_address = request.remote_addr
+        user_agent = request.headers.get('User-Agent', '')
+        # 创建用户标识符（哈希处理以保护隐私）
+        user_identifier = hashlib.sha256((ip_address + user_agent).encode()).hexdigest()[:32]
+        
+        # 删除同一用户的旧验证码
+        current_time = datetime.now(pytz.timezone("Asia/Shanghai"))
+        old_captchas = Captcha.query.filter(
+            Captcha.user_identifier == user_identifier,
+            Captcha.expired_at > current_time
+        ).all()
+        
+        if old_captchas:
+            for captcha in old_captchas:
+                db.session.delete(captcha)
+            db.session.commit()
+            print(f"删除了用户{user_identifier[:8]}的{len(old_captchas)}个旧验证码")
+        
+        # 限制未过期验证码的数量，生产环境最多保留1000个
+        # 可根据实际并发量调整此值
+        MAX_ACTIVE_CAPTCHAS = 1000
+        
+        # 获取当前未过期的验证码数量
+        active_captchas = Captcha.query.filter(Captcha.expired_at > current_time).count()
+        
+        # 如果未过期验证码数量超过限制，删除最旧的验证码
+        if active_captchas >= MAX_ACTIVE_CAPTCHAS:
+            # 查询最旧的未过期验证码
+            oldest_captchas = Captcha.query.filter(Captcha.expired_at > current_time) \
+                                           .order_by(Captcha.created_at.asc()) \
+                                           .limit(active_captchas - (MAX_ACTIVE_CAPTCHAS - 1)) \
+                                           .all()
+            
+            # 删除这些旧验证码
+            for captcha in oldest_captchas:
+                db.session.delete(captcha)
+            db.session.commit()
+            print(f"删除了{len(oldest_captchas)}个旧验证码，保持未过期验证码数量在合理范围内")
 
         # 生成验证码图片和文本
         # 注意：根据captcha.py的实现，返回值顺序是 (captcha_image, captcha_text)
@@ -125,10 +151,20 @@ def get_captcha():
         # 生成唯一的token
         captcha_token = str(uuid.uuid4())
 
-        # 存储验证码和生成时间
-        with captcha_lock:
-            captcha_store[captcha_token] = (captcha_text.lower(), datetime.now())
-        print(f"验证码已存储，token: {captcha_token}")
+        # 计算过期时间（5分钟后）
+        current_time = datetime.now(pytz.timezone("Asia/Shanghai"))
+        expired_time = current_time + timedelta(minutes=5)
+
+        # 创建验证码记录并存储到数据库
+        captcha = Captcha(
+            token=captcha_token,
+            text=captcha_text.lower(),
+            expired_at=expired_time,
+            user_identifier=user_identifier
+        )
+        db.session.add(captcha)
+        db.session.commit()
+        print(f"验证码已存储到数据库，token: {captcha_token}, 用户标识符: {user_identifier[:8]}")
 
         # 将图片转换为base64字符串
         buffer = BytesIO()

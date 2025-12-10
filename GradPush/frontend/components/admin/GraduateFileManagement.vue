@@ -149,6 +149,7 @@ import { useToastStore } from '../../stores/toast'
 import { useFilesStore } from '../../stores/files'
 import { useAuthStore } from '../../stores/auth'
 import api from '../../utils/api'
+import { getFileFullUrl } from '../../utils/api'
 
 const toastStore = useToastStore()
 const filesStore = useFilesStore()
@@ -255,9 +256,19 @@ const loadFiles = async () => {
 }
 
 // 下载文件
-const downloadFile = (file) => {
-  // 使用正确的后端地址构建下载链接
-  window.location.href = `${file.file_url}`
+const downloadFile = async (file) => {
+  try {
+    // 构建下载URL
+    const downloadUrl = getFileFullUrl(file.file_url)
+    
+    // 直接跳转到下载链接，让浏览器处理下载
+    window.location.href = downloadUrl
+    
+    toastStore.success('文件下载开始')
+  } catch (error) {
+    console.error('下载文件失败:', error)
+    toastStore.error('下载文件失败')
+  }
 }
 
 // 删除文件

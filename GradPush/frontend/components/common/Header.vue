@@ -58,9 +58,9 @@
                 </td>
                 <td style="padding: 6px; text-align: center;">
                   <div class="action-buttons">
-                    <a :href="file.file_url || ''" class="btn-outline btn small-btn" style="text-decoration: none;" title="下载">
-                      <font-awesome-icon :icon="['fas', 'download']" />
-                    </a>
+                    <a :href="getFileFullUrl(file.file_url) || ''" class="btn-outline btn small-btn" style="text-decoration: none;" title="下载">
+          <font-awesome-icon :icon="['fas', 'download']" />
+        </a>
                   </div>
                 </td>
               </tr>
@@ -78,6 +78,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { useToastStore } from '../../stores/toast'
 import { useFilesStore } from '../../stores/files'
+import { getFileFullUrl } from '../../utils/api'
 const toastStore = useToastStore()
 
 const props = defineProps({

@@ -258,6 +258,7 @@ import { ref, reactive, watch, onMounted, computed } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useApplicationsStore } from '../../stores/applications'
 import { useToastStore } from '../../stores/toast'
+import { getFileFullUrl } from '../../utils/api'
 
 // 接收编辑申请ID
 const props = defineProps(['editApplicationId'])
@@ -1325,16 +1326,11 @@ const previewFile = (file) => {
     let url = null
     if (isImageFile(file.name)) {
       if (file.path) {
-        // 检查path是否已经是完整URL
-        if (file.path.startsWith('http://') || file.path.startsWith('https://')) {
-          url = file.path
-        } else {
-          // 添加服务器地址前缀
-          url = `${file.path}`
-        }
+        // 使用getFileFullUrl函数确保路径正确
+        url = getFileFullUrl(file.path)
       } else if (file.id) {
         // 如果没有path字段，使用文件ID构建URL
-        url = `/uploads/files/${file.id}`
+        url = getFileFullUrl(`/uploads/files/${file.id}`)
       }
     }
     previewFileData.value = {

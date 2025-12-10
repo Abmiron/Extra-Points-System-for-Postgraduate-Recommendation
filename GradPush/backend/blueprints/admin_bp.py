@@ -185,7 +185,7 @@ def delete_faculty(faculty_id):
             )
             db.session.delete(student.user)
         # 删除学生记录
-        current_app.logger.info(f"删除学生: {student.id} ({student.name})")
+        current_app.logger.info(f"删除学生: {student.id} ({student.student_name})")
         db.session.delete(student)
 
     # 3. 处理直接关联到学院的非学生用户（如教师、管理员）
@@ -612,8 +612,10 @@ def update_system_settings():
     size_settings = ["singleFileSizeLimit", "totalFileSizeLimit", "avatarFileSizeLimit"]
     for setting in size_settings:
         if setting in data:
-            old_value = getattr(settings, setting)
-            setattr(settings, setting, data[setting])
+            # 将驼峰式命名转换为下划线命名
+            model_attr = setting.replace('FileSize', '_file_size').replace('Limit', '_limit').lower()
+            old_value = getattr(settings, model_attr)
+            setattr(settings, model_attr, data[setting])
             current_app.logger.info(f"更新{setting}: {old_value} -> {data[setting]}")
 
     if "allowedFileTypes" in data:

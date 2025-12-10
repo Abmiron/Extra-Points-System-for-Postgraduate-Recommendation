@@ -28,7 +28,7 @@ from psycopg2.extensions import cursor
 
 # 导入数据库备份模块
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from db_backup import backup_database_python, restore_database_python
+from db_backup import backup_database_python, restore_database_python, restore_uploads
 
 
 # 获取数据库连接
@@ -376,6 +376,8 @@ def restore_database():
     从备份文件恢复数据库
     """
     try:
+        import os
+        
         current_app.logger.info("管理员开始执行数据库恢复操作")
 
         data = request.get_json()
@@ -506,14 +508,6 @@ def upload_and_restore():
             # 恢复uploads目录
             if temp_zip_path and os.path.exists(temp_zip_path):
                 current_app.logger.info(f"开始恢复uploads目录: {temp_zip_path}")
-                import sys
-                import os
-
-                sys.path.append(
-                    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                )
-                from db_backup import restore_uploads
-
                 restore_uploads(temp_zip_path)
                 current_app.logger.info("uploads目录恢复完成")
 

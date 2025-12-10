@@ -18,7 +18,7 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backend.config import Config
+from config import Config
 
 
 def get_db_connection():
@@ -26,31 +26,21 @@ def get_db_connection():
     获取数据库连接
     """
     try:
-        # 解析数据库连接字符串
+        # 直接使用完整的连接字符串，避免解析过程中的编码问题
         db_uri = Config.SQLALCHEMY_DATABASE_URI
-
-        # 提取协议部分后的内容
-        db_uri = db_uri.split("://")[1]
-
-        # 分离用户密码与主机数据库部分
-        user_pass_part, host_db_part = db_uri.split("@")
-
-        # 解析用户名和密码
-        user = user_pass_part.split(":")[0]
-        password = user_pass_part.split(":")[1]
-
-        # 解析主机、端口和数据库名
-        host_port_part, dbname = host_db_part.split("/")
-        host = host_port_part.split(":")[0]
-        port = host_port_part.split(":")[1]
-
-        conn = psycopg2.connect(
-            dbname=dbname, user=user, password=password, host=host, port=port
-        )
+        
+        # 确保连接字符串是字符串类型
+        if isinstance(db_uri, bytes):
+            db_uri = db_uri.decode('utf-8', errors='replace')
+        
+        # 直接传递完整的连接字符串给psycopg2.connect()
+        conn = psycopg2.connect(db_uri)
         return conn
     except Exception as e:
         print(f"连接数据库失败: {e}")
-        sys.exit(1)
+        print(f"数据库连接字符串: {Config.SQLALCHEMY_DATABASE_URI}")
+        # 抛出异常而不是退出程序，让调用者处理错误
+        raise e
 
 
 def backup_uploads(backup_file):
@@ -112,7 +102,7 @@ def backup_database_python(backup_file):
 
     try:
         # 创建备份文件
-        with open(backup_file, "w", encoding="utf-8") as f:
+        with open(backup_file, "wb") as f:
             # 第一步：备份所有序列
             print("备份序列...")
             # 使用pg_get_serial_sequence获取所有表的序列
@@ -150,19 +140,19 @@ def backup_database_python(backup_file):
 
             if sequences:
                 for seq_name in sequences:
-                    f.write(f"-- 序列: {seq_name}")
+                    f.write(f"-- 序列: {seq_name}".encode('utf-8'))
 
                     try:
                         # 简化序列备份：只备份当前值，不尝试重建完整序列定义
-                        f.write(f"\n-- 序列当前值: {seq_name}\n")
+                        f.write(f"\n-- 序列当前值: {seq_name}\n".encode('utf-8'))
 
                         # 设置序列当前值
                         cursor.execute(f"SELECT last_value FROM {seq_name}")
                         last_val = cursor.fetchone()[0]
-                        f.write(f"SELECT setval('{seq_name}', {last_val}, true);\n\n")
+                        f.write(f"SELECT setval('{seq_name}', {last_val}, true);\n\n".encode('utf-8'))
                     except Exception as e:
                         print(f"  备份序列 {seq_name} 失败: {e}")
-                        f.write(f"-- 备份序列 {seq_name} 失败\n\n")
+                        f.write(f"-- 备份序列 {seq_name} 失败\n\n".encode('utf-8'))
 
             # 第二步：备份所有表结构和数据
             cursor.execute(
@@ -175,7 +165,7 @@ def backup_database_python(backup_file):
                 print(f"备份表: {table_name}")
 
                 # 备份表结构
-                f.write(f"-- 表结构: {table_name}\n")
+                f.write(f"-- 表结构: {table_name}\n".encode('utf-8'))
 
                 # 处理保留关键字表名
                 quoted_table_name = (
@@ -193,7 +183,7 @@ def backup_database_python(backup_file):
                     else table_name
                 )
 
-                f.write(f"CREATE TABLE {quoted_table_name} (\n")
+                f.write(f"CREATE TABLE {quoted_table_name} (\n".encode('utf-8'))
 
                 # 获取表列信息
                 cursor.execute(
@@ -238,15 +228,15 @@ def backup_database_python(backup_file):
                         f"    PRIMARY KEY ({', '.join(pkey_cols)})"
                     )
 
-                f.write(",\n".join(column_definitions))
-                f.write("\n);\n\n")
+                f.write(",\n".join(column_definitions).encode('utf-8'))
+                f.write("\n);\n\n".encode('utf-8'))
 
                 # 备份表数据
                 cursor.execute(f"SELECT * FROM {quoted_table_name}")
                 rows = cursor.fetchall()
 
                 if rows:
-                    f.write(f"-- 表数据: {table_name}\n")
+                    f.write(f"-- 表数据: {table_name}\n".encode('utf-8'))
                     column_names = [desc[0] for desc in cursor.description]
 
                     for row in rows:
@@ -256,22 +246,32 @@ def backup_database_python(backup_file):
                             if value is None:
                                 values.append("NULL")
                             elif isinstance(value, str):
-                                # 转义单引号
-                                values.append(f"'{value.replace("'", "''")}'")
+                                # 转义单引号并确保UTF-8编码
+                                try:
+                                    # 尝试直接编码为UTF-8
+                                    escaped_value = value.replace("'", "''")
+                                    values.append(f"'{escaped_value}'".encode('utf-8'))
+                                except UnicodeEncodeError:
+                                    # 如果编码失败，尝试使用utf-8-sig或忽略错误
+                                    escaped_value = value.replace("'", "''")
+                                    values.append(f"'{escaped_value}'".encode('utf-8', 'ignore'))
                             elif isinstance(value, datetime):
-                                values.append(f"'{value}'")
+                                values.append(f"'{value}'".encode('utf-8'))
                             elif isinstance(value, list):
                                 # 处理列表/数组类型，转换为JSON格式
                                 import json
 
                                 json_str = json.dumps(value)
-                                values.append(f"'{json_str.replace("'", "''")}'")
+                                values.append(f"'{json_str.replace("'", "''")}'".encode('utf-8'))
                             else:
-                                values.append(str(value))
+                                values.append(str(value).encode('utf-8'))
 
-                        insert_sql = f"INSERT INTO {quoted_table_name} ({', '.join(column_names)}) VALUES ({', '.join(values)});\n"
+                        # 构建插入语句
+                        col_names_str = ', '.join(column_names).encode('utf-8')
+                        values_str = b', '.join(values)
+                        insert_sql = b"INSERT INTO " + quoted_table_name.encode('utf-8') + b" (" + col_names_str + b") VALUES (" + values_str + b");\n"
                         f.write(insert_sql)
-                    f.write("\n")
+                    f.write("\n".encode('utf-8'))
 
         print(f"数据库备份完成: {backup_file}")
 
@@ -426,10 +426,24 @@ def restore_database(backup_file):
     # 先恢复uploads目录
     restore_uploads(backup_file)
 
-    # 使用psycopg2执行psql命令
+    # 解析数据库连接字符串
+    db_uri = Config.SQLALCHEMY_DATABASE_URI
+    db_uri = db_uri.split("://")[1]
+    user_pass_part, host_db_part = db_uri.split("@")
+    user = user_pass_part.split(":")[0]
+    password = user_pass_part.split(":")[1]
+    host_port_part, dbname = host_db_part.split("/")
+    host = host_port_part.split(":")[0]
+    port = host_port_part.split(":")[1]
+
+    # 使用配置文件中的数据库连接信息执行psql命令
+    # 设置PGPASSWORD环境变量避免密码提示
+    os.environ["PGPASSWORD"] = password
     result = os.system(
-        f"psql -h localhost -p 5432 -U postgres -d gradpush -f {backup_file} --password"
+        f"psql -h {host} -p {port} -U {user} -d {dbname} -f {backup_file}"
     )
+    # 删除环境变量
+    del os.environ["PGPASSWORD"]
 
     if result != 0:
         raise Exception(f"psql命令执行失败，退出码: {result}")
@@ -604,6 +618,27 @@ def restore_database_python(backup_file):
         # 处理保留关键字：将CREATE TABLE user替换为CREATE TABLE "user"
         sql_content = sql_content.replace("CREATE TABLE user", 'CREATE TABLE "user"')
         sql_content = sql_content.replace("INSERT INTO user", 'INSERT INTO "user"')
+        
+        # 检查SQL内容中是否包含captcha表的创建和插入语句
+        if "CREATE TABLE captcha" not in sql_content:
+            print("警告：备份文件中未找到captcha表的创建语句，将自动添加")
+            # 添加captcha表的创建语句
+            captcha_table_sql = """
+-- 创建captcha表
+CREATE TABLE IF NOT EXISTS captcha (
+    id SERIAL PRIMARY KEY,
+    token VARCHAR(36) UNIQUE NOT NULL,
+    text VARCHAR(10) NOT NULL,
+    user_identifier VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    expired_at TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+-- 添加索引
+CREATE INDEX IF NOT EXISTS idx_captcha_token ON captcha(token);
+CREATE INDEX IF NOT EXISTS idx_captcha_user_identifier ON captcha(user_identifier);
+            """
+            sql_content = captcha_table_sql + "\n" + sql_content
 
         # 预处理：将Python字典语法转换为PostgreSQL的JSON语法
         import re
@@ -692,8 +727,13 @@ def restore_database_python(backup_file):
             if "INSERT INTO" in line and (
                 "application" in line or "rule_calculation" in line
             ):
-                fixed_line = fix_json_fields(line)
-                line = fixed_line
+                try:
+                    fixed_line = fix_json_fields(line)
+                    line = fixed_line
+                except Exception as e:
+                    print(f"修复JSON字段失败: {e}")
+                    print(f"失败的行: {line}")
+                    print("跳过该行的JSON字段修复，继续执行恢复...")
             fixed_lines.append(line)
         sql_content = "\n".join(fixed_lines)
 
@@ -743,7 +783,11 @@ def restore_database_python(backup_file):
                     if command.startswith(
                         "INSERT INTO application"
                     ) or command.startswith("INSERT INTO rule_calculation"):
-                        command = fix_json_fields(command)
+                        try:
+                            command = fix_json_fields(command)
+                        except Exception as e:
+                            print(f"修复JSON字段失败: {e}")
+                            print("跳过该命令的JSON字段修复，继续执行恢复...")
                     cursor.execute(command)
                     if command.startswith("CREATE TABLE"):
                         table_creation_count += 1
@@ -774,6 +818,10 @@ def restore_database_python(backup_file):
             print(
                 f"分段执行完成，共执行 {command_count} 条命令，成功 {command_count - error_count} 条，失败 {error_count} 条"
             )
+            
+            # 如果有错误发生，返回False
+            if error_count > 0:
+                return False
 
         print(f"数据库恢复完成")
 

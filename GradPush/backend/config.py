@@ -12,11 +12,13 @@ from sqlalchemy.engine.url import URL
 
 class Config:
     # 数据库配置
-    SQLALCHEMY_DATABASE_URI = "postgresql://postgres:123456@localhost:5432/gradpush"
+    # 使用URL对象构建数据库连接字符串，避免编码问题
+    SQLALCHEMY_DATABASE_URI = "postgresql://postgres:123456@localhost:5432/gradpush" # 本地数据库
+    # SQLALCHEMY_DATABASE_URI = "postgresql://gradpush:0701284612yekYEK@localhost:5432/gradpush" # 服务器数据库
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # 密钥配置
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-key"
+    SECRET_KEY = os.environ.get("SECRET_KEY") or "0701284612yekYEK"
 
     # 文件上传配置
     UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")

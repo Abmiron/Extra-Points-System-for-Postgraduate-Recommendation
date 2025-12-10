@@ -101,7 +101,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useToastStore } from '../../stores/toast'
-import api from '../../utils/api'
+import api, { getFileFullUrl } from '../../utils/api'
 
 const authStore = useAuthStore()
 const toastStore = useToastStore()
@@ -120,16 +120,9 @@ const profile = reactive({})
 // 计算头像URL，确保包含完整的服务器地址前缀
 const getAvatarUrl = computed(() => {
   if (!profile.avatar || profile.avatar === '') return '/images/default-avatar.jpg'
-  // 检查头像URL是否已经包含完整路径
-  if (profile.avatar.startsWith('http://') || profile.avatar.startsWith('https://')) {
-    return profile.avatar
-  }
-  // 检查是否是本地默认头像路径
-  if (profile.avatar.startsWith('/images/')) {
-    return profile.avatar
-  }
-  // 添加服务器地址前缀
-  return `${profile.avatar}`
+
+  // 使用getFileFullUrl函数处理头像URL
+  return getFileFullUrl(profile.avatar)
 })
 
 const passwordForm = reactive({

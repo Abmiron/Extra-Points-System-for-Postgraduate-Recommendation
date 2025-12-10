@@ -376,6 +376,20 @@ class FacultyScoreSettings(db.Model):
         return f"<FacultyScoreSettings faculty_id={self.faculty_id}>"
 
 
+# 验证码模型
+class Captcha(db.Model):
+    __tablename__ = 'captcha'
+    id = db.Column(db.Integer, primary_key=True)
+    token = db.Column(db.String(36), unique=True, nullable=False, index=True)  # UUID格式的token
+    text = db.Column(db.String(10), nullable=False)  # 验证码文本
+    user_identifier = db.Column(db.String(100), nullable=False, index=True)  # 用户标识符（IP+User-Agent的哈希值）
+    created_at = db.Column(db.DateTime, default=get_current_time)  # 创建时间
+    expired_at = db.Column(db.DateTime, nullable=False)  # 过期时间
+    
+    def __repr__(self):
+        return f"<Captcha {self.token[:8]}>"
+
+
 # 系统设置模型
 class SystemSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
