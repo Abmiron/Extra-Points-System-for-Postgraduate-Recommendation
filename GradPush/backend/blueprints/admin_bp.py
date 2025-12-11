@@ -150,7 +150,7 @@ def delete_faculty(faculty_id):
         current_app.logger.info(f"删除学院成绩比例设置: {score_settings.id}")
         db.session.delete(score_settings)
 
-    # 级联删除：学院 -> 系 -> 专业 -> 学生 -> 用户
+    # 级联删除：推免申请 ->学生 ->用户 ->专业 ->系 -> 学院
 
     # 1. 先获取所有关联的申请记录
     applications = Application.query.filter_by(faculty_id=faculty.id).all()

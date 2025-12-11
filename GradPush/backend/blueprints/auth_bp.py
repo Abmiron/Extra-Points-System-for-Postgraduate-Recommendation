@@ -322,10 +322,10 @@ def register():
     if len(data["name"]) < 2 or len(data["name"]) > 20:
         return jsonify({"message": "姓名长度必须在2-20个字符之间"}), 400
 
-    # 获取关联ID
-    faculty_id = data.get("facultyId")
-    department_id = data.get("departmentId")
-    major_id = data.get("majorId")
+    # 获取关联ID并将空字符串转换为None
+    faculty_id = data.get("facultyId") or None
+    department_id = data.get("departmentId") or None
+    major_id = data.get("majorId") or None
 
     # 学生角色验证
     if data["role"] == "student":
