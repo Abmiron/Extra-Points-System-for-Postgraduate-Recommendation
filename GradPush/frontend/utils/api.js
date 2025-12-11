@@ -4,7 +4,8 @@ import { useAuthStore } from '../stores/auth';
 // 配置API基础URL和文件服务URL
 // 如果部署在不同服务器上，需要修改为实际的后端服务器地址
 const API_BASE_URL = '/api'; // 使用相对路径，确保与前端部署在同一个域名下
-const FILE_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001'; // 从环境变量获取后端URL，默认使用localhost:5001
+// 使用相对路径，确保通过Nginx代理正确访问后端文件服务
+const FILE_BASE_URL = '';
 
 // 辅助函数：构建URL，确保不会出现双斜杠
 function buildUrl(baseUrl, endpoint) {

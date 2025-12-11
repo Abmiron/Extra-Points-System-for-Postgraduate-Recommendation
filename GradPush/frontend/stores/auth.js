@@ -47,13 +47,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   const updateUserInfo = async (userData) => {
   try {
-    // 使用updateProfile替代updateUserInfo
-    const response = await api.updateProfile(userData)
-    // 确保提取正确的用户数据结构
-    const updatedUser = response.user || response
-    user.value = updatedUser
-    localStorage.setItem('user', JSON.stringify(updatedUser))
-    return updatedUser
+    // 直接使用传入的userData更新用户信息
+    user.value = userData
+    localStorage.setItem('user', JSON.stringify(userData))
+    return userData
   } catch (error) {
     console.error('更新用户信息失败:', error)
     throw error

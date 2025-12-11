@@ -377,6 +377,10 @@ def create_application():
         # 使用转换后的数据
         data = transformed_data
 
+        # 验证项目名称长度
+        if "project_name" in data and (len(data["project_name"]) < 2 or len(data["project_name"]) > 50):
+            return jsonify({"error": "项目名称长度必须在2-50个字符之间"}), 400
+
         # 处理文件上传
         files = []
         if request.files:
@@ -616,6 +620,10 @@ def update_application(id):
         # 使用转换后的数据
         data = transformed_data
 
+        # 验证项目名称长度
+        if "project_name" in data and (len(data["project_name"]) < 2 or len(data["project_name"]) > 50):
+            return jsonify({"error": "项目名称长度必须在2-50个字符之间"}), 400
+
         # 处理文件上传
         files = []
         if request.files:
@@ -813,8 +821,10 @@ def review_application(id):
     # 获取教师输入的分数，如果有的话优先使用
     teacher_final_score = data.get("finalScore")
 
-    # 如果教师输入了分数，直接使用教师输入的分数
+    # 如果教师输入了分数，先验证分数范围，确保在0-100之间
     if teacher_final_score is not None:
+        # 确保分数在0-100之间
+        teacher_final_score = max(0, min(100, teacher_final_score))
         application.final_score = teacher_final_score
     elif (
         application.application_type == "academic" and application.status == "approved"

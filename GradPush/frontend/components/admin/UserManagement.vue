@@ -201,13 +201,13 @@
               <div class="form-group">
                 <label class="form-label">{{ userForm.role === 'student' ? '学号' : (userForm.role === 'teacher' ? '工号' :
                   '管理员账号') }}</label>
-                <input type="text" class="form-control" v-model="userForm.username" required>
+                <input type="text" class="form-control" v-model="userForm.username" placeholder="5-20个字符" required minlength="5" maxlength="20">
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">姓名</label>
-                <input type="text" class="form-control" v-model="userForm.name" required>
+                <input type="text" class="form-control" v-model="userForm.name" placeholder="2-20个字符" required minlength="2" maxlength="20">
               </div>
               <div class="form-group">
                 <label class="form-label">学院</label>

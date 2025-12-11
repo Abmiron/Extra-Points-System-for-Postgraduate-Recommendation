@@ -315,6 +315,13 @@ def register():
     if existing_user:
         return jsonify({"message": "用户名已存在"}), 400
 
+    # 验证用户名和姓名长度
+    if len(data["username"]) < 5 or len(data["username"]) > 20:
+        return jsonify({"message": "用户名长度必须在5-20个字符之间"}), 400
+    
+    if len(data["name"]) < 2 or len(data["name"]) > 20:
+        return jsonify({"message": "姓名长度必须在2-20个字符之间"}), 400
+
     # 获取关联ID
     faculty_id = data.get("facultyId")
     department_id = data.get("departmentId")

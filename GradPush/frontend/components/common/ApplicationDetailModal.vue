@@ -167,7 +167,7 @@
             </div>
             <div class="compact-group full-width">
               <label>加分依据</label>
-              <p>{{ application.description || '无' }}</p>
+              <p class="description-text">{{ application.description || '无' }}</p>
             </div>
             <div class="compact-group full-width" v-if="application.reviewComment && !isReviewMode">
               <label>审核意见</label>
@@ -190,7 +190,7 @@
             </div>
             <div class="compact-group full-width">
               <label>规则说明</label>
-              <p>{{ application.rule.description || '无' }}</p>
+              <p class="description-text">{{ application.rule.description || '无' }}</p>
             </div>
             <!-- 动态系数信息 -->
             <div class="compact-row" v-if="Object.keys(dynamicCoefficients).length > 0">
@@ -331,6 +331,14 @@ watch(() => props.application, (newApplication) => {
     reviewData.rejectComment = newApplication.status === 'rejected' ? newApplication.reviewComment || '' : ''
   }
 }, { deep: true })
+
+// 监听finalScore变化，确保值在0-100之间
+watch(() => reviewData.finalScore, (newScore) => {
+  if (newScore !== null && newScore !== undefined) {
+    // 确保分数在0-100之间
+    reviewData.finalScore = Math.max(0, Math.min(100, parseFloat(newScore) || 0))
+  }
+})
 
 // 图片相关状态
 const currentImageIndex = ref(0)
@@ -1025,8 +1033,11 @@ const onPreviewImageLoad = () => {
 
 // 审核操作
 const approveApplication = () => {
+  // 确保最终分数在有效范围内
+  const validScore = Math.max(0, Math.min(100, parseFloat(reviewData.finalScore) || 0))
   emit('approve', {
     ...reviewData,
+    finalScore: validScore,
     applicationId: props.application.id
   })
 }
@@ -1415,6 +1426,14 @@ const rejectApplication = () => {
   font-size: 14px;
   line-height: 1.5;
   white-space: pre-wrap;
+}
+
+.description-text {
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .file-list {

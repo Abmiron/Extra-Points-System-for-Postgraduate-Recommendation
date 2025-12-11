@@ -16,8 +16,8 @@
               <label class="form-label">项目全称</label>
               <div class="input-with-icon">
                 <font-awesome-icon :icon="['fas', 'signature']" />
-                <input type="text" class="form-control" v-model="formData.projectName" placeholder="请输入项目全称"
-                  maxlength="100" required>
+                <input type="text" class="form-control" v-model="formData.projectName" placeholder="请输入项目全称 (2-30个字符)"
+                  minlength="2" maxlength="30" required>
               </div>
             </div>
             <div class="form-group">
@@ -183,7 +183,7 @@
             <div class="upload-text">
               <p>点击或拖拽文件到此处上传</p>
               <p class="help-text">支持 {{ fileUploadSettings.allowedFileTypesString }} 格式，单个文件不超过{{
-                fileUploadSettings.singleFileSizeLimit }}MB，总文件大小不超过{{ fileUploadSettings.totalFileSizeLimit }}MB</p>
+                fileUploadSettings.singleFileSizeLimit }}MB，总文件大小不超过{{ fileUploadSettings.totalFileSizeLimit }}MB，最多可上传{{ fileUploadSettings.maxFileCount }}个文件</p>
             </div>
           </div>
           <input type="file" ref="fileInput" style="display: none;"
@@ -341,6 +341,7 @@ const fileUploadSettings = computed(() => ({
   allowedFileTypesString: systemSettings.value?.allowedFileTypesString || '.pdf, .jpg, .jpeg, .png, .webp',
   singleFileSizeLimit: systemSettings.value?.singleFileSizeLimit || 10,
   totalFileSizeLimit: systemSettings.value?.totalFileSizeLimit || 50,
+  maxFileCount: systemSettings.value?.maxFileCount || 10,
   allowedFileTypes: systemSettings.value?.allowedFileTypes || ['.pdf', '.jpg', '.jpeg', '.png', '.webp']
 }))
 
@@ -1248,6 +1249,19 @@ const triggerFileInput = () => {
 
 // 验证并添加文件的通用函数
 const validateAndAddFiles = (files) => {
+  // 检查总文件数量
+  const totalLimit = systemSettings.value?.totalFileSizeLimit || 50
+  const singleLimit = systemSettings.value?.singleFileSizeLimit || 10
+  const allowedTypes = systemSettings.value?.allowedFileTypes || ['.pdf', '.jpg', '.jpeg', '.png']
+  const fileCountLimit = systemSettings.value?.maxFileCount || 10 // 默认限制10个文件
+  
+  // 检查总文件数量
+  const totalFiles = formData.files.length + files.length
+  if (totalFiles > fileCountLimit) {
+    toastStore.error(`文件数量超过${fileCountLimit}个限制`)
+    return false
+  }
+  
   // 检查总文件大小
   const currentTotalSize = formData.files.reduce((total, file) => total + file.size, 0)
   let totalSizeWithNewFiles = currentTotalSize
@@ -1255,10 +1269,6 @@ const validateAndAddFiles = (files) => {
   for (const file of files) {
     totalSizeWithNewFiles += file.size
   }
-
-  const totalLimit = systemSettings.value?.totalFileSizeLimit || 50
-  const singleLimit = systemSettings.value?.singleFileSizeLimit || 10
-  const allowedTypes = systemSettings.value?.allowedFileTypes || ['.pdf', '.jpg', '.jpeg', '.png']
 
   if (totalSizeWithNewFiles > totalLimit * 1024 * 1024) {
     toastStore.error(`总文件大小超过${totalLimit}MB限制`)
@@ -1470,6 +1480,16 @@ const prepareApplicationData = (status) => {
 // 修改保存草稿和提交表单的验证逻辑
 const saveDraft = async () => {
   try {
+    // 验证项目名称长度
+    if (!formData.projectName || formData.projectName.length < 2) {
+      toastStore.error('项目全称不能少于2个字符')
+      return
+    }
+    if (formData.projectName.length > 30) {
+      toastStore.error('项目全称不能超过30个字符')
+      return
+    }
+    
     // 获取学生信息和applicationType
     const { studentName, studentId, facultyId, departmentId, majorId } = getStudentInfo()
     const applicationType = getApplicationType()
@@ -1513,6 +1533,14 @@ const submitForm = async () => {
   // 通用验证
   if (!formData.projectName) {
     toastStore.error('请输入项目全称')
+    return
+  }
+  if (formData.projectName.length < 2) {
+    toastStore.error('项目全称不能少于2个字符')
+    return
+  }
+  if (formData.projectName.length > 30) {
+    toastStore.error('项目全称不能超过30个字符')
     return
   }
 
@@ -1559,6 +1587,16 @@ const submitForm = async () => {
   // 通用字段验证
   if (!formData.selfScore) {
     toastStore.error('请输入自评加分')
+    return
+  }
+  const selfScoreValue = parseFloat(formData.selfScore)
+  if (isNaN(selfScoreValue) || selfScoreValue < 0) {
+    toastStore.error('自评加分必须是非负数字')
+    return
+  }
+  
+  if (formData.description.length > 300) {
+    toastStore.error('项目描述不能超过300个字符')
     return
   }
 

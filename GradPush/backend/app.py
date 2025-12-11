@@ -219,7 +219,22 @@ def uploaded_app_file(filename):
         response.headers["Content-Disposition"] = (
             f"inline; filename*=UTF-8" "={quote(filename)}"
         )
-        response.headers["Content-Type"] = "application/pdf"
+        # 根据文件类型设置正确的Content-Type
+        if is_image:
+            # 根据文件扩展名设置对应的图片Content-Type
+            if filename.lower().endswith('.png'):
+                response.headers["Content-Type"] = "image/png"
+            elif filename.lower().endswith('.jpg') or filename.lower().endswith('.jpeg'):
+                response.headers["Content-Type"] = "image/jpeg"
+            elif filename.lower().endswith('.gif'):
+                response.headers["Content-Type"] = "image/gif"
+            elif filename.lower().endswith('.webp'):
+                response.headers["Content-Type"] = "image/webp"
+            else:
+                # 默认图片类型
+                response.headers["Content-Type"] = "image/jpeg"
+        elif is_pdf:
+            response.headers["Content-Type"] = "application/pdf"
     else:
         # 其他文件设置为附件下载
         response.headers["Content-Disposition"] = (

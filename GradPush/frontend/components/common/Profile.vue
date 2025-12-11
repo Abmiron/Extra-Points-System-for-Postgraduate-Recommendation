@@ -99,12 +99,14 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { useToastStore } from '../../stores/toast'
 import api, { getFileFullUrl } from '../../utils/api'
 
 const authStore = useAuthStore()
 const toastStore = useToastStore()
+const router = useRouter()
 
 const isEditing = ref(false)
 const saving = ref(false)
@@ -349,16 +351,18 @@ const changePassword = async () => {
     // 调用API修改密码
     await api.changePassword(passwordData)
 
-    toastStore.success('密码修改成功')
+    toastStore.success('密码修改成功，请重新登录')
 
+    // 关闭弹窗
     closePasswordModal()
 
-    // 清空表单
-    Object.assign(passwordForm, {
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    })
+    // 延迟执行登出操作，确保用户看到成功提示
+    setTimeout(async () => {
+      // 调用登出方法
+      await authStore.logout()
+      // 跳转到登录页面
+      router.push('/login')
+    }, 200)
   } catch (error) {
     console.error('密码修改失败:', error)
     toastStore.error(`密码修改失败: ${error.message || '请稍后重试'}`)

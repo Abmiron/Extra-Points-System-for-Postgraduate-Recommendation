@@ -133,12 +133,12 @@
             <form v-else-if="activeTab === 'register'" class="register-form" @submit.prevent="handleRegister">
               <div class="input-group">
                 <font-awesome-icon :icon="['fas', 'user']" class="input-icon" />
-                <input type="text" v-model="registerForm.username" placeholder="请输入学号/工号" required>
+                <input type="text" v-model="registerForm.username" placeholder="请输入学号/工号 (5-20个字符)" required minlength="5" maxlength="20">
               </div>
 
               <div class="input-group">
                 <font-awesome-icon :icon="['fas', 'user-tag']" class="input-icon" />
-                <input type="text" v-model="registerForm.name" placeholder="请输入姓名" required>
+                <input type="text" v-model="registerForm.name" placeholder="请输入姓名 (2-20个字符)" required minlength="2" maxlength="20">
               </div>
 
               <div class="input-group">
@@ -438,6 +438,16 @@ const isRegisterFormValid = computed(() => {
 
   // 基本字段验证
   if (!username || !name || !password || !confirmPassword || !role || !facultyId) {
+    return false
+  }
+
+  // 用户名长度验证
+  if (username.length < 5 || username.length > 20) {
+    return false
+  }
+
+  // 姓名长度验证
+  if (name.length < 2 || name.length > 20) {
     return false
   }
 
@@ -796,6 +806,18 @@ const handleRegister = async () => {
   }
   if (!captchaToken.value) {
     toastStore.error('验证码已失效，请刷新验证码')
+    return
+  }
+
+  // 用户名长度验证
+  if (registerForm.username.length < 5 || registerForm.username.length > 20) {
+    toastStore.error('学号/工号长度必须在5-20个字符之间')
+    return
+  }
+
+  // 姓名长度验证
+  if (registerForm.name.length < 2 || registerForm.name.length > 20) {
+    toastStore.error('姓名长度必须在2-20个字符之间')
     return
   }
 
