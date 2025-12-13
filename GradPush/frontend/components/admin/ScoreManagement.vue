@@ -656,10 +656,10 @@ export default {
     // 加载下拉选项数据
     async loadDropdownData() {
       try {
-        await Promise.all([
-          this.loadFaculties(),
-          this.loadAllFacultyScoreSettings()
-        ])
+        // 先加载学院列表，确保学院数据可用
+        await this.loadFaculties()
+        // 再加载成绩设置
+        await this.loadAllFacultyScoreSettings()
       } catch (error) {
         console.error('加载下拉数据失败:', error)
       }
@@ -670,17 +670,25 @@ export default {
       try {
         // 调用API获取所有学院的成绩设置
         const response = await api.getFacultyScoreSettings()
-        this.scoreSettings = response.settings || []
+        let existingSettings = response.settings || []
 
-        // 如果没有设置，为所有学院创建默认设置
-        if (this.scoreSettings.length === 0 && this.faculties.length > 0) {
-          this.scoreSettings = this.faculties.map(faculty => ({
-            faculty_id: faculty.id,
-            academic_score_weight: 80,
-            specialty_max_score: 15,
-            performance_max_score: 5
-          }))
-        }
+        // 为所有学院创建成绩设置，已有设置的使用现有设置，没有的创建默认设置
+        this.scoreSettings = this.faculties.map(faculty => {
+          // 查找现有设置
+          const existingSetting = existingSettings.find(setting => setting.faculty_id === faculty.id)
+          if (existingSetting) {
+            // 使用现有设置
+            return existingSetting
+          } else {
+            // 创建默认设置
+            return {
+              faculty_id: faculty.id,
+              academic_score_weight: 80,
+              specialty_max_score: 15,
+              performance_max_score: 5
+            }
+          }
+        })
       } catch (error) {
         console.error('加载所有学院成绩设置失败:', error)
         // 如果API调用失败，为所有学院创建默认设置
@@ -691,6 +699,9 @@ export default {
             specialty_max_score: 15,
             performance_max_score: 5
           }))
+        } else {
+          // 如果学院列表为空，初始化空数组
+          this.scoreSettings = []
         }
       }
     },
@@ -853,6 +864,15 @@ export default {
             specialty_max_score: 15,
             performance_max_score: 5
           };
+        } else {
+          // 如果学院列表为空，初始化默认设置
+          this.facultyScoreSettings = {
+            faculty_id: null,
+            academic_score_weight: 80,
+            specialty_max_score: 15,
+            performance_max_score: 5
+          };
+          this.selectedFaculty = null;
         }
       }
       this.scoreSettingsDialogVisible = true;
